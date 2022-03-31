@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package p2p;
+
+// Metadata for a P2P message.
+message Metadata {
+  uint64  peer_id                 = 1;  // Peer id assigned by Bitcoin Core
+  string  addr                    = 2;  // Address of the peer (e.g., IPv4, IPv6, Onion, ...)
+  string  conn_type               = 3;  // Connection type (e.g., "inbound", "block-relay-only", ..)
+  string  command                 = 4;  // Command or message type
+  bool    inbound                 = 5;  // Message direction
+  uint64  size                    = 6;  // Serialized message size
+  uint64  timestamp               = 7;  // Timestamp (seconds since UNIX epoch) when the message was received.
+  uint32  timestamp_subsec_micros = 8;  // The fractional part of the timestamp, in whole milliseconds. Always represents a fractional portion of a second (i.e., it is less than one million).
+}
+
+// A P2P message.
+message Message {
+  Metadata meta = 1;
+  oneof msg {
+    Ping ping = 2;
+    Pong pong = 3;
+    Inv inv = 4;
+  }
+}
+
+// A "ping" message.
+message Ping {
+  fixed64 value = 1; // Random value send with the ping. The reply should send the same value back.
+}
+
+// A "pong" message.
+message Pong {
+  fixed64 value = 1; // Random value originally received via the ping.
+}
+
+// A "inv" message.
+message Inv {
+  repeated InventoryItem items = 1;
+}
+
+message InventoryItem {
+  oneof item {
+    bytes transaction = 1;
+    bytes block = 2;
+    bytes wtx = 3;
+    bytes witness_transaction = 4;
+    bytes witness_block = 5;
+    UnknownItem unknown = 6;
+    uint32 error = 15;
+  }
+}
+
+// Details about an unknown inventory message.
+message UnknownItem {
+  uint32 inv_type = 1;
+  bytes hash = 2;
+}
+

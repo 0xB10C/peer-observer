@@ -1,5 +1,5 @@
 [package]
-name = "processor"
+name = "metric-server"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,6 +9,4 @@ edition = "2021"
 shared = { path = "../shared" }
 
 prost = "0.10"
-bcc = "0.0.32"
-bitcoin = "0.27.1"
 nng = "1.0.1"
