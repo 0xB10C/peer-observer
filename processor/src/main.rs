@@ -346,6 +346,64 @@ fn publish_p2p_message(meta: &P2PMessageMetadata, msg: &NetworkMessage, s: &Sock
             };
             s.send(&proto_msg.encode_to_vec()).unwrap();
         }
-        _ => println!("{} not implemented", meta.msg_type()),
+        NetworkMessage::GetCFCheckpt(getcfcheckpt) => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Getcfcheckpt(getcfcheckpt.clone().into())),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
+        NetworkMessage::CFCheckpt(cfcheckpt) => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Cfcheckpt(cfcheckpt.clone().into())),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
+        NetworkMessage::GetCFHeaders(getcfheaders) => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Getcfheaders(getcfheaders.clone().into())),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
+        NetworkMessage::CFHeaders(cfheaders) => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Cfheaders(cfheaders.clone().into())),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
+        NetworkMessage::GetCFilters(getcfilter) => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Getcfilter(getcfilter.clone().into())),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
+        NetworkMessage::CFilter(cfilter) => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Cfilter(cfilter.clone().into())),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
+        NetworkMessage::MerkleBlock(merkle_block) => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Merkleblock(merkle_block.clone().into())),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
+        NetworkMessage::Unknown { command, payload } => {
+            let proto_msg = p2p::Message {
+                meta: Some(meta.create_protobuf_metadata()),
+                msg: Some(p2p::message::Msg::Unknown(p2p::Unknown {
+                    command: command.to_string(),
+                    payload: payload.to_vec(),
+                })),
+            };
+            s.send(&proto_msg.encode_to_vec()).unwrap();
+        }
     }
 }

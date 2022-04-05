@@ -114,7 +114,7 @@ impl From<network::message_compact_blocks::SendCmpct> for SendCompact {
 }
 
 impl From<bitcoin::Block> for Block {
-    fn from(block: bitcoin::blockdata::block::Block) -> Self {
+    fn from(block: bitcoin::Block) -> Self {
         Block {
             header: Some(block.header.into()),
             transactions: block.txdata.iter().map(|tx| tx.clone().into()).collect(),
@@ -123,11 +123,86 @@ impl From<bitcoin::Block> for Block {
 }
 
 impl From<bitcoin::Transaction> for Transaction {
-    fn from(tx: bitcoin::blockdata::transaction::Transaction) -> Self {
+    fn from(tx: bitcoin::Transaction) -> Self {
         Transaction {
             txid: tx.txid().to_vec(),
             wtxid: tx.wtxid().to_vec(),
             raw: Some(bitcoin::consensus::serialize(&tx)),
+        }
+    }
+}
+
+impl From<network::message_filter::GetCFCheckpt> for GetCfCheckpt {
+    fn from(getcfcheckpt: network::message_filter::GetCFCheckpt) -> Self {
+        GetCfCheckpt {
+            filter_type: getcfcheckpt.filter_type as u32,
+            stop_hash: getcfcheckpt.stop_hash.to_vec(),
+        }
+    }
+}
+
+impl From<network::message_filter::CFCheckpt> for CfCheckpt {
+    fn from(cfcheckpt: network::message_filter::CFCheckpt) -> Self {
+        CfCheckpt {
+            filter_type: cfcheckpt.filter_type as u32,
+            stop_hash: cfcheckpt.stop_hash.to_vec(),
+            filter_headers: cfcheckpt
+                .filter_headers
+                .iter()
+                .map(|h| h.to_vec())
+                .collect(),
+        }
+    }
+}
+
+impl From<network::message_filter::CFHeaders> for CfHeaders {
+    fn from(cfheaders: network::message_filter::CFHeaders) -> Self {
+        CfHeaders {
+            filter_type: cfheaders.filter_type as u32,
+            stop_hash: cfheaders.stop_hash.to_vec(),
+            previous_filter_header: cfheaders.previous_filter_header.to_vec(),
+            filter_hashes: cfheaders.filter_hashes.iter().map(|h| h.to_vec()).collect(),
+        }
+    }
+}
+
+impl From<network::message_filter::GetCFilters> for GetCFilter {
+    fn from(getcfilter: network::message_filter::GetCFilters) -> Self {
+        GetCFilter {
+            filter_type: getcfilter.filter_type as u32,
+            start_height: getcfilter.start_height,
+            stop_hash: getcfilter.stop_hash.to_vec(),
+        }
+    }
+}
+
+impl From<network::message_filter::GetCFHeaders> for GetCfHeaders {
+    fn from(getcfheaders: network::message_filter::GetCFHeaders) -> Self {
+        GetCfHeaders {
+            filter_type: getcfheaders.filter_type as u32,
+            start_height: getcfheaders.start_height as u32,
+            stop_hash: getcfheaders.stop_hash.to_vec(),
+        }
+    }
+}
+
+impl From<network::message_filter::CFilter> for CFilter {
+    fn from(cfilter: network::message_filter::CFilter) -> Self {
+        CFilter {
+            filter_type: cfilter.filter_type as u32,
+            block_hash: cfilter.block_hash.to_vec(),
+            filter: cfilter.filter.to_vec(),
+        }
+    }
+}
+
+impl From<bitcoin::util::merkleblock::MerkleBlock> for MerkleBlock {
+    fn from(merkle_block: bitcoin::util::merkleblock::MerkleBlock) -> Self {
+        MerkleBlock {
+            header: Some(merkle_block.header.into()),
+            num_transactions: merkle_block.txn.num_transactions,
+            bits: merkle_block.txn.bits,
+            hashes: merkle_block.txn.hashes.iter().map(|h| h.to_vec()).collect(),
         }
     }
 }

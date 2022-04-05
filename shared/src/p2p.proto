@@ -40,6 +40,14 @@ message Message {
     Alert alert = 21;
     FilterAdd filteradd = 22;
     FilterLoad filterload = 23;
+    GetCFCheckpt getcfcheckpt = 24;
+    CFHeaders cfheaders = 25;
+    CFilter cfilter = 26;
+    CFCheckpt cfcheckpt = 27;
+    GetCFHeaders getcfheaders = 28;
+    GetCFilter getcfilter = 29;
+    MerkleBlock merkleblock = 30;
+    Unknown unknown = 31;
 
     // empty messages:
     bool verack = 32; // always true
@@ -275,3 +283,59 @@ message FilterLoad {
   BloomFlags flags = 4;
 }
 
+// A BIP157 "getcfcheckpt" message.
+message GetCFCheckpt {
+  uint32 filter_type = 1;
+  bytes stop_hash = 2;
+}
+
+// A BIP157 "cfcheckpt" message.
+message CFCheckpt {
+  uint32 filter_type = 1;
+  bytes stop_hash = 2;
+  repeated bytes filter_headers = 3;
+}
+
+
+// A BIP157 "getcfheaders" message.
+message GetCFHeaders {
+  uint32 filter_type = 1;
+  uint32 start_height = 2;
+  bytes stop_hash = 3;
+}
+
+// A BIP157 "cfheaders" message.
+message CFHeaders {
+  uint32 filter_type = 1;
+  bytes stop_hash = 2;
+  bytes previous_filter_header = 3;
+  repeated bytes filter_hashes = 4;
+}
+
+// A BIP157 "getcfilter" message.
+message GetCFilter {
+  uint32 filter_type = 1;
+  uint32 start_height = 2;
+  bytes stop_hash = 3;
+}
+
+// A BIP157 "cfilter" message.
+message CFilter {
+  uint32 filter_type = 1;
+  bytes block_hash = 2;
+  bytes filter = 3;
+}
+
+// A "merkleblock" message.
+message MerkleBlock {
+  BlockHeader header = 1;
+  uint32 num_transactions = 2;
+  repeated bool bits = 3;
+  repeated bytes hashes = 4;
+}
+
+// A message that's not implemented in rust-bitcoin.
+message Unknown {
+  string command = 1;
+  bytes payload = 2;
+}
