@@ -17,6 +17,9 @@ fn main() {
     loop {
         let msg = sub.recv().unwrap();
         let protobuf = p2p::Message::decode(msg.as_slice()).unwrap();
+
+        //if protobuf.meta.as_ref().unwrap().command == "addr" {
         println!("{:?}", protobuf);
+        //}
     }
 }

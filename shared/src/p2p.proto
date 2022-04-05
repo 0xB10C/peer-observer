@@ -21,6 +21,36 @@ message Message {
     Ping ping = 2;
     Pong pong = 3;
     Inv inv = 4;
+    GetData getdata = 5;
+    Tx tx = 6;
+    Headers headers = 7;
+    Addr addr = 8;
+    AddrV2 addrv2 = 9;
+    FeeFilter feefilter = 10;
+    GetHeaders getheaders = 11;
+    GetBlocks getblocks = 12;
+    Version version = 13;
+    NotFound notfound = 14;
+    Reject reject = 15;
+    CompactBlock compactblock = 16;
+    SendCompact sendcompact = 17;
+    Block block = 18;
+    GetBlockTxn getblocktxn = 19;
+    BlockTxn blocktxn = 20;
+    Alert alert = 21;
+    FilterAdd filteradd = 22;
+    FilterLoad filterload = 23;
+
+    // empty messages:
+    bool verack = 32; // always true
+    bool sendheaders = 33; // always true
+    bool getaddr = 34; // always true
+    bool mempool = 35; // always true
+    bool wtxidrelay = 36; // always true
+    bool sendaddrv2 = 37; // always true
+
+    // A BIP37 "filterclear" message.
+    bool filterclear = 38; // always true
   }
 }
 
@@ -39,6 +69,7 @@ message Inv {
   repeated InventoryItem items = 1;
 }
 
+// A Inv(entory) item primitve
 message InventoryItem {
   oneof item {
     bytes transaction = 1;
@@ -46,8 +77,9 @@ message InventoryItem {
     bytes wtx = 3;
     bytes witness_transaction = 4;
     bytes witness_block = 5;
-    UnknownItem unknown = 6;
-    uint32 error = 15;
+    bytes compact_block = 6;
+    UnknownItem unknown = 7;
+    bool error = 15; // always true
   }
 }
 
@@ -55,5 +87,191 @@ message InventoryItem {
 message UnknownItem {
   uint32 inv_type = 1;
   bytes hash = 2;
+}
+
+// A "notfound" message.
+message NotFound {
+  repeated InventoryItem items = 1;
+}
+
+// A "cmpctblock" message.
+message CompactBlock {
+  BlockHeader header = 1;
+  uint64 nonce = 2;
+  repeated bytes short_ids = 3;
+  repeated PrefilledTransaction transactions = 4;
+}
+
+// A BIP-152 prefilled transaction primtive.
+message PrefilledTransaction {
+  uint32 diff_index = 1; // differentially encoded index
+  Transaction tx = 2;
+}
+
+// A transaction primitive.
+message Transaction {
+  bytes txid = 1;
+  bytes wtxid = 2;
+  optional bytes raw = 3;
+}
+
+// A "tx" message.
+message Tx {
+  Transaction tx = 1;
+}
+
+// A "getdata" message.
+message GetData {
+  repeated InventoryItem items = 1;
+}
+
+// A "headers" message.
+message Headers {
+  repeated BlockHeader headers = 1;
+}
+
+// A "getblocktxn" message.
+message GetBlockTxn {
+  bytes block_hash = 1;
+  repeated uint64 tx_indexes = 2; // proper indexes - not encoded differentially.
+}
+
+// A "blocktxn" message.
+message BlockTxn {
+  bytes block_hash = 1;
+  repeated Transaction transactions = 2;
+}
+
+// A "alert" message.
+message Alert {
+  bytes alert = 1;
+}
+
+// A block header primitive
+message BlockHeader {
+  sint32 version = 1;
+  bytes prev_blockhash = 2;
+  bytes merkle_root = 3;
+  uint32 time = 4;
+  uint32 bits = 5;
+  uint32 nonce = 6;
+  bytes hash = 7;
+}
+
+// A "addr" message.
+message Addr {
+  repeated Address addresses = 1;
+}
+
+// A "addrv2" message.
+message AddrV2 {
+  repeated Address addresses = 1;
+}
+
+// An address message primitve for both "addr" (v1) and "addrv2" messages.
+message Address {
+  uint32 timestamp = 1;
+  NetAddress address = 2;
+  uint64 services = 3;
+  uint32 port = 4;
+}
+
+// A network address primitve.
+message NetAddress {
+  oneof AddrType {
+    string ipv4 = 1;
+    string ipv6 = 2;
+    string torv2 = 3;
+    string torv3 = 4;
+    string i2p = 5;
+    string cjdns = 6;
+    UnknownNetAddress unknown = 7;
+  }
+}
+
+// A primitive for an unknown network address with it's network identifier.
+message UnknownNetAddress {
+  uint32 id = 1;
+  bytes address = 2;
+};
+
+// A "reject" message.
+message Reject {
+  string rejected_command = 1;
+  enum RejectReason {
+    MALFORMED = 0;
+    INVALID = 1;
+    OBSOLETE = 2;
+    DUPLICATE = 3;
+    NONSTANDARD = 4;
+    DUST = 5;
+    FEE = 6;
+    CHECKPOINT = 7;
+  }
+  RejectReason reason = 2;
+  string reason_details = 3;
+  bytes hash = 4;
+}
+
+// A "sendcmpct" message.
+message SendCompact {
+  bool send_compact = 1;
+  uint64 version = 2;
+}
+
+// A "feefilter" message.
+message FeeFilter {
+  sint64 fee = 1;
+}
+
+// A "getheaders" message.
+message GetHeaders {
+  uint32 version = 1;
+  repeated bytes hashes = 2;
+  bytes stop_hash = 3;
+}
+
+// A "getblocks" message.
+message GetBlocks {
+  uint32 version = 1;
+  repeated bytes hashes = 2;
+  bytes stop_hash = 3;
+}
+
+// A "version" message.
+message Version {
+  uint32 version = 1;
+  uint64 services = 2;
+  sint64 timestamp = 3;
+  Address receiver = 4;
+  Address sender = 5;
+  uint64 nonce = 6;
+  string user_agent = 7;
+  sint32 start_height = 8;
+  bool relay = 9;
+}
+
+// A "block" message.
+message Block {
+  BlockHeader header = 1;
+  repeated Transaction transactions = 2;
+}
+
+// A BIP37 "filteradd" message.
+message FilterAdd {
+  bytes filter = 1;
+}
+
+// A BIP37 "filterload" message.
+message FilterLoad {
+  bytes filter = 1;
+  uint32 hash_funcs = 2;
+  uint32 tweak = 3;
+  enum BloomFlags {
+    None = 0;
+    All = 1;
+    PubkeyOnly = 2;
+  };
+  BloomFlags flags = 4;
 }
 

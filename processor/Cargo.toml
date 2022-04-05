@@ -10,5 +10,9 @@ shared = { path = "../shared" }
 
 prost = "0.10"
 bcc = "0.0.32"
-bitcoin = "0.27.1"
+
+# Use custom branch until #249 and #939 are merged (and released)
+bitcoin = {git = "https://github.com/0xB10C/rust-bitcoin", branch = "2022-04-no-dev"}
+#bitcoin = "0.27.1"
+
 nng = "1.0.1"

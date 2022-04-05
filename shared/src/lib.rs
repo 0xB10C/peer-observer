@@ -1,6 +1,4 @@
-pub mod p2p {
-    include!(concat!(env!("OUT_DIR"), "/p2p.rs"));
-}
+pub mod p2p;
 
 #[cfg(test)]
 mod tests {

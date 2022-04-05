@@ -1,5 +1,5 @@
-use std::{fmt, ptr};
 use std::time::SystemTime;
+use std::{fmt, ptr};
 
 use bitcoin::consensus::encode::Decodable;
 use bitcoin::hashes::{sha256d, Hash};
@@ -53,11 +53,13 @@ impl P2PMessageMetadata {
     /// Returns `shared::p2p::Metadata` with a timestamp set to the current
     /// time.
     pub fn create_protobuf_metadata(&self) -> p2p::Metadata {
-        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
         let timestamp = now.as_secs();
         let timestamp_subsec_millis = now.subsec_micros();
 
-        p2p::Metadata{
+        p2p::Metadata {
             peer_id: self.peer_id,
             addr: self.peer_addr(),
             conn_type: self.peer_conn_type(),
@@ -106,22 +108,7 @@ fn build_raw_network_message(meta: &P2PMessageMetadata, payload: &[u8]) -> RawNe
     raw_message.append(&mut payload_hash[..4].to_vec());
     raw_message.append(&mut payload.to_vec());
 
-    let rnn = RawNetworkMessage::consensus_decode(raw_message.as_slice()).unwrap();
-
-    match rnn.payload {
-        NetworkMessage::Unknown { .. } => println!(
-            "{} {:?}",
-            if meta.msg_inbound {
-                "inbound"
-            } else {
-                "outbound"
-            },
-            rnn
-        ),
-        _ => (),
-    }
-
-    return rnn;
+    RawNetworkMessage::consensus_decode(raw_message.as_slice()).unwrap()
 }
 
 const MAX_SMALL_MSG_LENGTH: usize = 256;
