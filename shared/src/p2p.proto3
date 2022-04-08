@@ -1,12 +1,12 @@
-syntax = "proto2";
+syntax = "proto3";
 
 package p2p;
 
 // Metadata for a P2P message.
 message Metadata {
-  required uint64  peer_id                 = 1;  // Peer id assigned by Bitcoin Core
-  required string  addr                    = 2;  // Address of the peer
-  required ConnType conn_type = 3;
+  uint64  peer_id                 = 1;  // Peer id assigned by Bitcoin Core
+  string  addr                    = 2;  // Address of the peer
+  ConnType conn_type = 3;
   enum ConnType {
     Unknown = 0;
     Inbound = 1;
@@ -14,16 +14,16 @@ message Metadata {
     BlockRelayOnly = 3;
     Feeler = 4;
   }
-  required string  command                 = 4;  // Command or message type
-  required bool    inbound                 = 5;  // Message direction
-  required uint64  size                    = 6;  // Serialized message size
-  required uint64  timestamp               = 7;  // Timestamp (seconds since UNIX epoch) when the message was received.
-  required uint32  timestamp_subsec_micros = 8;  // The fractional part of the timestamp, in whole milliseconds. Always represents a fractional portion of a second (i.e., it is less than one million).
+  string  command                 = 4;  // Command or message type
+  bool    inbound                 = 5;  // Message direction
+  uint64  size                    = 6;  // Serialized message size
+  uint64  timestamp               = 7;  // Timestamp (seconds since UNIX epoch) when the message was received.
+  uint32  timestamp_subsec_micros = 8;  // The fractional part of the timestamp, in whole milliseconds. Always represents a fractional portion of a second (i.e., it is less than one million).
 }
 
 // A P2P message.
 message Message {
-  required Metadata meta = 1;
+  Metadata meta = 1;
   oneof msg {
     Ping ping = 2;
     Pong pong = 3;
@@ -56,6 +56,7 @@ message Message {
     MerkleBlock merkleblock = 30;
     Unknown unknown = 31;
 
+    // empty messages:
     bool verack = 32; // always true
     bool sendheaders = 33; // always true
     bool getaddr = 34; // always true
@@ -70,12 +71,12 @@ message Message {
 
 // A "ping" message.
 message Ping {
-  required fixed64 value = 1; // Random value send with the ping. The reply should send the same value back.
+  fixed64 value = 1; // Random value send with the ping. The reply should send the same value back.
 }
 
 // A "pong" message.
 message Pong {
-  required fixed64 value = 1; // Random value originally received via the ping.
+  fixed64 value = 1; // Random value originally received via the ping.
 }
 
 // A "inv" message.
@@ -88,9 +89,8 @@ message InventoryItem {
   oneof item {
     bytes transaction = 1;
     bytes block = 2;
-    // MSG_WTX (0x00000005) as defined in BIP 339 (wtxid based tx-relay)
+    // TODO: Why does rust bitcoin have a WTx and WitnessTransaction?
     bytes wtx = 3;
-    // MSG_WITNESS_TX	(0x40000001) as defined in BIP 144
     bytes witness_transaction = 4;
     bytes witness_block = 5;
     bytes compact_block = 6;
@@ -101,8 +101,8 @@ message InventoryItem {
 
 // Details about an unknown inventory message.
 message UnknownItem {
-  required uint32 inv_type = 1;
-  required bytes hash = 2;
+  uint32 inv_type = 1;
+  bytes hash = 2;
 }
 
 // A "notfound" message.
@@ -112,28 +112,28 @@ message NotFound {
 
 // A "cmpctblock" message.
 message CompactBlock {
-  required BlockHeader header = 1;
-  required uint64 nonce = 2;
+  BlockHeader header = 1;
+  uint64 nonce = 2;
   repeated bytes short_ids = 3;
   repeated PrefilledTransaction transactions = 4;
 }
 
 // A BIP-152 prefilled transaction primtive.
 message PrefilledTransaction {
-  required uint32 diff_index = 1; // differentially encoded index
-  required Transaction tx = 2;
+  uint32 diff_index = 1; // differentially encoded index
+  Transaction tx = 2;
 }
 
 // A transaction primitive.
 message Transaction {
-  required bytes txid = 1;
-  required bytes wtxid = 2;
+  bytes txid = 1;
+  bytes wtxid = 2;
   optional bytes raw = 3;
 }
 
 // A "tx" message.
 message Tx {
-  required Transaction tx = 1;
+  Transaction tx = 1;
 }
 
 // A "getdata" message.
@@ -148,30 +148,30 @@ message Headers {
 
 // A "getblocktxn" message.
 message GetBlockTxn {
-  required bytes block_hash = 1;
+  bytes block_hash = 1;
   repeated uint64 tx_indexes = 2; // proper indexes - not encoded differentially.
 }
 
 // A "blocktxn" message.
 message BlockTxn {
-  required bytes block_hash = 1;
+  bytes block_hash = 1;
   repeated Transaction transactions = 2;
 }
 
 // A "alert" message.
 message Alert {
-  required bytes alert = 1;
+  bytes alert = 1;
 }
 
 // A block header primitive
 message BlockHeader {
-  required sint32 version = 1;
-  required bytes prev_blockhash = 2;
-  required bytes merkle_root = 3;
-  required uint32 time = 4;
-  required uint32 bits = 5;
-  required uint32 nonce = 6;
-  required bytes hash = 7;
+  sint32 version = 1;
+  bytes prev_blockhash = 2;
+  bytes merkle_root = 3;
+  uint32 time = 4;
+  uint32 bits = 5;
+  uint32 nonce = 6;
+  bytes hash = 7;
 }
 
 // A "addr" message.
@@ -186,30 +186,34 @@ message AddrV2 {
 
 // An address message primitve for both "addr" (v1) and "addrv2" messages.
 message Address {
-  // TODO: extract this!
-  required uint32 timestamp = 1;
-  oneof address {
-    string ipv4 = 2;
-    string ipv6 = 3;
-    string torv2 = 4;
-    string torv3 = 5;
-    string i2p = 6;
-    string cjdns = 7;
-    UnknownAddress unknown = 8;
+  uint32 timestamp = 1;
+  NetAddress address = 2;
+  uint64 services = 3;
+  uint32 port = 4;
+}
+
+// A network address primitve.
+message NetAddress {
+  oneof AddrType {
+    string ipv4 = 1;
+    string ipv6 = 2;
+    string torv2 = 3;
+    string torv3 = 4;
+    string i2p = 5;
+    string cjdns = 6;
+    UnknownNetAddress unknown = 7;
   }
-  required uint64 services = 9;
-  required uint32 port = 10;
 }
 
 // A primitive for an unknown network address with it's network identifier.
-message UnknownAddress {
-  required uint32 id = 1;
-  required bytes address = 2;
+message UnknownNetAddress {
+  uint32 id = 1;
+  bytes address = 2;
 };
 
 // A "reject" message.
 message Reject {
-  required string rejected_command = 1;
+  string rejected_command = 1;
   enum RejectReason {
     MALFORMED = 0;
     INVALID = 1;
@@ -220,126 +224,126 @@ message Reject {
     FEE = 6;
     CHECKPOINT = 7;
   }
-  required RejectReason reason = 2;
-  required string reason_details = 3;
-  required bytes hash = 4;
+  RejectReason reason = 2;
+  string reason_details = 3;
+  bytes hash = 4;
 }
 
 // A "sendcmpct" message.
 message SendCompact {
-  required bool send_compact = 1;
-  required uint64 version = 2;
+  bool send_compact = 1;
+  uint64 version = 2;
 }
 
 // A "feefilter" message.
 message FeeFilter {
-  required sint64 fee = 1;
+  sint64 fee = 1;
 }
 
 // A "getheaders" message.
 message GetHeaders {
-  required uint32 version = 1;
-  repeated bytes locator_hashes = 2;
-  required bytes stop_hash = 3;
+  uint32 version = 1;
+  repeated bytes hashes = 2;
+  bytes stop_hash = 3;
 }
 
 // A "getblocks" message.
 message GetBlocks {
-  required uint32 version = 1;
-  repeated bytes locator_hashes = 2;
-  required bytes stop_hash = 3;
+  uint32 version = 1;
+  repeated bytes hashes = 2;
+  bytes stop_hash = 3;
 }
 
 // A "version" message.
 message Version {
-  required uint32 version = 1;
-  required uint64 services = 2;
-  required sint64 timestamp = 3;
-  required Address receiver = 4;
-  required Address sender = 5;
-  required uint64 nonce = 6;
-  required string user_agent = 7;
-  required sint32 start_height = 8;
-  required bool relay = 9;
+  uint32 version = 1;
+  uint64 services = 2;
+  sint64 timestamp = 3;
+  Address receiver = 4;
+  Address sender = 5;
+  uint64 nonce = 6;
+  string user_agent = 7;
+  sint32 start_height = 8;
+  bool relay = 9;
 }
 
 // A "block" message.
 message Block {
-  required BlockHeader header = 1;
+  BlockHeader header = 1;
   repeated Transaction transactions = 2;
 }
 
 // A BIP37 "filteradd" message.
 message FilterAdd {
-  required bytes filter = 1;
+  bytes filter = 1;
 }
 
 // A BIP37 "filterload" message.
 message FilterLoad {
-  required bytes filter = 1;
-  required uint32 hash_funcs = 2;
-  required uint32 tweak = 3;
+  bytes filter = 1;
+  uint32 hash_funcs = 2;
+  uint32 tweak = 3;
   enum BloomFlags {
     None = 0;
     All = 1;
     PubkeyOnly = 2;
   };
-  required BloomFlags flags = 4;
+  BloomFlags flags = 4;
 }
 
 // A BIP157 "getcfcheckpt" message.
 message GetCFCheckpt {
-  required uint32 filter_type = 1;
-  required bytes stop_hash = 2;
+  uint32 filter_type = 1;
+  bytes stop_hash = 2;
 }
 
 // A BIP157 "cfcheckpt" message.
 message CFCheckpt {
-  required uint32 filter_type = 1;
-  required bytes stop_hash = 2;
+  uint32 filter_type = 1;
+  bytes stop_hash = 2;
   repeated bytes filter_headers = 3;
 }
 
 
 // A BIP157 "getcfheaders" message.
 message GetCFHeaders {
-  required uint32 filter_type = 1;
-  required uint32 start_height = 2;
-  required bytes stop_hash = 3;
+  uint32 filter_type = 1;
+  uint32 start_height = 2;
+  bytes stop_hash = 3;
 }
 
 // A BIP157 "cfheaders" message.
 message CFHeaders {
-  required uint32 filter_type = 1;
-  required bytes stop_hash = 2;
-  required bytes previous_filter_header = 3;
+  uint32 filter_type = 1;
+  bytes stop_hash = 2;
+  bytes previous_filter_header = 3;
   repeated bytes filter_hashes = 4;
 }
 
 // A BIP157 "getcfilter" message.
 message GetCFilter {
-  required uint32 filter_type = 1;
-  required uint32 start_height = 2;
-  required bytes stop_hash = 3;
+  uint32 filter_type = 1;
+  uint32 start_height = 2;
+  bytes stop_hash = 3;
 }
 
 // A BIP157 "cfilter" message.
 message CFilter {
-  required uint32 filter_type = 1;
-  required bytes block_hash = 2;
-  required bytes filter = 3;
+  uint32 filter_type = 1;
+  bytes block_hash = 2;
+  bytes filter = 3;
 }
 
 // A "merkleblock" message.
 message MerkleBlock {
-  required BlockHeader header = 1;
-  required uint32 num_transactions = 2;
+  BlockHeader header = 1;
+  uint32 num_transactions = 2;
   repeated bool bits = 3;
   repeated bytes hashes = 4;
 }
 
 // A message that's not implemented in rust-bitcoin.
 message Unknown {
-  required string command = 1;
-  required bytes payload = 2;
+  string command = 1;
+  bytes payload = 2;
 }

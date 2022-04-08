@@ -7,6 +7,7 @@ use bitcoin::network::message::NetworkMessage;
 use bitcoin::network::message::RawNetworkMessage;
 
 use shared::p2p;
+use shared::p2p::metadata::ConnType;
 
 pub enum P2PMessageSize {
     Small,
@@ -62,7 +63,13 @@ impl P2PMessageMetadata {
         p2p::Metadata {
             peer_id: self.peer_id,
             addr: self.peer_addr(),
-            conn_type: self.peer_conn_type(),
+            conn_type: match self.peer_conn_type().as_str() {
+                "inbound" => ConnType::Inbound as i32,
+                "outbound-full-relay" => ConnType::OutboundFullRelay as i32,
+                "block-relay-only" => ConnType::BlockRelayOnly as i32,
+                "feeler" => ConnType::OutboundFullRelay as i32,
+                _ => ConnType::Unknown as i32,
+            },
             command: self.msg_type(),
             inbound: self.msg_inbound,
             size: self.msg_size,
