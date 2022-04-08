@@ -1,0 +1,72 @@
+syntax = "proto2";
+
+package primitive;
+
+// A transaction primitive.
+message Transaction {
+  required bytes txid = 1;
+  required bytes wtxid = 2;
+  optional bytes raw = 3;
+}
+
+// A block header primitive
+message BlockHeader {
+  required sint32 version = 1;
+  required bytes prev_blockhash = 2;
+  required bytes merkle_root = 3;
+  required uint32 time = 4;
+  required uint32 bits = 5;
+  required uint32 nonce = 6;
+  required bytes hash = 7;
+}
+
+// An address primtive.
+message Address {
+  // TODO: extract this!
+  required uint32 timestamp = 1;
+  oneof address {
+    string ipv4 = 2;
+    string ipv6 = 3;
+    string torv2 = 4;
+    string torv3 = 5;
+    string i2p = 6;
+    string cjdns = 7;
+    UnknownAddress unknown = 8;
+  }
+  required uint64 services = 9;
+  required uint32 port = 10;
+}
+
+// A primitive for an unknown network address with it's network identifier.
+message UnknownAddress {
+  required uint32 id = 1;
+  required bytes address = 2;
+}
+
+// A Inventory item primitve
+message InventoryItem {
+  oneof item {
+    bytes transaction = 1;
+    bytes block = 2;
+    // MSG_WTX (0x00000005) as defined in BIP 339 (wtxid based tx-relay)
+    bytes wtx = 3;
+    // MSG_WITNESS_TX (0x40000001) as defined in BIP 144
+    bytes witness_transaction = 4;
+    bytes witness_block = 5;
+    bytes compact_block = 6;
+    UnknownItem unknown = 7;
+    bool error = 15; // always true
+  }
+}
+
+// Details about an unknown InventoryItem
+message UnknownItem {
+  required uint32 inv_type = 1;
+  required bytes hash = 2;
+}
+
+// A BIP-152 prefilled transaction primtive
+message PrefilledTransaction {
+  required uint32 diff_index = 1; // differentially encoded index
+  required Transaction tx = 2;
+}

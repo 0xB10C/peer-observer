@@ -1,5 +1,7 @@
 syntax = "proto2";
 
+import "primitive.proto";
+
 package p2p;
 
 // Metadata for a P2P message.
@@ -80,134 +82,65 @@ message Pong {
 
 // A "inv" message.
 message Inv {
-  repeated InventoryItem items = 1;
+  repeated primitive.InventoryItem items = 1;
 }
 
-// A Inv(entory) item primitve
-message InventoryItem {
-  oneof item {
-    bytes transaction = 1;
-    bytes block = 2;
-    // MSG_WTX (0x00000005) as defined in BIP 339 (wtxid based tx-relay)
-    bytes wtx = 3;
-    // MSG_WITNESS_TX	(0x40000001) as defined in BIP 144
-    bytes witness_transaction = 4;
-    bytes witness_block = 5;
-    bytes compact_block = 6;
-    UnknownItem unknown = 7;
-    bool error = 15; // always true
-  }
-}
-
-// Details about an unknown inventory message.
-message UnknownItem {
-  required uint32 inv_type = 1;
-  required bytes hash = 2;
-}
-
-// A "notfound" message.
+// A "notfound" message
 message NotFound {
-  repeated InventoryItem items = 1;
+  repeated primitive.InventoryItem items = 1;
 }
 
-// A "cmpctblock" message.
+// A "cmpctblock" message
 message CompactBlock {
-  required BlockHeader header = 1;
+  required primitive.BlockHeader header = 1;
   required uint64 nonce = 2;
   repeated bytes short_ids = 3;
-  repeated PrefilledTransaction transactions = 4;
+  repeated primitive.PrefilledTransaction transactions = 4;
 }
 
-// A BIP-152 prefilled transaction primtive.
-message PrefilledTransaction {
-  required uint32 diff_index = 1; // differentially encoded index
-  required Transaction tx = 2;
-}
-
-// A transaction primitive.
-message Transaction {
-  required bytes txid = 1;
-  required bytes wtxid = 2;
-  optional bytes raw = 3;
-}
-
-// A "tx" message.
+// A "tx" message
 message Tx {
-  required Transaction tx = 1;
+  required primitive.Transaction tx = 1;
 }
 
-// A "getdata" message.
+// A "getdata" message
 message GetData {
-  repeated InventoryItem items = 1;
+  repeated primitive.InventoryItem items = 1;
 }
 
-// A "headers" message.
+// A "headers" message
 message Headers {
-  repeated BlockHeader headers = 1;
+  repeated primitive.BlockHeader headers = 1;
 }
 
-// A "getblocktxn" message.
+// A "getblocktxn" message
 message GetBlockTxn {
   required bytes block_hash = 1;
   repeated uint64 tx_indexes = 2; // proper indexes - not encoded differentially.
 }
 
-// A "blocktxn" message.
+// A "blocktxn" message
 message BlockTxn {
   required bytes block_hash = 1;
-  repeated Transaction transactions = 2;
+  repeated primitive.Transaction transactions = 2;
 }
 
-// A "alert" message.
+// A "alert" message
 message Alert {
   required bytes alert = 1;
 }
 
-// A block header primitive
-message BlockHeader {
-  required sint32 version = 1;
-  required bytes prev_blockhash = 2;
-  required bytes merkle_root = 3;
-  required uint32 time = 4;
-  required uint32 bits = 5;
-  required uint32 nonce = 6;
-  required bytes hash = 7;
-}
-
-// A "addr" message.
+// A "addr" message
 message Addr {
-  repeated Address addresses = 1;
+  repeated primitive.Address addresses = 1;
 }
 
-// A "addrv2" message.
+// A "addrv2" message
 message AddrV2 {
-  repeated Address addresses = 1;
+  repeated primitive.Address addresses = 1;
 }
 
-// An address message primitve for both "addr" (v1) and "addrv2" messages.
-message Address {
-  // TODO: extract this!
-  required uint32 timestamp = 1;
-  oneof address {
-    string ipv4 = 2;
-    string ipv6 = 3;
-    string torv2 = 4;
-    string torv3 = 5;
-    string i2p = 6;
-    string cjdns = 7;
-    UnknownAddress unknown = 8;
-  }
-  required uint64 services = 9;
-  required uint32 port = 10;
-}
-
-// A primitive for an unknown network address with it's network identifier.
-message UnknownAddress {
-  required uint32 id = 1;
-  required bytes address = 2;
-};
-
-// A "reject" message.
+// A "reject" message
 message Reject {
   required string rejected_command = 1;
   enum RejectReason {
@@ -225,56 +158,56 @@ message Reject {
   required bytes hash = 4;
 }
 
-// A "sendcmpct" message.
+// A "sendcmpct" message
 message SendCompact {
   required bool send_compact = 1;
   required uint64 version = 2;
 }
 
-// A "feefilter" message.
+// A "feefilter" message
 message FeeFilter {
   required sint64 fee = 1;
 }
 
-// A "getheaders" message.
+// A "getheaders" message
 message GetHeaders {
   required uint32 version = 1;
   repeated bytes locator_hashes = 2;
   required bytes stop_hash = 3;
 }
 
-// A "getblocks" message.
+// A "getblocks" message
 message GetBlocks {
   required uint32 version = 1;
   repeated bytes locator_hashes = 2;
   required bytes stop_hash = 3;
 }
 
-// A "version" message.
+// A "version" message
 message Version {
   required uint32 version = 1;
   required uint64 services = 2;
   required sint64 timestamp = 3;
-  required Address receiver = 4;
-  required Address sender = 5;
+  required primitive.Address receiver = 4;
+  required primitive.Address sender = 5;
   required uint64 nonce = 6;
   required string user_agent = 7;
   required sint32 start_height = 8;
   required bool relay = 9;
 }
 
-// A "block" message.
+// A "block" message
 message Block {
-  required BlockHeader header = 1;
-  repeated Transaction transactions = 2;
+  required primitive.BlockHeader header = 1;
+  repeated primitive.Transaction transactions = 2;
 }
 
-// A BIP37 "filteradd" message.
+// A BIP37 "filteradd" message
 message FilterAdd {
   required bytes filter = 1;
 }
 
-// A BIP37 "filterload" message.
+// A BIP37 "filterload" message
 message FilterLoad {
   required bytes filter = 1;
   required uint32 hash_funcs = 2;
@@ -287,13 +220,13 @@ message FilterLoad {
   required BloomFlags flags = 4;
 }
 
-// A BIP157 "getcfcheckpt" message.
+// A BIP157 "getcfcheckpt" message
 message GetCFCheckpt {
   required uint32 filter_type = 1;
   required bytes stop_hash = 2;
 }
 
-// A BIP157 "cfcheckpt" message.
+// A BIP157 "cfcheckpt" message
 message CFCheckpt {
   required uint32 filter_type = 1;
   required bytes stop_hash = 2;
@@ -301,14 +234,14 @@ message CFCheckpt {
 }
 
 
-// A BIP157 "getcfheaders" message.
+// A BIP157 "getcfheaders" message
 message GetCFHeaders {
   required uint32 filter_type = 1;
   required uint32 start_height = 2;
   required bytes stop_hash = 3;
 }
 
-// A BIP157 "cfheaders" message.
+// A BIP157 "cfheaders" message
 message CFHeaders {
   required uint32 filter_type = 1;
   required bytes stop_hash = 2;
@@ -316,14 +249,14 @@ message CFHeaders {
   repeated bytes filter_hashes = 4;
 }
 
-// A BIP157 "getcfilter" message.
+// A BIP157 "getcfilter" message
 message GetCFilter {
   required uint32 filter_type = 1;
   required uint32 start_height = 2;
   required bytes stop_hash = 3;
 }
 
-// A BIP157 "cfilter" message.
+// A BIP157 "cfilter" message
 message CFilter {
   required uint32 filter_type = 1;
   required bytes block_hash = 2;
@@ -332,7 +265,7 @@ message CFilter {
 
 // A "merkleblock" message.
 message MerkleBlock {
-  required BlockHeader header = 1;
+  required primitive.BlockHeader header = 1;
   required uint32 num_transactions = 2;
   repeated bool bits = 3;
   repeated bytes hashes = 4;

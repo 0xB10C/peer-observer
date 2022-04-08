@@ -1,4 +1,5 @@
 pub mod p2p;
+pub mod primitive;
 
 #[cfg(test)]
 mod tests {
