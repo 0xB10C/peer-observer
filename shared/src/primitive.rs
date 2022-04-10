@@ -1,12 +1,12 @@
 use base32;
 
-use bitcoin::network;
-use bitcoin::util::bip152;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::Hash;
+use bitcoin::network;
+use bitcoin::util::bip152;
 
-use std::net::SocketAddr;
 use std::fmt;
+use std::net::SocketAddr;
 
 // structs are generated via the p2p.proto file
 include!(concat!(env!("OUT_DIR"), "/primitive.rs"));

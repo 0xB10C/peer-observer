@@ -1,11 +1,11 @@
-use bitcoin::network;
-use bitcoin::util::bip152;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::Hash;
+use bitcoin::network;
+use bitcoin::util::bip152;
 
 use std::fmt;
 
-use crate::primitive::{BlockHeader, PrefilledTransaction, Address};
+use crate::primitive::{Address, BlockHeader, PrefilledTransaction};
 
 // structs are generated via the p2p.proto file
 include!(concat!(env!("OUT_DIR"), "/p2p.rs"));
