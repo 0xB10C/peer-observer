@@ -3,5 +3,6 @@
 members = [
   "processor",
   "logger",
-  "shared"
+  "shared",
+  "metrics"
 ]
