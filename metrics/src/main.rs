@@ -49,13 +49,6 @@ fn main() {
     loop {
         let msg = sub.recv().unwrap();
         let protobuf = p2p::Message::decode(msg.as_slice()).unwrap();
-        println! {
-            "{} from id={} (conn_type={:?}): {}",
-            if protobuf.meta.inbound { "<--"} else { "-->" },
-            protobuf.meta.peer_id,
-            protobuf.meta.conn_type,
-            protobuf.msg.as_ref().unwrap(),
-        };
 
         let conn_type = protobuf.meta.conn_type.to_string();
         let direction = if protobuf.meta.inbound {
