@@ -280,7 +280,7 @@ mod tests {
     fn test_address_into_addrtype_onion() {
         use bitcoin::network::address::Address;
         use bitcoin::network::constants::ServiceFlags;
-        use shared::primitive;
+        use crate::primitive;
 
         let a = Address {
             services: ServiceFlags::from(0),
@@ -292,8 +292,8 @@ mod tests {
             port: 0,
         };
         assert_eq!(
-            a.into(),
-            primtive::address::Address::Torv2(String::from("5wyqrzbvrdsumnok.onion"))
+            primitive::address::Address::from(a),
+            primitive::address::Address::Torv2(String::from("5wyqrzbvrdsumnok.onion"))
         );
     }
 }
