@@ -278,9 +278,9 @@ impl fmt::Display for UnknownAddress {
 mod tests {
     #[test]
     fn test_address_into_addrtype_onion() {
+        use crate::primitive;
         use bitcoin::network::address::Address;
         use bitcoin::network::constants::ServiceFlags;
-        use crate::primitive;
 
         let a = Address {
             services: ServiceFlags::from(0),
