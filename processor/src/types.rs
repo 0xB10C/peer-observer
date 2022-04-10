@@ -115,7 +115,13 @@ fn build_raw_network_message(meta: &P2PMessageMetadata, payload: &[u8]) -> RawNe
     raw_message.append(&mut payload_hash[..4].to_vec());
     raw_message.append(&mut payload.to_vec());
 
-    RawNetworkMessage::consensus_decode(raw_message.as_slice()).unwrap()
+    match RawNetworkMessage::consensus_decode(raw_message.as_slice()) {
+        Ok(rnm) => rnm,
+        Err(e) => {
+            println!("Could not create raw_network_message: {}", meta);
+            panic!("{}", e);
+        }
+    }
 }
 
 const MAX_SMALL_MSG_LENGTH: usize = 256;
