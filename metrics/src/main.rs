@@ -85,17 +85,7 @@ fn main() {
                     let offset = protobuf.meta.timestamp as i64 - address.timestamp as i64;
                     if offset >= 0 {
                         past_offset.observe(offset as f64);
-                        println!(
-                            "{} addr offset {:?}",
-                            direction,
-                            Duration::from_secs(offset as u64)
-                        );
                     } else {
-                        println!(
-                            "{} addr offset {:?}",
-                            direction,
-                            Duration::from_secs((offset * -1) as u64)
-                        );
                         future_offset.observe((offset * -1) as f64);
                     }
                 }
@@ -115,18 +105,8 @@ fn main() {
                     // timestamp lies in the future.
                     let offset = protobuf.meta.timestamp as i64 - address.timestamp as i64;
                     if offset >= 0 {
-                        println!(
-                            "{} addrv2 offset {:?}",
-                            direction,
-                            Duration::from_secs(offset as u64)
-                        );
                         past_offset.observe(offset as f64);
                     } else {
-                        println!(
-                            "{} addrv2 offset {:?}",
-                            direction,
-                            Duration::from_secs((offset * -1) as u64)
-                        );
                         future_offset.observe((offset * -1) as f64);
                     }
                 }

@@ -21,7 +21,7 @@ pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
     50f64, 75f64, 100f64, 150f64, 200f64, 250f64, 300f64, 400f64, 500f64, 600f64, 700f64, 800f64,
-    900f64, 1000f64, 999f64,
+    900f64, 999f64, 1000f64,
 ];
 
 // Buckets for addr(v2) message timestamp offset in seconds.
