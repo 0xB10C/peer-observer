@@ -18,12 +18,10 @@ pub const LABEL_P2P_DIRECTION: &str = "direction";
 
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
 
-pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 53] = [
+pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
     50f64, 75f64, 100f64, 150f64, 200f64, 250f64, 300f64, 400f64, 500f64, 600f64, 700f64, 800f64,
-    900f64, 1000f64, 2000f64, 3000f64, 4000f64, 5000f64, 6000f64, 7000f64, 8000f64, 9000f64,
-    10_000f64, 12_000f64, 14_000f64, 16_000f64, 18_000f64, 20_000f64, 25_000f64, 30_000f64,
-    35_000f64, 40_000f64, 50_000f64, 60_000f64, 70_000f64, 80_000f64, 90_000f64, 100_000f64,
+    900f64, 1000f64, 999f64,
 ];
 
 // Buckets for addr(v2) message timestamp offset in seconds.
@@ -53,7 +51,7 @@ pub const BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET: [f64; 26] = [
     2097152f64,
     4194304f64,
     8388608f64,
-    16777216f64, // 0.5 years
+    16777216f64,
 ];
 
 lazy_static! {
