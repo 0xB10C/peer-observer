@@ -26,6 +26,36 @@ pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 53] = [
     35_000f64, 40_000f64, 50_000f64, 60_000f64, 70_000f64, 80_000f64, 90_000f64, 100_000f64,
 ];
 
+// Buckets for addr(v2) message timestamp offset in seconds.
+pub const BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET: [f64; 26] = [
+    0f64,
+    1f64,
+    2f64,
+    4f64,
+    8f64,
+    16f64,
+    32f64,
+    64f64,
+    128f64,
+    256f64,
+    512f64,
+    1024f64,
+    2048f64,
+    4096f64,
+    8192f64,
+    16384f64,
+    32768f64,
+    65536f64,
+    131072f64,
+    262144f64,
+    524288f64,
+    1048576f64,
+    2097152f64,
+    4194304f64,
+    8388608f64,
+    16777216f64, // 0.5 years
+];
+
 lazy_static! {
 
     // -------------------- Runtime
@@ -78,7 +108,7 @@ lazy_static! {
             HistogramOpts::new("addr_timestamp_offset_seconds", "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addr' message.")
                 .namespace(NAMESPACE)
                 .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_ADDRESS_COUNT.to_vec()),
+                .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
             &[LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET]
         ).unwrap();
 
@@ -98,7 +128,7 @@ lazy_static! {
             HistogramOpts::new("addrv2_timestamp_offset_seconds", "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addrv2' message.")
                 .namespace(NAMESPACE)
                 .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_ADDRESS_COUNT.to_vec()),
+                .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
             &[LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET]
         ).unwrap();
 }
