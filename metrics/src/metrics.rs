@@ -16,12 +16,49 @@ pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
 pub const LABEL_P2P_DIRECTION: &str = "direction";
 
+pub const LABEL_P2P_SERVICES: &str = "services";
+
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
     50f64, 75f64, 100f64, 150f64, 200f64, 250f64, 300f64, 400f64, 500f64, 600f64, 700f64, 800f64,
     900f64, 999f64, 1000f64,
+];
+
+pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 32] = [
+    0_f64,      // 0 NODE_NONE
+    1_f64,      // 1 NODE_NETWORK
+    2_f64,	    // 2 NODE_GETUTXO
+    3_f64,      // 4 NODE_BLOOM
+    4_f64,      // 8 NODE_WITNESS
+    5_f64,      // 16 NODE_XTHIN
+    6_f64,      // 32
+    7_f64,      // 64 NODE_COMPACT_FILTERS
+    8_f64,      // 128
+    9_f64,      // 256
+    10_f64,     // 512
+    11_f64,     // 1024 NODE_NETWORK_LIMITED
+    12_f64,
+    13_f64,
+    14_f64,
+    15_f64,
+    16_f64,
+    17_f64,
+    18_f64,
+    19_f64,
+    20_f64,
+    21_f64,
+    22_f64,
+    23_f64,
+    24_f64,
+    25_f64,
+    26_f64,
+    27_f64,
+    28_f64,
+    29_f64,
+    30_f64,
+    31_f64,
 ];
 
 // Buckets for addr(v2) message timestamp offset in seconds.
@@ -109,6 +146,44 @@ lazy_static! {
                 .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
             &[LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET]
         ).unwrap();
+
+    /// Histogram of the service flags (per bit) of addresses contained in an "addr" message.
+    pub static ref P2P_ADDR_SERVICES_HISTOGRAM: HistogramVec =
+        register_histogram_vec!(
+            HistogramOpts::new("addr_services_bits", "Histogram of the service flags (per bit) of addresses contained in an 'addr' message.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_P2P)
+                .buckets(BUCKETS_ADDR_SERVICE_BITS.to_vec()),
+            &[LABEL_P2P_DIRECTION]
+        ).unwrap();
+
+    /// Histogram of the service flags (per bit) of addresses contained in an "addrv2" message.
+    pub static ref P2P_ADDRV2_SERVICES_HISTOGRAM: HistogramVec =
+        register_histogram_vec!(
+            HistogramOpts::new("addrv2_services_bits", "Histogram of the service flags (per bit) of addresses contained in an 'addrv2' message.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_P2P)
+                .buckets(BUCKETS_ADDR_SERVICE_BITS.to_vec()),
+            &[LABEL_P2P_DIRECTION]
+        ).unwrap();
+
+    /// Number of addresses with these service bits cointained in an 'addr' message.
+    pub static ref P2P_ADDR_SERVICES: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("addr_services", "Number of addresses with these service bits cointained in an 'addr' message.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_DIRECTION, LABEL_P2P_SERVICES]
+    ).unwrap();
+
+    /// Number of addresses with these service bits cointained in an 'addrv2' message.
+    pub static ref P2P_ADDRV2_SERVICES: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("addrv2_services", "Number of addresses with these service bits cointained in an 'addrv2' message.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_DIRECTION, LABEL_P2P_SERVICES]
+    ).unwrap();
 
     /// Histogram of the number of addresses contained in an "addrv2" message.
     pub static ref P2P_ADDRV2_ADDRESS_HISTOGRAM: HistogramVec =

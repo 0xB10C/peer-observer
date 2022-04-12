@@ -88,6 +88,13 @@ fn main() {
                     } else {
                         future_offset.observe((offset * -1) as f64);
                     }
+                    for i in 0..32 {
+                        if (1 << i) & address.services > 0 {
+                            metrics::P2P_ADDR_SERVICES_HISTOGRAM.with_label_values(&[direction]).observe(i as f64)
+                        }
+                    }
+                    metrics::P2P_ADDR_SERVICES.with_label_values(&[direction, &address.services.to_string()]).inc();
+
                 }
             }
             shared::p2p::message::Msg::Addrv2(addrv2) => {
@@ -109,6 +116,13 @@ fn main() {
                     } else {
                         future_offset.observe((offset * -1) as f64);
                     }
+
+                    for i in 0..32 {
+                        if (1 << i) & address.services > 0 {
+                            metrics::P2P_ADDRV2_SERVICES_HISTOGRAM.with_label_values(&[direction]).observe(i as f64)
+                        }
+                    }
+                    metrics::P2P_ADDRV2_SERVICES.with_label_values(&[direction, &address.services.to_string()]).inc();
                 }
             }
             _ => (),
