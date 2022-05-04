@@ -20,6 +20,7 @@ pub enum P2PMessageSize {
 const MAX_PEER_ADDR_LENGTH: usize = 62 + 6;
 const MAX_PEER_CONN_TYPE_LENGTH: usize = 20;
 const MAX_MSG_TYPE_LENGTH: usize = 12;
+const MAX_MISBEHAVING_MESSAGE_LENGTH: usize = 128;
 
 /// The metadata for a P2P message.
 #[repr(C)]
@@ -226,5 +227,153 @@ impl HugeP2PMessage {
 impl RustBitcoinNetworkMessage for HugeP2PMessage {
     fn rust_bitcoin_network_message(&self) -> NetworkMessage {
         return build_raw_network_message(&self.meta, self.trimmed_payload()).payload;
+    }
+}
+
+#[repr(C)]
+pub struct Connection {
+    pub id: u64,
+    pub addr: [u8; MAX_PEER_ADDR_LENGTH],
+    pub conn_type: [u8; MAX_PEER_CONN_TYPE_LENGTH],
+    pub network: u32,
+    pub net_group: u64,
+}
+
+impl Connection {
+    // TODO: comment
+    pub fn addr(&self) -> String {
+        String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap())
+            .into_owned()
+    }
+
+    // TODO: comment
+    pub fn conn_type(&self) -> String {
+        String::from_utf8_lossy(&self.conn_type.split(|c| *c == 0x00u8).next().unwrap())
+            .into_owned()
+    }
+}
+
+impl fmt::Display for Connection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Connection(peer={}, addr={}, type={}, network={}, netgroup={})",
+            self.id,
+            self.addr(),
+            self.conn_type(),
+            self.network,
+            self.net_group,
+        )
+    }
+}
+
+#[repr(C)]
+pub struct ClosedConnection {
+    pub connection: Connection,
+    pub last_block_time: u64,
+    pub last_tx_time: u64,
+    pub min_ping_time: u64,
+    pub relays_txs: bool,
+}
+
+impl fmt::Display for ClosedConnection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ClosedConnection(conn={}, last_block_time={}, last_tx_time={}, min_ping_time={}, relays_txs={})",
+            self.connection,
+            self.last_block_time,
+            self.last_tx_time,
+            self.min_ping_time,
+            self.relays_txs,
+        )
+    }
+}
+
+
+impl ClosedConnection {
+    pub fn from_bytes(x: &[u8]) -> ClosedConnection {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const ClosedConnection) }
+    }
+}
+
+#[repr(C)]
+pub struct InboundConnection {
+    pub connection: Connection,
+    pub services: u64,
+    pub inbound_onion: bool,
+}
+
+impl InboundConnection {
+    pub fn from_bytes(x: &[u8]) -> InboundConnection {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const InboundConnection) }
+    }
+}
+
+impl fmt::Display for InboundConnection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "InboundConnection(conn={}, services={}, inbound_onion={})",
+            self.connection,
+            self.services,
+            self.inbound_onion,
+        )
+    }
+}
+
+#[repr(C)]
+pub struct OutboundConnection {
+    pub connection: Connection,
+}
+
+impl OutboundConnection {
+    pub fn from_bytes(x: &[u8]) -> OutboundConnection {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const OutboundConnection) }
+    }
+}
+
+impl fmt::Display for OutboundConnection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "OutboundConnection(conn={})",
+            self.connection,
+        )
+    }
+}
+
+#[repr(C)]
+pub struct MisbehavingConnection {
+    pub id: u64,
+    pub score_before: i32,
+    pub score_increase: i32,
+    pub message: [u8; MAX_MISBEHAVING_MESSAGE_LENGTH],
+    pub threshold_exceeded: bool,
+}
+
+impl MisbehavingConnection {
+    pub fn from_bytes(x: &[u8]) -> MisbehavingConnection {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const MisbehavingConnection) }
+    }
+
+    // TODO: comment
+    pub fn message(&self) -> String {
+        String::from_utf8_lossy(&self.message.split(|c| *c == 0x00u8).next().unwrap())
+            .into_owned()
+    }
+}
+
+impl fmt::Display for MisbehavingConnection {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MisbehavingConnection(id={}, score_before={}, score_increase={}, message={}, threshold_exceeded={})",
+            self.id,
+            self.score_before,
+            self.score_increase,
+            self.message(),
+            self.threshold_exceeded,
+        )
     }
 }
