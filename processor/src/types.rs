@@ -103,7 +103,7 @@ pub trait RustBitcoinNetworkMessage {
     fn rust_bitcoin_network_message(&self) -> NetworkMessage;
 }
 
-fn build_raw_network_message(meta: &P2PMessageMetadata, payload: &[u8]) -> RawNetworkMessage {
+fn build_network_message(meta: &P2PMessageMetadata, payload: &[u8]) -> NetworkMessage {
     let mut raw_message: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     for (i, b) in meta.msg_type.iter().enumerate() {
         if *b == 0x00 {
@@ -117,12 +117,33 @@ fn build_raw_network_message(meta: &P2PMessageMetadata, payload: &[u8]) -> RawNe
     raw_message.append(&mut payload.to_vec());
 
     match RawNetworkMessage::consensus_decode(raw_message.as_slice()) {
-        Ok(rnm) => rnm,
+        Ok(rnm) => rnm.payload,
         Err(e) => {
-            println!("Could not create raw_network_message: {}", meta);
-            panic!("{}", e);
+            if let Some(nm) = build_alternative_network_message(meta, payload) {
+                return nm;
+            } else {
+                println!("Could not decode the network message: {}", meta);
+                panic!("{}", e);
+            }
         }
     }
+}
+
+/// There might be cases where rust-bitcoin can't deserialize a message.
+/// This happens, for example, when a message has no elements but rust-bitcoin
+/// expects at least one element. We try to handle known cases here on a best
+/// effort basis.
+fn build_alternative_network_message(meta: &P2PMessageMetadata, _: &[u8]) -> Option<NetworkMessage> {
+    // case: empty addrv2 message.
+    if meta.msg_type() == "addrv2" && meta.msg_size == 0 {
+        println!("emtpy addrv2 {}", meta);
+        return Some(NetworkMessage::AddrV2(vec![]));
+    // case: old ping message with no nonce.
+    } else if meta.msg_type() == "ping" && meta.msg_size == 0 {
+        println!("no-value ping {}", meta);
+        return Some(NetworkMessage::Ping(0));
+    }
+    None
 }
 
 const MAX_SMALL_MSG_LENGTH: usize = 256;
@@ -151,7 +172,7 @@ impl SmallP2PMessage {
 
 impl RustBitcoinNetworkMessage for SmallP2PMessage {
     fn rust_bitcoin_network_message(&self) -> NetworkMessage {
-        return build_raw_network_message(&self.meta, self.trimmed_payload()).payload;
+        return build_network_message(&self.meta, self.trimmed_payload());
     }
 }
 
@@ -176,7 +197,7 @@ impl MediumP2PMessage {
 
 impl RustBitcoinNetworkMessage for MediumP2PMessage {
     fn rust_bitcoin_network_message(&self) -> NetworkMessage {
-        return build_raw_network_message(&self.meta, self.trimmed_payload()).payload;
+        return build_network_message(&self.meta, self.trimmed_payload());
     }
 }
 
@@ -201,7 +222,7 @@ impl LargeP2PMessage {
 
 impl RustBitcoinNetworkMessage for LargeP2PMessage {
     fn rust_bitcoin_network_message(&self) -> NetworkMessage {
-        return build_raw_network_message(&self.meta, self.trimmed_payload()).payload;
+        return build_network_message(&self.meta, self.trimmed_payload());
     }
 }
 
@@ -226,7 +247,7 @@ impl HugeP2PMessage {
 
 impl RustBitcoinNetworkMessage for HugeP2PMessage {
     fn rust_bitcoin_network_message(&self) -> NetworkMessage {
-        return build_raw_network_message(&self.meta, self.trimmed_payload()).payload;
+        return build_network_message(&self.meta, self.trimmed_payload());
     }
 }
 
