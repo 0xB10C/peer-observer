@@ -27,38 +27,20 @@ pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
 ];
 
 pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 32] = [
-    0_f64,      // 0 NODE_NONE
-    1_f64,      // 1 NODE_NETWORK
-    2_f64,	    // 2 NODE_GETUTXO
-    3_f64,      // 4 NODE_BLOOM
-    4_f64,      // 8 NODE_WITNESS
-    5_f64,      // 16 NODE_XTHIN
-    6_f64,      // 32
-    7_f64,      // 64 NODE_COMPACT_FILTERS
-    8_f64,      // 128
-    9_f64,      // 256
-    10_f64,     // 512
-    11_f64,     // 1024 NODE_NETWORK_LIMITED
-    12_f64,
-    13_f64,
-    14_f64,
-    15_f64,
-    16_f64,
-    17_f64,
-    18_f64,
-    19_f64,
-    20_f64,
-    21_f64,
-    22_f64,
-    23_f64,
-    24_f64,
-    25_f64,
-    26_f64,
-    27_f64,
-    28_f64,
-    29_f64,
-    30_f64,
-    31_f64,
+    0_f64,  // 0 NODE_NONE
+    1_f64,  // 1 NODE_NETWORK
+    2_f64,  // 2 NODE_GETUTXO
+    3_f64,  // 4 NODE_BLOOM
+    4_f64,  // 8 NODE_WITNESS
+    5_f64,  // 16 NODE_XTHIN
+    6_f64,  // 32
+    7_f64,  // 64 NODE_COMPACT_FILTERS
+    8_f64,  // 128
+    9_f64,  // 256
+    10_f64, // 512
+    11_f64, // 1024 NODE_NETWORK_LIMITED
+    12_f64, 13_f64, 14_f64, 15_f64, 16_f64, 17_f64, 18_f64, 19_f64, 20_f64, 21_f64, 22_f64, 23_f64,
+    24_f64, 25_f64, 26_f64, 27_f64, 28_f64, 29_f64, 30_f64, 31_f64,
 ];
 
 // Buckets for addr(v2) message timestamp offset in seconds.

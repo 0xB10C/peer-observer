@@ -156,6 +156,18 @@ impl From<bitcoin::Transaction> for Transaction {
     }
 }
 
+impl From<String> for ConnType {
+    fn from(conntype: String) -> Self {
+        match conntype.as_str() {
+            "inbound" => ConnType::Inbound,
+            "outbound-full-relay" => ConnType::OutboundFullRelay,
+            "block-relay-only" => ConnType::BlockRelayOnly,
+            "feeler" => ConnType::OutboundFullRelay,
+            _ => ConnType::Unknown,
+        }
+    }
+}
+
 impl From<network::message_blockdata::Inventory> for InventoryItem {
     fn from(inv_item: network::message_blockdata::Inventory) -> Self {
         use network::message_blockdata::Inventory;

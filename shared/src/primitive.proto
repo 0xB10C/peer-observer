@@ -70,3 +70,12 @@ message PrefilledTransaction {
   required uint32 diff_index = 1; // differentially encoded index
   required Transaction tx = 2;
 }
+
+// A Bitcoin P2P connection type
+enum ConnType {
+  Unknown = 0;
+  Inbound = 1;
+  OutboundFullRelay = 2;
+  BlockRelayOnly = 3;
+  Feeler = 4;
+ }

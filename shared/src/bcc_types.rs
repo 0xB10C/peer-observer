@@ -6,8 +6,8 @@ use bitcoin::hashes::{sha256d, Hash};
 use bitcoin::network::message::NetworkMessage;
 use bitcoin::network::message::RawNetworkMessage;
 
-use shared::p2p;
-use shared::p2p::metadata::ConnType;
+use crate::p2p;
+use crate::primitive::ConnType;
 
 pub enum P2PMessageSize {
     Small,
@@ -52,7 +52,7 @@ impl P2PMessageMetadata {
         String::from_utf8_lossy(&self.msg_type.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
 
-    /// Returns `shared::p2p::Metadata` with a timestamp set to the current
+    /// Returns `p2p::Metadata` with a timestamp set to the current
     /// time.
     pub fn create_protobuf_metadata(&self) -> p2p::Metadata {
         let now = SystemTime::now()
@@ -60,17 +60,12 @@ impl P2PMessageMetadata {
             .unwrap();
         let timestamp = now.as_secs();
         let timestamp_subsec_millis = now.subsec_micros();
+        let conn_type: ConnType = self.peer_conn_type().into();
 
         p2p::Metadata {
             peer_id: self.peer_id,
             addr: self.peer_addr(),
-            conn_type: match self.peer_conn_type().as_str() {
-                "inbound" => ConnType::Inbound as i32,
-                "outbound-full-relay" => ConnType::OutboundFullRelay as i32,
-                "block-relay-only" => ConnType::BlockRelayOnly as i32,
-                "feeler" => ConnType::OutboundFullRelay as i32,
-                _ => ConnType::Unknown as i32,
-            },
+            conn_type: conn_type as i32,
             command: self.msg_type(),
             inbound: self.msg_inbound,
             size: self.msg_size,
@@ -133,7 +128,10 @@ fn build_network_message(meta: &P2PMessageMetadata, payload: &[u8]) -> NetworkMe
 /// This happens, for example, when a message has no elements but rust-bitcoin
 /// expects at least one element. We try to handle known cases here on a best
 /// effort basis.
-fn build_alternative_network_message(meta: &P2PMessageMetadata, _: &[u8]) -> Option<NetworkMessage> {
+fn build_alternative_network_message(
+    meta: &P2PMessageMetadata,
+    _: &[u8],
+) -> Option<NetworkMessage> {
     // case: empty addrv2 message.
     if meta.msg_type() == "addrv2" && meta.msg_size == 0 {
         println!("emtpy addrv2 {}", meta);
@@ -263,8 +261,7 @@ pub struct Connection {
 impl Connection {
     // TODO: comment
     pub fn addr(&self) -> String {
-        String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap())
-            .into_owned()
+        String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
 
     // TODO: comment
@@ -293,6 +290,7 @@ pub struct ClosedConnection {
     pub connection: Connection,
     pub last_block_time: u64,
     pub last_tx_time: u64,
+    pub last_ping_time: u64,
     pub min_ping_time: u64,
     pub relays_txs: bool,
 }
@@ -301,16 +299,16 @@ impl fmt::Display for ClosedConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "ClosedConnection(conn={}, last_block_time={}, last_tx_time={}, min_ping_time={}, relays_txs={})",
+            "ClosedConnection(conn={}, last_block_time={}, last_tx_time={}, last_ping_time={}, min_ping_time={}, relays_txs={})",
             self.connection,
             self.last_block_time,
             self.last_tx_time,
+            self.last_ping_time,
             self.min_ping_time,
             self.relays_txs,
         )
     }
 }
-
 
 impl ClosedConnection {
     pub fn from_bytes(x: &[u8]) -> ClosedConnection {
@@ -336,9 +334,7 @@ impl fmt::Display for InboundConnection {
         write!(
             f,
             "InboundConnection(conn={}, services={}, inbound_onion={})",
-            self.connection,
-            self.services,
-            self.inbound_onion,
+            self.connection, self.services, self.inbound_onion,
         )
     }
 }
@@ -356,11 +352,7 @@ impl OutboundConnection {
 
 impl fmt::Display for OutboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "OutboundConnection(conn={})",
-            self.connection,
-        )
+        write!(f, "OutboundConnection(conn={})", self.connection,)
     }
 }
 
@@ -380,8 +372,7 @@ impl MisbehavingConnection {
 
     // TODO: comment
     pub fn message(&self) -> String {
-        String::from_utf8_lossy(&self.message.split(|c| *c == 0x00u8).next().unwrap())
-            .into_owned()
+        String::from_utf8_lossy(&self.message.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
 }
 

@@ -4,6 +4,8 @@ use nng::{Protocol, Socket};
 
 use prost::Message;
 use shared::p2p;
+use shared::wrapper;
+use shared::wrapper::wrapper::Wrap;
 
 use simple_logger::SimpleLogger;
 
@@ -50,25 +52,40 @@ fn main() {
 
     loop {
         let msg = sub.recv().unwrap();
-        let protobuf = p2p::Message::decode(msg.as_slice()).unwrap();
+        let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
 
-        let conn_type = protobuf.meta.conn_type.to_string();
-        let direction = if protobuf.meta.inbound {
+        if let Some(event) = unwrapped {
+            match event {
+                Wrap::Msg(msg) => {
+                    handle_p2p_message(&msg);
+                }
+                Wrap::Conn(c) => {
+                    println! {
+                        "# CONN {}", c.event.unwrap()
+                    };
+                }
+            }
+        }
+    }
+
+    fn handle_p2p_message(msg: &p2p::Message) {
+        let conn_type = msg.meta.conn_type.to_string();
+        let direction = if msg.meta.inbound {
             "inbound"
         } else {
             "outbound"
         };
         let mut labels = HashMap::<&str, &str>::new();
-        labels.insert(metrics::LABEL_P2P_MSG_TYPE, &protobuf.meta.command);
+        labels.insert(metrics::LABEL_P2P_MSG_TYPE, &msg.meta.command);
         labels.insert(metrics::LABEL_P2P_CONNECTION_TYPE, &conn_type);
         labels.insert(metrics::LABEL_P2P_DIRECTION, &direction);
 
         metrics::P2P_MESSAGE_COUNT.with(&labels).inc();
         metrics::P2P_MESSAGE_BYTES
             .with(&labels)
-            .inc_by(protobuf.meta.size);
+            .inc_by(msg.meta.size);
 
-        match protobuf.msg.as_ref().unwrap() {
+        match msg.msg.as_ref().unwrap() {
             shared::p2p::message::Msg::Addr(addr) => {
                 metrics::P2P_ADDR_ADDRESS_HISTOGRAM
                     .with_label_values(&[direction])
@@ -82,7 +99,7 @@ fn main() {
                     // message. If the remaining offset is larger than or equal to zero, the address
                     // timestamp lies in the past. If the offset is smaller than zero, the address
                     // timestamp lies in the future.
-                    let offset = protobuf.meta.timestamp as i64 - address.timestamp as i64;
+                    let offset = msg.meta.timestamp as i64 - address.timestamp as i64;
                     if offset >= 0 {
                         past_offset.observe(offset as f64);
                     } else {
@@ -90,11 +107,14 @@ fn main() {
                     }
                     for i in 0..32 {
                         if (1 << i) & address.services > 0 {
-                            metrics::P2P_ADDR_SERVICES_HISTOGRAM.with_label_values(&[direction]).observe(i as f64)
+                            metrics::P2P_ADDR_SERVICES_HISTOGRAM
+                                .with_label_values(&[direction])
+                                .observe(i as f64)
                         }
                     }
-                    metrics::P2P_ADDR_SERVICES.with_label_values(&[direction, &address.services.to_string()]).inc();
-
+                    metrics::P2P_ADDR_SERVICES
+                        .with_label_values(&[direction, &address.services.to_string()])
+                        .inc();
                 }
             }
             shared::p2p::message::Msg::Addrv2(addrv2) => {
@@ -110,7 +130,7 @@ fn main() {
                     // message. If the remaining offset is larger than or equal to zero, the address
                     // timestamp lies in the past. If the offset is smaller than zero, the address
                     // timestamp lies in the future.
-                    let offset = protobuf.meta.timestamp as i64 - address.timestamp as i64;
+                    let offset = msg.meta.timestamp as i64 - address.timestamp as i64;
                     if offset >= 0 {
                         past_offset.observe(offset as f64);
                     } else {
@@ -119,10 +139,14 @@ fn main() {
 
                     for i in 0..32 {
                         if (1 << i) & address.services > 0 {
-                            metrics::P2P_ADDRV2_SERVICES_HISTOGRAM.with_label_values(&[direction]).observe(i as f64)
+                            metrics::P2P_ADDRV2_SERVICES_HISTOGRAM
+                                .with_label_values(&[direction])
+                                .observe(i as f64)
                         }
                     }
-                    metrics::P2P_ADDRV2_SERVICES.with_label_values(&[direction, &address.services.to_string()]).inc();
+                    metrics::P2P_ADDRV2_SERVICES
+                        .with_label_values(&[direction, &address.services.to_string()])
+                        .inc();
                 }
             }
             _ => (),

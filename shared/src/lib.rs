@@ -1,5 +1,9 @@
+pub mod connection;
 pub mod p2p;
 pub mod primitive;
+pub mod wrapper;
+
+pub mod bcc_types;
 
 #[cfg(test)]
 mod tests {

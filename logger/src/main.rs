@@ -4,6 +4,8 @@ use nng::{Protocol, Socket};
 
 use prost::Message;
 use shared::p2p;
+use shared::wrapper;
+use shared::wrapper::wrapper::Wrap;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 
@@ -16,13 +18,26 @@ fn main() {
 
     loop {
         let msg = sub.recv().unwrap();
-        let protobuf = p2p::Message::decode(msg.as_slice()).unwrap();
-        println! {
-            "{} from id={} (conn_type={:?}): {}",
-            if protobuf.meta.inbound { "<--"} else { "-->" },
-            protobuf.meta.peer_id,
-            protobuf.meta.conn_type,
-            protobuf.msg.unwrap(),
-        };
+        let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
+
+        if let Some(event) = unwrapped {
+            match event {
+                Wrap::Msg(msg) => {
+                    println! {
+                        "{} {} id={} (conn_type={:?}): {}",
+                        if msg.meta.inbound { "<--"} else { "-->" },
+                        if msg.meta.inbound { "from"} else { "to" },
+                        msg.meta.peer_id,
+                        msg.meta.conn_type,
+                        msg.msg.unwrap(),
+                    };
+                }
+                Wrap::Conn(c) => {
+                    println! {
+                        "# CONN {}", c.event.unwrap()
+                    };
+                }
+            }
+        }
     }
 }

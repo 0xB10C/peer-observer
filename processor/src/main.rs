@@ -7,11 +7,11 @@ use nng::{Protocol, Socket};
 
 use prost::Message;
 
-mod types;
-
-use types::*;
-
+use shared::bcc_types::*;
+use shared::connection;
 use shared::p2p;
+use shared::wrapper::wrapper::Wrap;
+use shared::wrapper::Wrapper;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 
@@ -83,14 +83,11 @@ fn main() {
         .build()
         .unwrap();
 
-    let closed_connection_callback =
-        RingCallback::new(callback_p2p_closed_connection(s.clone()));
+    let closed_connection_callback = RingCallback::new(callback_p2p_closed_connection(s.clone()));
     let outbound_connection_callback =
         RingCallback::new(callback_p2p_outbound_connection(s.clone()));
-    let inbound_connection_callback =
-        RingCallback::new(callback_p2p_inbound_connection(s.clone()));
-    let evicted_connection_callback =
-        RingCallback::new(callback_p2p_evicted_connection(s.clone()));
+    let inbound_connection_callback = RingCallback::new(callback_p2p_inbound_connection(s.clone()));
+    let evicted_connection_callback = RingCallback::new(callback_p2p_evicted_connection(s.clone()));
     let misbehaving_connection_callback =
         RingCallback::new(callback_p2p_misbehaving_connection(s.clone()));
 
@@ -111,35 +108,64 @@ fn main() {
 fn callback_p2p_closed_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let closed = ClosedConnection::from_bytes(x);
-        println!("ClosedConnection {}", closed);
+        let proto = Wrapper {
+            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
+                event: Some(connection::connection_event::Event::Closed(closed.into())),
+            })),
+        };
+        s.send(&proto.encode_to_vec()).unwrap();
     })
 }
 
 fn callback_p2p_outbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let outbound = OutboundConnection::from_bytes(x);
-        println!("OutboundConnection {}", outbound);
+        let proto = Wrapper {
+            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
+                event: Some(connection::connection_event::Event::Outbound(
+                    outbound.into(),
+                )),
+            })),
+        };
+        s.send(&proto.encode_to_vec()).unwrap();
     })
 }
 
 fn callback_p2p_inbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let inbound = InboundConnection::from_bytes(x);
-        println!("InboundConnection {}", inbound);
+        let proto = Wrapper {
+            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
+                event: Some(connection::connection_event::Event::Inbound(inbound.into())),
+            })),
+        };
+        s.send(&proto.encode_to_vec()).unwrap();
     })
 }
 
 fn callback_p2p_evicted_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let evicted = ClosedConnection::from_bytes(x);
-        println!("EvictedConnection {}", evicted);
+        let proto = Wrapper {
+            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
+                event: Some(connection::connection_event::Event::Evicted(evicted.into())),
+            })),
+        };
+        s.send(&proto.encode_to_vec()).unwrap();
     })
 }
 
 fn callback_p2p_misbehaving_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let misbehaving = MisbehavingConnection::from_bytes(x);
-        println!("MisbehavingConnection {}", misbehaving);
+        let proto = Wrapper {
+            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
+                event: Some(connection::connection_event::Event::Misbehaving(
+                    misbehaving.into(),
+                )),
+            })),
+        };
+        s.send(&proto.encode_to_vec()).unwrap();
     })
 }
 
@@ -170,9 +196,11 @@ fn callback_p2p_message(bcc_msg_size: P2PMessageSize, s: Socket) -> Box<dyn FnMu
                 network_msg = msg.rust_bitcoin_network_message();
             }
         };
-        let proto = p2p::Message {
-            meta: metadata.create_protobuf_metadata(),
-            msg: Some((&network_msg).into()),
+        let proto = Wrapper {
+            wrap: Some(Wrap::Msg(p2p::Message {
+                meta: metadata.create_protobuf_metadata(),
+                msg: Some((&network_msg).into()),
+            })),
         };
         s.send(&proto.encode_to_vec()).unwrap();
     })

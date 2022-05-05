@@ -8,14 +8,7 @@ package p2p;
 message Metadata {
   required uint64  peer_id                 = 1;  // Peer id assigned by Bitcoin Core
   required string  addr                    = 2;  // Address of the peer
-  required ConnType conn_type = 3;
-  enum ConnType {
-    Unknown = 0;
-    Inbound = 1;
-    OutboundFullRelay = 2;
-    BlockRelayOnly = 3;
-    Feeler = 4;
-  }
+  required primitive.ConnType conn_type    = 3;
   required string  command                 = 4;  // Command or message type
   required bool    inbound                 = 5;  // Message direction
   required uint64  size                    = 6;  // Serialized message size

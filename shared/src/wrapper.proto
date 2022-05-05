@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package wrapper;
+
+import "p2p.proto";
+import "connection.proto";
+
+message Wrapper {
+  oneof wrap {
+    p2p.Message msg = 1;
+    connection.ConnectionEvent conn = 2;
+  }
+}
+
