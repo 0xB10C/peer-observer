@@ -11,14 +11,19 @@ const NAMESPACE: &str = "networkobserver";
 
 const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_P2P: &str = "p2p";
+const SUBSYSTEM_CONN: &str = "conn";
 
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
 pub const LABEL_P2P_DIRECTION: &str = "direction";
 
 pub const LABEL_P2P_SERVICES: &str = "services";
-
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
+pub const LABEL_CONN_NETWORK: &str = "network";
+pub const LABEL_CONN_ADDR: &str = "addr";
+pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
+pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "message";
+pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
@@ -186,4 +191,53 @@ lazy_static! {
                 .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
             &[LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET]
         ).unwrap();
+
+
+    // -------------------- Connections
+
+    /// Number of inbound connections.
+    pub static ref CONN_INBOUND: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound", "Number of opnened inbound connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK, LABEL_P2P_SERVICES]
+    ).unwrap();
+
+    /// Number of outbound connections.
+    pub static ref CONN_OUTBOUND: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("outbound", "Number of opened outbound connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
+    ).unwrap();
+
+    /// Number of closed connections.
+    pub static ref CONN_CLOSED: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("closed", "Number of closed connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
+    ).unwrap();
+
+    /// Number of evicted connections.
+    pub static ref CONN_EVICTED: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("evicted", "Number of evicted connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
+    ).unwrap();
+
+    /// Number of evicted connections.
+    pub static ref CONN_MISBEHAVING: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("misbehaving", "Number of evicted connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_SCORE_INC, LABEL_CONN_MISBEHAVING_MESSAGE]
+    ).unwrap();
+
 }

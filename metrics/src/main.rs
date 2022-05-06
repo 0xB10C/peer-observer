@@ -6,6 +6,7 @@ use prost::Message;
 use shared::p2p;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
+use shared::connection::connection_event::Event;
 
 use simple_logger::SimpleLogger;
 
@@ -60,9 +61,34 @@ fn main() {
                     handle_p2p_message(&msg);
                 }
                 Wrap::Conn(c) => {
-                    println! {
-                        "# CONN {}", c.event.unwrap()
-                    };
+                    match c.event.unwrap() {
+                        Event::Inbound(i) => {
+                            metrics::CONN_INBOUND
+                                .with_label_values(&[&i.conn.addr, &i.conn.network.to_string(), &i.services.to_string()])
+                                .inc()
+                        },
+                        Event::Outbound(o) => {
+                            metrics::CONN_OUTBOUND
+                                .with_label_values(&[&o.conn.addr, &o.conn.network.to_string()])
+                                .inc()
+                        },
+                        Event::Closed(c) => {
+                            metrics::CONN_CLOSED
+                                .with_label_values(&[&c.conn.addr, &c.conn.network.to_string()])
+                                .inc()
+                        },
+                        Event::Evicted(e) => {
+                            metrics::CONN_EVICTED
+                                .with_label_values(&[&e.conn.addr, &e.conn.network.to_string()])
+                                .inc()
+                        },
+                        Event::Misbehaving(m) => {
+                            metrics::CONN_MISBEHAVING
+                                .with_label_values(&[&m.id.to_string(), &m.score_increase.to_string(), &m.xmessage])
+                                .inc()
+                        },
+                    }
+
                 }
             }
         }
