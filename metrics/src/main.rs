@@ -64,7 +64,7 @@ fn main() {
                     match c.event.unwrap() {
                         Event::Inbound(i) => {
                             metrics::CONN_INBOUND
-                                .with_label_values(&[&i.conn.addr, &i.conn.network.to_string(), &i.services.to_string()])
+                                .with_label_values(&[&i.conn.addr.split(":").next().unwrap_or(""), &i.conn.network.to_string(), &i.services.to_string()])
                                 .inc()
                         },
                         Event::Outbound(o) => {
