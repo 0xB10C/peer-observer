@@ -240,4 +240,13 @@ lazy_static! {
         &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_SCORE_INC, LABEL_CONN_MISBEHAVING_MESSAGE]
     ).unwrap();
 
+    /// Number of evicted connections.
+    pub static ref CONN_MISBEHAVING_SCORE_INC: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("misbehaving_score_increase", "Misbehaving score increase.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_MESSAGE]
+    ).unwrap();
+
 }

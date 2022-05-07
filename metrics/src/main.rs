@@ -85,7 +85,10 @@ fn main() {
                         Event::Misbehaving(m) => {
                             metrics::CONN_MISBEHAVING
                                 .with_label_values(&[&m.id.to_string(), &m.score_increase.to_string(), &m.xmessage])
-                                .inc()
+                                .inc();
+                            metrics::CONN_MISBEHAVING_SCORE_INC
+                                .with_label_values(&[&m.id.to_string(), &m.xmessage])
+                                .inc_by(m.score_increase as u64);
                         },
                     }
 
