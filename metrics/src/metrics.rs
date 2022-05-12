@@ -401,4 +401,15 @@ lazy_static! {
         &[LABEL_P2P_DIRECTION]
     ).unwrap();
 
+    // -------------------- Pings
+
+    /// Number of Pings received by address
+    pub static ref P2P_PING_ADDRESS: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("ping_address", "Number of Pings received by address.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_CONN_ADDR]
+    ).unwrap();
+
 }

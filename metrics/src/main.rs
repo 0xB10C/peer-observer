@@ -206,20 +206,35 @@ fn main() {
             shared::p2p::message::Msg::Inv(inv) => {
                 let mut count_by_invtype: HashMap<String, u64> = HashMap::new();
                 for item in inv.items.iter() {
-                        let count = count_by_invtype.entry(String::from((*item).inv_type())).or_insert(0);
-                        *count += 1;
+                    let count = count_by_invtype
+                        .entry(String::from((*item).inv_type()))
+                        .or_insert(0);
+                    *count += 1;
                 }
                 for (inv_type, count) in &count_by_invtype {
-                    metrics::P2P_INV_ENTRIES.with_label_values(&[direction, inv_type]).inc_by(*count);
+                    metrics::P2P_INV_ENTRIES
+                        .with_label_values(&[direction, inv_type])
+                        .inc_by(*count);
                 }
                 metrics::P2P_INV_ENTRIES_HISTOGRAM
-                    .with_label_values(&[direction]).observe(inv.items.len() as f64);
+                    .with_label_values(&[direction])
+                    .observe(inv.items.len() as f64);
                 if count_by_invtype.len() == 1 {
-                    metrics::P2P_INV_ENTRIES_HOMOGENOUS.with_label_values(&[direction]).inc();
+                    metrics::P2P_INV_ENTRIES_HOMOGENOUS
+                        .with_label_values(&[direction])
+                        .inc();
                 } else {
-                    metrics::P2P_INV_ENTRIES_HETEROGENEOUS.with_label_values(&[direction]).inc();
+                    metrics::P2P_INV_ENTRIES_HETEROGENEOUS
+                        .with_label_values(&[direction])
+                        .inc();
                 }
-
+            }
+            shared::p2p::message::Msg::Ping(_) => {
+                if msg.meta.inbound {
+                    metrics::P2P_PING_ADDRESS
+                        .with_label_values(&[&msg.meta.addr])
+                        .inc();
+                }
             }
             _ => (),
         }
