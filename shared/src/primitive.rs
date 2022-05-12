@@ -203,6 +203,26 @@ impl From<network::message_blockdata::Inventory> for InventoryItem {
     }
 }
 
+impl InventoryItem {
+    pub fn inv_type(&self) -> &str {
+        use inventory_item::Item;
+        if let Some(item) = &self.item {
+            match item {
+                Item::Transaction(_) => "Tx",
+                Item::Block(_) => "Block",
+                Item::Wtx(_) => "WTx",
+                Item::WitnessTransaction(_) => "WitnessTx",
+                Item::WitnessBlock(_) => "WitnessBlock",
+                Item::CompactBlock(_) => "CompactBlock",
+                Item::Unknown(_) => "Unknown",
+                Item::Error(_) => "Error",
+            }
+        } else {
+            "None"
+        }
+    }
+}
+
 impl fmt::Display for InventoryItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use inventory_item::Item;

@@ -19,6 +19,8 @@ pub const LABEL_P2P_DIRECTION: &str = "direction";
 
 pub const LABEL_P2P_SERVICES: &str = "services";
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
+pub const LABEL_P2P_INV_TYPE: &str = "inv_type";
+
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_NETGROUP: &str = "netgroup";
 pub const LABEL_CONN_ADDR: &str = "addr";
@@ -30,6 +32,14 @@ pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
     50f64, 75f64, 100f64, 150f64, 200f64, 250f64, 300f64, 400f64, 500f64, 600f64, 700f64, 800f64,
     900f64, 999f64, 1000f64,
+];
+
+pub const BUCKETS_INV_SIZE: [f64; 46] = [
+    0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
+    50f64, 75f64, 100f64, 150f64, 200f64, 250f64, 300f64, 400f64, 500f64, 600f64, 700f64, 800f64,
+    900f64, 999f64, 1000f64, 2000f64, 3000f64, 4000f64, 5000f64, 6000f64, 7000f64, 8000f64,
+    9000f64, 10_000f64, 20_000f64, 25_000f64, 30_000f64, 35_000f64, 40_000f64, 45_000f64,
+    50_000f64,
 ];
 
 pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 32] = [
@@ -350,6 +360,45 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_MESSAGE]
+    ).unwrap();
+
+    // -------------------- INVs
+
+    /// Number of INV entries send and received with INV type.
+    pub static ref P2P_INV_ENTRIES: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inv_entries", "Number of INV entries send and received with INV type.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_DIRECTION, LABEL_P2P_INV_TYPE]
+    ).unwrap();
+
+    /// Histogram of the service flags (per bit) of addresses contained in an "addr" message.
+    pub static ref P2P_INV_ENTRIES_HISTOGRAM: HistogramVec =
+        register_histogram_vec!(
+            HistogramOpts::new("inv_entries_histogram", "Histogram number of entries contained in an INV message.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_P2P)
+                .buckets(BUCKETS_INV_SIZE.to_vec()),
+            &[LABEL_P2P_DIRECTION]
+        ).unwrap();
+
+    /// Number of homogenous INV entries send and received with INV type.
+    pub static ref P2P_INV_ENTRIES_HOMOGENOUS: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("invs_homogeneous", "Number of homogenous INV entries send and received.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_DIRECTION]
+    ).unwrap();
+
+    /// Number of heterogeneous INV entries send and received with INV type.
+    pub static ref P2P_INV_ENTRIES_HETEROGENEOUS: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("invs_heterogeneous", "Number of heterogenous INVs send and received.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_DIRECTION]
     ).unwrap();
 
 }
