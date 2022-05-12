@@ -30,14 +30,16 @@ struct ClosedConnection
 
 struct InboundConnection
 {
-    struct Connection conn;
+    struct  Connection conn;
     u64     services;
     bool    inbound_onion;
+    u64     existing_connections;
 };
 
 struct OutboundConnection
 {
-    struct Connection conn;
+    struct  Connection conn;
+    u64     existing_connections;
 };
 
 struct MisbehavingConnection
@@ -95,6 +97,7 @@ int trace_inbound_connection(struct pt_regs *ctx) {
     bpf_usdt_readarg(5, ctx, &inbound.conn.net_group);
     bpf_usdt_readarg(6, ctx, &inbound.services);
     bpf_usdt_readarg(7, ctx, &inbound.inbound_onion);
+    bpf_usdt_readarg(8, ctx, &inbound.existing_connections);
 
     inbound_connections.ringbuf_output(&inbound, sizeof(inbound), 0);
     return 0;
@@ -108,6 +111,7 @@ int trace_outbound_connection(struct pt_regs *ctx) {
     bpf_usdt_readarg_p(3, ctx, &outbound.conn.type, MAX_PEER_CONN_TYPE_LENGTH);
     bpf_usdt_readarg(4, ctx, &outbound.conn.network);
     bpf_usdt_readarg(5, ctx, &outbound.conn.net_group);
+    bpf_usdt_readarg(6, ctx, &outbound.existing_connections);
 
     outbound_connections.ringbuf_output(&outbound, sizeof(outbound), 0);
     return 0;

@@ -212,6 +212,14 @@ lazy_static! {
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK, LABEL_P2P_SERVICES]
     ).unwrap();
 
+    /// Number of total inbound connections.
+    pub static ref CONN_INBOUND_TOTAL: IntGauge =
+    register_int_gauge!(
+        Opts::new("inbound_total", "Number of current total inbound connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+    ).unwrap();
+
     /// Number of outbound connections.
     pub static ref CONN_OUTBOUND: IntCounter =
     register_int_counter!(
@@ -227,6 +235,14 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
+    ).unwrap();
+
+    /// Number of current total outbound connections.
+    pub static ref CONN_OUTBOUND_TOTAL: IntGauge =
+    register_int_gauge!(
+        Opts::new("outbound_total", "Number of current total outbound connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
     /// Number of closed connections.
@@ -263,7 +279,7 @@ lazy_static! {
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
     ).unwrap();
 
-    /// Number of evicted connections.
+    /// Number of misbehaving connections.
     pub static ref CONN_MISBEHAVING: IntCounterVec =
     register_int_counter_vec!(
         Opts::new("misbehaving", "Number of evicted connections.")
@@ -272,7 +288,7 @@ lazy_static! {
         &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_SCORE_INC, LABEL_CONN_MISBEHAVING_MESSAGE]
     ).unwrap();
 
-    /// Number of evicted connections.
+    /// Score increase for misbehaving connections.
     pub static ref CONN_MISBEHAVING_SCORE_INC: IntCounterVec =
     register_int_counter_vec!(
         Opts::new("misbehaving_score_increase", "Misbehaving score increase.")

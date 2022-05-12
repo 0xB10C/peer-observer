@@ -48,11 +48,13 @@ message InboundConnection {
   required Connection conn = 1;
   required uint64 services = 2;
   required bool inbound_onion = 3;
+  required uint64 existing_connections = 4;
 }
 
 // An outbound connection.
 message OutboundConnection {
   required Connection conn = 1;
+  required uint64 existing_connections = 2;
 }
 
 // A connection that Bitcoin Core thinks is misbehaving.

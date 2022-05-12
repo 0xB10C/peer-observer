@@ -3,10 +3,10 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 
 use prost::Message;
+use shared::connection::connection_event::Event;
 use shared::p2p;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
-use shared::connection::connection_event::Event;
 
 use simple_logger::SimpleLogger;
 
@@ -60,43 +60,50 @@ fn main() {
                 Wrap::Msg(msg) => {
                     handle_p2p_message(&msg);
                 }
-                Wrap::Conn(c) => {
-                    match c.event.unwrap() {
-                        Event::Inbound(i) => {
-                            metrics::CONN_INBOUND.inc();
-                            metrics::CONN_INBOUND_WITHINFO
-                                .with_label_values(&[&i.conn.addr.split(":").next().unwrap_or(""), &i.conn.network.to_string(), &i.services.to_string()])
-                                .inc();
-                        },
-                        Event::Outbound(o) => {
-                            metrics::CONN_OUTBOUND.inc();
-                            metrics::CONN_OUTBOUND_WITHINFO
-                                .with_label_values(&[&o.conn.addr, &o.conn.network.to_string()])
-                                .inc();
-                        },
-                        Event::Closed(c) => {
-                            metrics::CONN_CLOSED.inc();
-                            metrics::CONN_CLOSED_WITHINFO
-                                .with_label_values(&[&c.conn.addr, &c.conn.network.to_string()])
-                                .inc();
-                        },
-                        Event::Evicted(e) => {
-                            metrics::CONN_EVICTED.inc();
-                            metrics::CONN_EVICTED_WITHINFO
-                                .with_label_values(&[&e.conn.addr, &e.conn.network.to_string()])
-                                .inc();
-                        },
-                        Event::Misbehaving(m) => {
-                            metrics::CONN_MISBEHAVING
-                                .with_label_values(&[&m.id.to_string(), &m.score_increase.to_string(), &m.xmessage])
-                                .inc();
-                            metrics::CONN_MISBEHAVING_SCORE_INC
-                                .with_label_values(&[&m.id.to_string(), &m.xmessage])
-                                .inc_by(m.score_increase as u64);
-                        },
+                Wrap::Conn(c) => match c.event.unwrap() {
+                    Event::Inbound(i) => {
+                        metrics::CONN_INBOUND.inc();
+                        metrics::CONN_INBOUND_TOTAL.set(i.existing_connections as i64 + 1);
+                        metrics::CONN_INBOUND_WITHINFO
+                            .with_label_values(&[
+                                &i.conn.addr.split(":").next().unwrap_or(""),
+                                &i.conn.network.to_string(),
+                                &i.services.to_string(),
+                            ])
+                            .inc();
                     }
-
-                }
+                    Event::Outbound(o) => {
+                        metrics::CONN_OUTBOUND.inc();
+                        metrics::CONN_OUTBOUND_TOTAL.set(o.existing_connections as i64 + 1);
+                        metrics::CONN_OUTBOUND_WITHINFO
+                            .with_label_values(&[&o.conn.addr, &o.conn.network.to_string()])
+                            .inc();
+                    }
+                    Event::Closed(c) => {
+                        metrics::CONN_CLOSED.inc();
+                        metrics::CONN_CLOSED_WITHINFO
+                            .with_label_values(&[&c.conn.addr, &c.conn.network.to_string()])
+                            .inc();
+                    }
+                    Event::Evicted(e) => {
+                        metrics::CONN_EVICTED.inc();
+                        metrics::CONN_EVICTED_WITHINFO
+                            .with_label_values(&[&e.conn.addr, &e.conn.network.to_string()])
+                            .inc();
+                    }
+                    Event::Misbehaving(m) => {
+                        metrics::CONN_MISBEHAVING
+                            .with_label_values(&[
+                                &m.id.to_string(),
+                                &m.score_increase.to_string(),
+                                &m.xmessage,
+                            ])
+                            .inc();
+                        metrics::CONN_MISBEHAVING_SCORE_INC
+                            .with_label_values(&[&m.id.to_string(), &m.xmessage])
+                            .inc_by(m.score_increase as u64);
+                    }
+                },
             }
         }
     }

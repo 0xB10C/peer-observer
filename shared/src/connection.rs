@@ -78,8 +78,8 @@ impl fmt::Display for InboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "InboundConnection(conn={}, services={}, inbound_onion={})",
-            self.conn, self.services, self.inbound_onion,
+            "InboundConnection(conn={}, services={}, inbound_onion={}, existing_connections={})",
+            self.conn, self.services, self.inbound_onion, self.existing_connections,
         )
     }
 }
@@ -90,13 +90,18 @@ impl From<bcc_types::InboundConnection> for InboundConnection {
             conn: iconn.connection.into(),
             services: iconn.services,
             inbound_onion: iconn.inbound_onion,
+            existing_connections: iconn.existing_connections,
         }
     }
 }
 
 impl fmt::Display for OutboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "OutboundConnection(conn={})", self.conn)
+        write!(
+            f,
+            "OutboundConnection(conn={}, existing_connections={})",
+            self.conn, self.existing_connections
+        )
     }
 }
 
@@ -104,6 +109,7 @@ impl From<bcc_types::OutboundConnection> for OutboundConnection {
     fn from(oconn: bcc_types::OutboundConnection) -> Self {
         OutboundConnection {
             conn: oconn.connection.into(),
+            existing_connections: oconn.existing_connections,
         }
     }
 }

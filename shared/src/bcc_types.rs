@@ -321,6 +321,7 @@ pub struct InboundConnection {
     pub connection: Connection,
     pub services: u64,
     pub inbound_onion: bool,
+    pub existing_connections: u64,
 }
 
 impl InboundConnection {
@@ -333,8 +334,8 @@ impl fmt::Display for InboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "InboundConnection(conn={}, services={}, inbound_onion={})",
-            self.connection, self.services, self.inbound_onion,
+            "InboundConnection(conn={}, services={}, inbound_onion={}, existing_connections={})",
+            self.connection, self.services, self.inbound_onion, self.existing_connections,
         )
     }
 }
@@ -342,6 +343,7 @@ impl fmt::Display for InboundConnection {
 #[repr(C)]
 pub struct OutboundConnection {
     pub connection: Connection,
+    pub existing_connections: u64,
 }
 
 impl OutboundConnection {
@@ -352,7 +354,11 @@ impl OutboundConnection {
 
 impl fmt::Display for OutboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "OutboundConnection(conn={})", self.connection,)
+        write!(
+            f,
+            "OutboundConnection(conn={}, existing_connections={})",
+            self.connection, self.existing_connections
+        )
     }
 }
 
