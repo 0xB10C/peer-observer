@@ -63,24 +63,28 @@ fn main() {
                 Wrap::Conn(c) => {
                     match c.event.unwrap() {
                         Event::Inbound(i) => {
-                            metrics::CONN_INBOUND
+                            metrics::CONN_INBOUND.inc();
+                            metrics::CONN_INBOUND_WITHINFO
                                 .with_label_values(&[&i.conn.addr.split(":").next().unwrap_or(""), &i.conn.network.to_string(), &i.services.to_string()])
-                                .inc()
+                                .inc();
                         },
                         Event::Outbound(o) => {
-                            metrics::CONN_OUTBOUND
+                            metrics::CONN_OUTBOUND.inc();
+                            metrics::CONN_OUTBOUND_WITHINFO
                                 .with_label_values(&[&o.conn.addr, &o.conn.network.to_string()])
-                                .inc()
+                                .inc();
                         },
                         Event::Closed(c) => {
-                            metrics::CONN_CLOSED
+                            metrics::CONN_CLOSED.inc();
+                            metrics::CONN_CLOSED_WITHINFO
                                 .with_label_values(&[&c.conn.addr, &c.conn.network.to_string()])
-                                .inc()
+                                .inc();
                         },
                         Event::Evicted(e) => {
-                            metrics::CONN_EVICTED
+                            metrics::CONN_EVICTED.inc();
+                            metrics::CONN_EVICTED_WITHINFO
                                 .with_label_values(&[&e.conn.addr, &e.conn.network.to_string()])
-                                .inc()
+                                .inc();
                         },
                         Event::Misbehaving(m) => {
                             metrics::CONN_MISBEHAVING

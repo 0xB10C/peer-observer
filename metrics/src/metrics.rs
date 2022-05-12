@@ -196,36 +196,68 @@ lazy_static! {
     // -------------------- Connections
 
     /// Number of inbound connections.
-    pub static ref CONN_INBOUND: IntCounterVec =
-    register_int_counter_vec!(
+    pub static ref CONN_INBOUND: IntCounter =
+    register_int_counter!(
         Opts::new("inbound", "Number of opnened inbound connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+    ).unwrap();
+
+    /// Number of inbound connections with information about their address, network, and services.
+    pub static ref CONN_INBOUND_WITHINFO: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound_withinfo", "Number of inbound connections with information about their address, network, and services.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK, LABEL_P2P_SERVICES]
     ).unwrap();
 
     /// Number of outbound connections.
-    pub static ref CONN_OUTBOUND: IntCounterVec =
-    register_int_counter_vec!(
+    pub static ref CONN_OUTBOUND: IntCounter =
+    register_int_counter!(
         Opts::new("outbound", "Number of opened outbound connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+    ).unwrap();
+
+    /// Number of outbound connections with information about their address and network.
+    pub static ref CONN_OUTBOUND_WITHINFO: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("outbound_withinfo", "Number of opened outbound connections with information about their address and network.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
     ).unwrap();
 
     /// Number of closed connections.
-    pub static ref CONN_CLOSED: IntCounterVec =
-    register_int_counter_vec!(
+    pub static ref CONN_CLOSED: IntCounter =
+    register_int_counter!(
         Opts::new("closed", "Number of closed connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+    ).unwrap();
+
+    /// Number of closed connections.
+    pub static ref CONN_CLOSED_WITHINFO: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("closed_withinfo", "Number of closed connections with information about their address and network.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
     ).unwrap();
 
     /// Number of evicted connections.
-    pub static ref CONN_EVICTED: IntCounterVec =
-    register_int_counter_vec!(
+    pub static ref CONN_EVICTED: IntCounter =
+    register_int_counter!(
         Opts::new("evicted", "Number of evicted connections.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN)
+    ).unwrap();
+
+    /// Number of evicted connections with information about their address and network.
+    pub static ref CONN_EVICTED_WITHINFO: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("evicted_withinfo", "Number of evicted connections with information about their address and network.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
