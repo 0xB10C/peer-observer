@@ -20,6 +20,7 @@ pub const LABEL_P2P_DIRECTION: &str = "direction";
 pub const LABEL_P2P_SERVICES: &str = "services";
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
 pub const LABEL_CONN_NETWORK: &str = "network";
+pub const LABEL_CONN_NETGROUP: &str = "netgroup";
 pub const LABEL_CONN_ADDR: &str = "addr";
 pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
 pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "message";
@@ -203,19 +204,46 @@ lazy_static! {
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
-    /// Number of inbound connections with information about their address, network, and services.
-    pub static ref CONN_INBOUND_WITHINFO: IntCounterVec =
+    /// Number of inbound connections by address.
+    pub static ref CONN_INBOUND_ADDRESS: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("inbound_withinfo", "Number of inbound connections with information about their address, network, and services.")
+        Opts::new("inbound_address", "Number of inbound connections by address.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK, LABEL_P2P_SERVICES]
+        &[LABEL_CONN_ADDR]
     ).unwrap();
 
-    /// Number of total inbound connections.
-    pub static ref CONN_INBOUND_TOTAL: IntGauge =
+    /// Number of inbound connections with their services.
+    pub static ref CONN_INBOUND_SERVICE: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound_service", "Number of inbound connections with their services.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_P2P_SERVICES]
+    ).unwrap();
+
+    /// Number of inbound connections by network.
+    pub static ref CONN_INBOUND_NETWORK: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound_network", "Number of inbound connections by network.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_NETWORK]
+    ).unwrap();
+
+    /// Number of inbound connections by netgroup.
+    pub static ref CONN_INBOUND_NETGROUP: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound_netgroup", "Number of inbound connections by netgroup.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_NETGROUP]
+    ).unwrap();
+
+    /// Number of currently open inbound connections.
+    pub static ref CONN_INBOUND_CURRENT: IntGauge =
     register_int_gauge!(
-        Opts::new("inbound_total", "Number of current total inbound connections.")
+        Opts::new("inbound_current", "Number of currently open inbound connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
@@ -228,21 +256,30 @@ lazy_static! {
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
-    /// Number of outbound connections with information about their address and network.
-    pub static ref CONN_OUTBOUND_WITHINFO: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("outbound_withinfo", "Number of opened outbound connections with information about their address and network.")
+    /// Number of currently open outbound connections.
+    pub static ref CONN_OUTBOUND_CURRENT: IntGauge =
+    register_int_gauge!(
+        Opts::new("outbound_current", "Number of currently open outbound connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
     ).unwrap();
 
-    /// Number of current total outbound connections.
-    pub static ref CONN_OUTBOUND_TOTAL: IntGauge =
-    register_int_gauge!(
-        Opts::new("outbound_total", "Number of current total outbound connections.")
+    /// Number of outbound connections by network.
+    pub static ref CONN_OUTBOUND_NETWORK: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("outbound_network", "Number of opened outbound connections by network.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_NETWORK]
+    ).unwrap();
+
+    /// Number of outbound connections by netgroup.
+    pub static ref CONN_OUTBOUND_NETGROUP: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("outbound_netgroup", "Number of opened outbound connections by netgroup.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_NETGROUP]
     ).unwrap();
 
     /// Number of closed connections.
@@ -253,13 +290,31 @@ lazy_static! {
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
-    /// Number of closed connections.
-    pub static ref CONN_CLOSED_WITHINFO: IntCounterVec =
+    /// Number of closed connections by address.
+    pub static ref CONN_CLOSED_ADDRESS: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("closed_withinfo", "Number of closed connections with information about their address and network.")
+        Opts::new("closed_address", "Number of closed connections by address.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
+        &[LABEL_CONN_ADDR]
+    ).unwrap();
+
+    /// Number of closed connections by network.
+    pub static ref CONN_CLOSED_NETWORK: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("closed_network", "Number of closed connections by network.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_NETWORK]
+    ).unwrap();
+
+    /// Number of closed connections by netgroup.
+    pub static ref CONN_CLOSED_NETGROUP: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("closed_netgroup", "Number of closed connections by netgroup.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_NETGROUP]
     ).unwrap();
 
     /// Number of evicted connections.
