@@ -20,6 +20,7 @@ pub const LABEL_P2P_DIRECTION: &str = "direction";
 pub const LABEL_P2P_SERVICES: &str = "services";
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
 pub const LABEL_P2P_INV_TYPE: &str = "inv_type";
+pub const LABEL_P2P_VERSION_USERAGENT: &str = "useragent";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_NETGROUP: &str = "netgroup";
@@ -410,6 +411,26 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_P2P),
         &[LABEL_CONN_ADDR]
+    ).unwrap();
+
+    // -------------------- Version
+
+    /// Number of version messages received by address
+    pub static ref P2P_VERSION_ADDRESS: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("version_address", "Number of version messags received by address.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_CONN_ADDR]
+    ).unwrap();
+
+    /// Number of version messages received by user_agent
+    pub static ref P2P_VERSION_USERAGENT: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("version_useragent", "Number of version messags received by useragent.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_VERSION_USERAGENT]
     ).unwrap();
 
 }

@@ -102,7 +102,7 @@ fn main() {
                     Event::Evicted(e) => {
                         metrics::CONN_EVICTED.inc();
                         metrics::CONN_EVICTED_WITHINFO
-                            .with_label_values(&[&e.conn.addr, &e.conn.network.to_string()])
+                            .with_label_values(&[&e.conn.addr.split(":").next().unwrap_or(""), &e.conn.network.to_string()])
                             .inc();
                     }
                     Event::Misbehaving(m) => {
@@ -232,7 +232,17 @@ fn main() {
             shared::p2p::message::Msg::Ping(_) => {
                 if msg.meta.inbound {
                     metrics::P2P_PING_ADDRESS
-                        .with_label_values(&[&msg.meta.addr])
+                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
+                        .inc();
+                }
+            }
+            shared::p2p::message::Msg::Version(v) => {
+                if msg.meta.inbound {
+                    metrics::P2P_VERSION_ADDRESS
+                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
+                        .inc();
+                    metrics::P2P_VERSION_USERAGENT
+                        .with_label_values(&[&v.user_agent])
                         .inc();
                 }
             }
