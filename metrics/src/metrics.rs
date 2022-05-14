@@ -21,6 +21,7 @@ pub const LABEL_P2P_SERVICES: &str = "services";
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
 pub const LABEL_P2P_INV_TYPE: &str = "inv_type";
 pub const LABEL_P2P_VERSION_USERAGENT: &str = "useragent";
+pub const LABEL_P2P_FEEFILTER_FEERATE: &str = "feerate";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_NETGROUP: &str = "netgroup";
@@ -432,5 +433,17 @@ lazy_static! {
             .subsystem(SUBSYSTEM_P2P),
         &[LABEL_P2P_VERSION_USERAGENT]
     ).unwrap();
+
+    // -------------------- Feefilter
+
+    /// Number of feefilter messages received and sent by feerate
+    pub static ref P2P_FEEFILTER_FEERATE: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("feefilter_feerate", "Number of feefilter messages received and sent by feerate.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_DIRECTION, LABEL_P2P_FEEFILTER_FEERATE]
+    ).unwrap();
+
 
 }

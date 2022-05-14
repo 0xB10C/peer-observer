@@ -246,6 +246,10 @@ fn main() {
                         .inc();
                 }
             }
+            shared::p2p::message::Msg::Feefilter(f) => {
+                metrics::P2P_FEEFILTER_FEERATE
+                    .with_label_values(&[direction, &f.fee.to_string()]).inc();
+            }
             _ => (),
         }
     }
