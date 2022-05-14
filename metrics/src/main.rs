@@ -256,6 +256,10 @@ fn main() {
                     metrics::P2P_REJECT_ADDR
                         .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or(""), &r.rejected_command, &RejectReason::from_i32(r.reason).unwrap().to_string()])
                         .inc();
+                    metrics::P2P_REJECT_MESSAGE
+                        .with_label_values(&[&r.rejected_command, &RejectReason::from_i32(r.reason).unwrap().to_string(), &r.reason_details])
+                        .inc();
+
                 }
             }
             _ => (),

@@ -24,12 +24,13 @@ pub const LABEL_P2P_VERSION_USERAGENT: &str = "useragent";
 pub const LABEL_P2P_FEEFILTER_FEERATE: &str = "feerate";
 pub const LABEL_P2P_REJECT_REASON: &str = "rejectreason";
 pub const LABEL_P2P_REJECT_COMMAND: &str = "rejectcommand";
+pub const LABEL_P2P_REJECT_MESSAGE: &str = "rejectmessage";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_NETGROUP: &str = "netgroup";
 pub const LABEL_CONN_ADDR: &str = "addr";
 pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
-pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "message";
+pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "missbehavingmessage";
 pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
@@ -458,4 +459,13 @@ lazy_static! {
         &[LABEL_CONN_ADDR, LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON]
     ).unwrap();
 
+
+    /// Number of reject messages received by command, reason and message
+    pub static ref P2P_REJECT_MESSAGE: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("reject_message", "Number of reject messages received by command, reason and message.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON, LABEL_P2P_REJECT_MESSAGE]
+    ).unwrap();
 }
