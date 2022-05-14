@@ -22,6 +22,8 @@ pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
 pub const LABEL_P2P_INV_TYPE: &str = "inv_type";
 pub const LABEL_P2P_VERSION_USERAGENT: &str = "useragent";
 pub const LABEL_P2P_FEEFILTER_FEERATE: &str = "feerate";
+pub const LABEL_P2P_REJECT_REASON: &str = "rejectreason";
+pub const LABEL_P2P_REJECT_COMMAND: &str = "rejectcommand";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_NETGROUP: &str = "netgroup";
@@ -445,5 +447,15 @@ lazy_static! {
         &[LABEL_P2P_DIRECTION, LABEL_P2P_FEEFILTER_FEERATE]
     ).unwrap();
 
+    // -------------------- Reject
+
+    /// Number of reject messages received by addr, command and rejected command
+    pub static ref P2P_REJECT_ADDR: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("reject_addr", "Number of reject messages received by addr, command and reason.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_CONN_ADDR, LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON]
+    ).unwrap();
 
 }

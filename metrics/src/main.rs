@@ -7,6 +7,7 @@ use shared::connection::connection_event::Event;
 use shared::p2p;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
+use shared::p2p::reject::RejectReason;
 
 use simple_logger::SimpleLogger;
 
@@ -249,6 +250,13 @@ fn main() {
             shared::p2p::message::Msg::Feefilter(f) => {
                 metrics::P2P_FEEFILTER_FEERATE
                     .with_label_values(&[direction, &f.fee.to_string()]).inc();
+            }
+            shared::p2p::message::Msg::Reject(r) => {
+                if msg.meta.inbound {
+                    metrics::P2P_REJECT_ADDR
+                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or(""), &r.rejected_command, &RejectReason::from_i32(r.reason).unwrap().to_string()])
+                        .inc();
+                }
             }
             _ => (),
         }
