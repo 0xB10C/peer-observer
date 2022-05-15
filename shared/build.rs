@@ -3,12 +3,12 @@ use prost_build;
 fn main() {
     if let Err(e) = prost_build::compile_protos(
         &[
-            "./src/wrapper.proto",
-            "./src/primitive.proto",
-            "./src/p2p.proto",
-            "./src/connection.proto",
+            "./../protobuf/protos/wrapper.proto",
+            "./../protobuf/protos/primitive.proto",
+            "./../protobuf/protos/p2p.proto",
+            "./../protobuf/protos/connection.proto",
         ],
-        &["./src/"],
+        &["./../protobuf/protos/"],
     ) {
         println!("Error while compiling protos: {}", e);
         panic!("Failed to code-gen the Rust structs from the Protobuf definitions");
