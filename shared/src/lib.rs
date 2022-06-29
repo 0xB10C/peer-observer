@@ -1,3 +1,6 @@
+
+pub extern crate bitcoin;
+
 pub mod connection;
 pub mod p2p;
 pub mod primitive;

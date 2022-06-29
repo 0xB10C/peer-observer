@@ -111,7 +111,7 @@ fn build_network_message(meta: &P2PMessageMetadata, payload: &[u8]) -> NetworkMe
     raw_message.append(&mut payload_hash[..4].to_vec());
     raw_message.append(&mut payload.to_vec());
 
-    match RawNetworkMessage::consensus_decode(raw_message.as_slice()) {
+    match RawNetworkMessage::consensus_decode(&mut raw_message.as_slice()) {
         Ok(rnm) => rnm.payload,
         Err(e) => {
             if let Some(nm) = build_alternative_network_message(meta, payload) {

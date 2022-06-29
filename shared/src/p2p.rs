@@ -115,9 +115,9 @@ impl From<bitcoin::util::merkleblock::MerkleBlock> for MerkleBlock {
     fn from(merkle_block: bitcoin::util::merkleblock::MerkleBlock) -> Self {
         MerkleBlock {
             header: merkle_block.header.into(),
-            num_transactions: merkle_block.txn.num_transactions,
-            bits: merkle_block.txn.bits,
-            hashes: merkle_block.txn.hashes.iter().map(|h| h.to_vec()).collect(),
+            num_transactions: merkle_block.txn.num_transactions(),
+            bits: merkle_block.txn.bits().to_vec(),
+            hashes: merkle_block.txn.hashes().iter().map(|h| h.to_vec()).collect(),
         }
     }
 }

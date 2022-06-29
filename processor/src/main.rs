@@ -2,11 +2,11 @@ use bcc::ring_buf::{RingBufBuilder, RingCallback};
 use bcc::{BPFBuilder, USDTContext};
 use std::env;
 
-use bitcoin::network::message::NetworkMessage;
 use nng::{Protocol, Socket};
 
 use prost::Message;
 
+use shared::bitcoin::network::message::NetworkMessage;
 use shared::bcc_types::*;
 use shared::connection;
 use shared::p2p;
