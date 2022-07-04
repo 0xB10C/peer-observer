@@ -31,7 +31,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -106,7 +106,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "networkobserver_p2p_reject_addr{rejectcommand!=\"tx\"}",
@@ -121,7 +121,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -191,7 +191,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "sum(networkobserver_p2p_reject_addr) by (addr)",
@@ -208,7 +208,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -278,7 +278,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "sum(networkobserver_p2p_reject_addr{rejectcommand=\"tx\"}) by (rejectreason)",
@@ -295,7 +295,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -344,7 +344,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "networkobserver_p2p_reject_addr{rejectreason=\"Invalid\"}",
@@ -360,7 +360,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "description": "",
       "fieldConfig": {
@@ -406,7 +406,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "networkobserver_p2p_reject_addr{rejectreason=\"NonStandard\"}",
@@ -422,7 +422,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -471,7 +471,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "networkobserver_p2p_reject_message",

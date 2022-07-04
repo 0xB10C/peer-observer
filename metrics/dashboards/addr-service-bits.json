@@ -40,7 +40,7 @@
       "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 17,
@@ -60,7 +60,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "delta(networkobserver_p2p_addr_services_bits_bucket{direction=\"inbound\"}[1m])",
@@ -98,7 +98,7 @@
       "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 17,
@@ -118,7 +118,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "delta(networkobserver_p2p_addr_services_bits_bucket{direction=\"outbound\"}[1m])",

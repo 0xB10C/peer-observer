@@ -44,7 +44,7 @@
       "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 14,
@@ -66,7 +66,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "increase(networkobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
@@ -109,7 +109,7 @@
       "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 14,
@@ -131,7 +131,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "delta(networkobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
@@ -176,7 +176,7 @@
       "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 14,
@@ -197,7 +197,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": false,
           "expr": "increase(networkobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
@@ -240,7 +240,7 @@
       "dataFormat": "tsbuckets",
       "datasource": {
         "type": "prometheus",
-        "uid": "Ql_9O5U7k"
+        "uid": "prometheus"
       },
       "gridPos": {
         "h": 14,
@@ -261,7 +261,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Ql_9O5U7k"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "delta(networkobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
@@ -309,7 +309,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "Ql_9O5U7k"
+          "uid": "prometheus"
         },
         "definition": "label_values(direction)",
         "hide": 0,
