@@ -1,0 +1,342 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "iteration": 1656923624878,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "cards": {
+        "cardPadding": 0,
+        "cardRound": 0
+      },
+      "color": {
+        "cardColor": "#5794F2",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateCool",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Ql_9O5U7k"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 3,
+      "legend": {
+        "show": true
+      },
+      "repeat": "connection_direction",
+      "repeatDirection": "v",
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": false,
+          "expr": "increase(networkobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
+          "format": "heatmap",
+          "hide": false,
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$connection_direction addr message timestamp offsets (past)",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketSize": "2m",
+      "yAxis": {
+        "format": "s",
+        "logBase": 2,
+        "show": true,
+        "splitFactor": 1
+      },
+      "yBucketBound": "middle"
+    },
+    {
+      "cards": {},
+      "color": {
+        "cardColor": "#5794F2",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolatePlasma",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Ql_9O5U7k"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 9,
+      "legend": {
+        "show": true
+      },
+      "repeat": "connection_direction",
+      "repeatDirection": "v",
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": false,
+          "expr": "delta(networkobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
+          "format": "heatmap",
+          "hide": false,
+          "instant": false,
+          "interval": "1m",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$connection_direction addr message timestamp offsets (future)",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketSize": "2m",
+      "yAxis": {
+        "format": "s",
+        "logBase": 2,
+        "show": true,
+        "splitFactor": 1
+      },
+      "yBucketBound": "middle"
+    },
+    {
+      "cards": {
+        "cardPadding": 0,
+        "cardRound": 0
+      },
+      "color": {
+        "cardColor": "#5794F2",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateCool",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Ql_9O5U7k"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 7,
+      "legend": {
+        "show": true
+      },
+      "repeatDirection": "v",
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": false,
+          "expr": "increase(networkobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
+          "format": "heatmap",
+          "hide": false,
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$connection_direction addrv2 message timestamp offsets (past)",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketSize": "2m",
+      "yAxis": {
+        "format": "s",
+        "logBase": 2,
+        "show": true,
+        "splitFactor": 1
+      },
+      "yBucketBound": "middle"
+    },
+    {
+      "cards": {},
+      "color": {
+        "cardColor": "#5794F2",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolatePlasma",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Ql_9O5U7k"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 8,
+      "legend": {
+        "show": true
+      },
+      "repeatDirection": "v",
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": true,
+          "expr": "delta(networkobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
+          "format": "heatmap",
+          "hide": false,
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$connection_direction addrv2 message timestamp offsets (future)",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketSize": "2m",
+      "yAxis": {
+        "format": "s",
+        "logBase": 2,
+        "show": true,
+        "splitFactor": 1
+      },
+      "yBucketBound": "middle"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [
+    "addr"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "inbound",
+          "value": "inbound"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Ql_9O5U7k"
+        },
+        "definition": "label_values(direction)",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "connection_direction",
+        "options": [],
+        "query": {
+          "query": "label_values(direction)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "addr message timestamp offset",
+  "uid": "xIntFc8nz",
+  "version": 28,
+  "weekStart": ""
+}

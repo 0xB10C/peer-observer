@@ -1,0 +1,365 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Ql_9O5U7k"
+        },
+        "enable": false,
+        "expr": "sum(delta(networkobserver_conn_misbehaving[1m]))",
+        "iconColor": "red",
+        "name": "restarts"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 4,
+  "iteration": 1656923942606,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Ql_9O5U7k"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "repeat": "msg",
+      "repeatDirection": "v",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": true,
+          "expr": "sum(increase(networkobserver_p2p_message_bytes{message=\"$msg\", direction=\"outbound\"}[1m]))",
+          "interval": "1m",
+          "legendFormat": "outbound",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": true,
+          "expr": "sum(-increase(networkobserver_p2p_message_bytes{message=\"$msg\", direction=\"inbound\"}[1m]))",
+          "hide": false,
+          "interval": "1m",
+          "legendFormat": "inbound",
+          "refId": "B"
+        }
+      ],
+      "title": "bandwidth per minute: $msg",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Ql_9O5U7k"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "msgs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "repeat": "msg",
+      "repeatDirection": "v",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": true,
+          "expr": "sum(increase(networkobserver_p2p_message_count{message=\"$msg\", direction=\"outbound\"}[1m]))",
+          "interval": "1m",
+          "legendFormat": "outbound",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ql_9O5U7k"
+          },
+          "exemplar": true,
+          "expr": "sum(-increase(networkobserver_p2p_message_count{message=\"$msg\", direction=\"inbound\"}[1m]))",
+          "hide": false,
+          "interval": "1m",
+          "legendFormat": "inbound",
+          "refId": "B"
+        }
+      ],
+      "title": "messages per minute: $msg",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "addr",
+            "addrv2",
+            "alert",
+            "block",
+            "blocktxn",
+            "cmpctblock",
+            "feefilter",
+            "filterload",
+            "getaddr",
+            "getblocks",
+            "getblocktxn",
+            "getdata",
+            "getheaders",
+            "headers",
+            "inv",
+            "mempool",
+            "notfound",
+            "ping",
+            "pong",
+            "reject",
+            "sendaddrv2",
+            "sendcmpct",
+            "sendheaders",
+            "tx",
+            "verack",
+            "version",
+            "wtxidrelay",
+            "cfcheckpt",
+            "cfheaders",
+            "cfilter",
+            "getcfcheckpt",
+            "getcfheaders",
+            "getcfilters",
+            "merkleblock"
+          ],
+          "value": [
+            "addr",
+            "addrv2",
+            "alert",
+            "block",
+            "blocktxn",
+            "cmpctblock",
+            "feefilter",
+            "filterload",
+            "getaddr",
+            "getblocks",
+            "getblocktxn",
+            "getdata",
+            "getheaders",
+            "headers",
+            "inv",
+            "mempool",
+            "notfound",
+            "ping",
+            "pong",
+            "reject",
+            "sendaddrv2",
+            "sendcmpct",
+            "sendheaders",
+            "tx",
+            "verack",
+            "version",
+            "wtxidrelay",
+            "cfcheckpt",
+            "cfheaders",
+            "cfilter",
+            "getcfcheckpt",
+            "getcfheaders",
+            "getcfilters",
+            "merkleblock"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Ql_9O5U7k"
+        },
+        "definition": "label_values(message)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "msg",
+        "options": [],
+        "query": {
+          "query": "label_values(message)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "messages",
+  "uid": "Q55gTTU7k",
+  "version": 13,
+  "weekStart": ""
+}
