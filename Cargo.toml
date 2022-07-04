@@ -4,5 +4,6 @@ members = [
   "processor",
   "logger",
   "shared",
-  "metrics"
+  "metrics",
+  "archiver"
 ]
