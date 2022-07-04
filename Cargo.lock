@@ -63,7 +63,7 @@ checksum = "cf9ff0bbfd639f15c74af777d81383cf53efb7c93613f6cab67c6c11e05bbf8b"
 [[package]]
 name = "bitcoin"
 version = "0.28.0"
-source = "git+https://github.com/0xB10C/rust-bitcoin?branch=compact-blocks#c7065c4d7767c30cccdd0f591f5b997851ca8ca9"
+source = "git+https://github.com/0xB10C/rust-bitcoin?branch=compact-blocks#9b2cd58c58dfa82afcfe7a3f858bb938ee23eb3f"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -143,9 +143,9 @@ dependencies = [
 
 [[package]]
 name = "fixedbitset"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "279fb028e20b3c4c320317955b77c5e0c9701f05a1d309905d6fc702cdc5053e"
+checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "fnv"
@@ -521,9 +521,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.8.1"
+version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc88c725d61fc6c3132893370cac4a0200e3fedf5da8331c570664b1987f5ca2"
+checksum = "2fd0db749597d91ff862fd1d55ea87f7855a744a8425a64695b6fca237d1dad1"
 
 [[package]]
 name = "syn"
