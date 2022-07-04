@@ -8,8 +8,8 @@ import wrapper_pb2
 
 from nanomsg import Socket, SUB, SUB_SUBSCRIBE
 
-def meta_to_row(meta):
-    return [meta.peer_id, meta.addr, meta.conn_type, meta.inbound, meta.timestamp, meta.timestamp_subsec_micros, meta.command]
+def data_to_row(meta, wrapped):
+    return [meta.peer_id, meta.addr, meta.conn_type, meta.inbound, wrapped.timestamp, wrapped.timestamp_subsec_micros, meta.command]
 
 useragents = dict()
 
@@ -35,7 +35,7 @@ with Socket(SUB) as sub:
                         inv_items_per_type[itype].append(hex_hash)
                     # check if we have multiple inv types
                     if len(inv_items_per_type.keys()) > 1:
-                        row = meta_to_row(meta) + [useragents[meta.peer_id] if meta.peer_id in useragents else "NONE"]  + [inv_items_per_type]
+                        row = data_to_row(meta) + [useragents[meta.peer_id] if meta.peer_id in useragents else "NONE"]  + [inv_items_per_type]
                         print(row)
                         w.writerow(row)
                 elif meta.inbound and meta.command == "version":

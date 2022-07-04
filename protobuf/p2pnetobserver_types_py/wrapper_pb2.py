@@ -16,7 +16,7 @@ import p2p_pb2 as p2p__pb2
 import connection_pb2 as connection__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rwrapper.proto\x12\x07wrapper\x1a\tp2p.proto\x1a\x10\x63onnection.proto\"[\n\x07Wrapper\x12\x1b\n\x03msg\x18\x01 \x01(\x0b\x32\x0c.p2p.MessageH\x00\x12+\n\x04\x63onn\x18\x02 \x01(\x0b\x32\x1b.connection.ConnectionEventH\x00\x42\x06\n\x04wrap')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rwrapper.proto\x12\x07wrapper\x1a\tp2p.proto\x1a\x10\x63onnection.proto\"\x8f\x01\n\x07Wrapper\x12\x11\n\ttimestamp\x18\n \x02(\x04\x12\x1f\n\x17timestamp_subsec_micros\x18\x0b \x02(\r\x12\x1b\n\x03msg\x18\x01 \x01(\x0b\x32\x0c.p2p.MessageH\x00\x12+\n\x04\x63onn\x18\x02 \x01(\x0b\x32\x1b.connection.ConnectionEventH\x00\x42\x06\n\x04wrap')
 
 
 
@@ -31,6 +31,6 @@ _sym_db.RegisterMessage(Wrapper)
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _WRAPPER._serialized_start=55
-  _WRAPPER._serialized_end=146
+  _WRAPPER._serialized_start=56
+  _WRAPPER._serialized_end=199
 # @@protoc_insertion_point(module_scope)

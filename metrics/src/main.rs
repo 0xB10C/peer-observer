@@ -52,12 +52,12 @@ fn main() {
 
     loop {
         let msg = sub.recv().unwrap();
-        let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
+        let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap();
 
-        if let Some(event) = unwrapped {
+        if let Some(event) = unwrapped.wrap {
             match event {
                 Wrap::Msg(msg) => {
-                    handle_p2p_message(&msg);
+                    handle_p2p_message(&msg, unwrapped.timestamp);
                 }
                 Wrap::Conn(c) => match c.event.unwrap() {
                     Event::Inbound(i) => {
@@ -124,7 +124,7 @@ fn main() {
         }
     }
 
-    fn handle_p2p_message(msg: &p2p::Message) {
+    fn handle_p2p_message(msg: &p2p::Message, timestamp: u64) {
         let conn_type = msg.meta.conn_type.to_string();
         let direction = if msg.meta.inbound {
             "inbound"
@@ -155,7 +155,7 @@ fn main() {
                     // message. If the remaining offset is larger than or equal to zero, the address
                     // timestamp lies in the past. If the offset is smaller than zero, the address
                     // timestamp lies in the future.
-                    let offset = msg.meta.timestamp as i64 - address.timestamp as i64;
+                    let offset = timestamp as i64 - address.timestamp as i64;
                     if offset >= 0 {
                         past_offset.observe(offset as f64);
                     } else {
@@ -186,7 +186,7 @@ fn main() {
                     // message. If the remaining offset is larger than or equal to zero, the address
                     // timestamp lies in the past. If the offset is smaller than zero, the address
                     // timestamp lies in the future.
-                    let offset = msg.meta.timestamp as i64 - address.timestamp as i64;
+                    let offset = timestamp as i64 - address.timestamp as i64;
                     if offset >= 0 {
                         past_offset.observe(offset as f64);
                     } else {

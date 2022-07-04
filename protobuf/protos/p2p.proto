@@ -12,8 +12,6 @@ message Metadata {
   required string  command                 = 4;  // Command or message type
   required bool    inbound                 = 5;  // Message direction
   required uint64  size                    = 6;  // Serialized message size
-  required uint64  timestamp               = 7;  // Timestamp (seconds since UNIX epoch) when the message was received.
-  required uint32  timestamp_subsec_micros = 8;  // The fractional part of the timestamp, in whole milliseconds. Always represents a fractional portion of a second (i.e., it is less than one million).
 }
 
 // A P2P message.

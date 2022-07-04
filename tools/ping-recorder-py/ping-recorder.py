@@ -8,8 +8,8 @@ import wrapper_pb2
 
 from nanomsg import Socket, SUB, SUB_SUBSCRIBE
 
-def meta_to_row(meta):
-    return [meta.peer_id, meta.addr, meta.conn_type, meta.inbound, meta.timestamp, meta.timestamp_subsec_micros, meta.command]
+def data_to_row(meta, wrapped):
+    return [meta.peer_id, meta.addr, meta.conn_type, meta.inbound, wrapped.timestamp, wrapped.timestamp_subsec_micros, meta.command]
 
 with Socket(SUB) as sub:
     sub.connect('tcp://127.0.0.1:8883')
@@ -25,12 +25,12 @@ with Socket(SUB) as sub:
                 msg = wrapped.msg
                 meta = msg.meta
                 if meta.inbound and meta.command == "ping":
-                    row = meta_to_row(meta) + [msg.ping.value]
+                    row = data_to_row(meta, wrapped) + [msg.ping.value]
                     wp.writerow(row)
                 elif not meta.inbound and meta.command == "pong":
-                    row = meta_to_row(meta) + [msg.pong.value]
+                    row = data_to_row(meta, wrapped) + [msg.pong.value]
                     wp.writerow(row)
                 elif meta.inbound and meta.command == "version":
-                    row = meta_to_row(meta) + [msg.version.user_agent]
+                    row = data_to_row(meta, wrapped) + [msg.version.user_agent]
                     print(row)
                     wv.writerow(row)

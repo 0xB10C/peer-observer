@@ -1,6 +1,8 @@
 use bcc::ring_buf::{RingBufBuilder, RingCallback};
 use bcc::{BPFBuilder, USDTContext};
+
 use std::env;
+use std::time::SystemTime;
 
 use nng::{Protocol, Socket};
 
@@ -108,7 +110,14 @@ fn main() {
 fn callback_p2p_closed_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let closed = ClosedConnection::from_bytes(x);
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let timestamp = now.as_secs();
+        let timestamp_subsec_millis = now.subsec_micros();
         let proto = Wrapper {
+            timestamp: timestamp,
+            timestamp_subsec_micros: timestamp_subsec_millis,
             wrap: Some(Wrap::Conn(connection::ConnectionEvent {
                 event: Some(connection::connection_event::Event::Closed(closed.into())),
             })),
@@ -120,7 +129,14 @@ fn callback_p2p_closed_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
 fn callback_p2p_outbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let outbound = OutboundConnection::from_bytes(x);
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let timestamp = now.as_secs();
+        let timestamp_subsec_millis = now.subsec_micros();
         let proto = Wrapper {
+            timestamp: timestamp,
+            timestamp_subsec_micros: timestamp_subsec_millis,
             wrap: Some(Wrap::Conn(connection::ConnectionEvent {
                 event: Some(connection::connection_event::Event::Outbound(
                     outbound.into(),
@@ -134,7 +150,14 @@ fn callback_p2p_outbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
 fn callback_p2p_inbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let inbound = InboundConnection::from_bytes(x);
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let timestamp = now.as_secs();
+        let timestamp_subsec_millis = now.subsec_micros();
         let proto = Wrapper {
+            timestamp: timestamp,
+            timestamp_subsec_micros: timestamp_subsec_millis,
             wrap: Some(Wrap::Conn(connection::ConnectionEvent {
                 event: Some(connection::connection_event::Event::Inbound(inbound.into())),
             })),
@@ -146,7 +169,14 @@ fn callback_p2p_inbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
 fn callback_p2p_evicted_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let evicted = ClosedConnection::from_bytes(x);
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let timestamp = now.as_secs();
+        let timestamp_subsec_millis = now.subsec_micros();
         let proto = Wrapper {
+            timestamp: timestamp,
+            timestamp_subsec_micros: timestamp_subsec_millis,
             wrap: Some(Wrap::Conn(connection::ConnectionEvent {
                 event: Some(connection::connection_event::Event::Evicted(evicted.into())),
             })),
@@ -158,7 +188,14 @@ fn callback_p2p_evicted_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
 fn callback_p2p_misbehaving_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
     Box::new(move |x| {
         let misbehaving = MisbehavingConnection::from_bytes(x);
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let timestamp = now.as_secs();
+        let timestamp_subsec_millis = now.subsec_micros();
         let proto = Wrapper {
+            timestamp: timestamp,
+            timestamp_subsec_micros: timestamp_subsec_millis,
             wrap: Some(Wrap::Conn(connection::ConnectionEvent {
                 event: Some(connection::connection_event::Event::Misbehaving(
                     misbehaving.into(),
@@ -196,7 +233,14 @@ fn callback_p2p_message(bcc_msg_size: P2PMessageSize, s: Socket) -> Box<dyn FnMu
                 network_msg = msg.rust_bitcoin_network_message();
             }
         };
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let timestamp = now.as_secs();
+        let timestamp_subsec_millis = now.subsec_micros();
         let proto = Wrapper {
+            timestamp: timestamp,
+            timestamp_subsec_micros: timestamp_subsec_millis,
             wrap: Some(Wrap::Msg(p2p::Message {
                 meta: metadata.create_protobuf_metadata(),
                 msg: Some((&network_msg).into()),

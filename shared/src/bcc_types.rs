@@ -1,4 +1,3 @@
-use std::time::SystemTime;
 use std::{fmt, ptr};
 
 use bitcoin::consensus::encode::Decodable;
@@ -52,14 +51,8 @@ impl P2PMessageMetadata {
         String::from_utf8_lossy(&self.msg_type.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
 
-    /// Returns `p2p::Metadata` with a timestamp set to the current
-    /// time.
+    /// Returns `p2p::Metadata`.
     pub fn create_protobuf_metadata(&self) -> p2p::Metadata {
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = now.as_secs();
-        let timestamp_subsec_millis = now.subsec_micros();
         let conn_type: ConnType = self.peer_conn_type().into();
 
         p2p::Metadata {
@@ -69,8 +62,6 @@ impl P2PMessageMetadata {
             command: self.msg_type(),
             inbound: self.msg_inbound,
             size: self.msg_size,
-            timestamp: timestamp,
-            timestamp_subsec_micros: timestamp_subsec_millis,
         }
     }
 }
