@@ -5,9 +5,9 @@ use nng::{Protocol, Socket};
 use prost::Message;
 use shared::connection::connection_event::Event;
 use shared::p2p;
+use shared::p2p::reject::RejectReason;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
-use shared::p2p::reject::RejectReason;
 
 use simple_logger::SimpleLogger;
 
@@ -15,8 +15,6 @@ use std::env;
 use std::time;
 
 use std::collections::HashMap;
-
-use std::time::Duration;
 
 mod metrics;
 mod metricserver;
@@ -29,9 +27,9 @@ fn main() {
         .nth(1)
         .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
 
-    //SimpleLogger::new()
-    //    .init()
-    //    .expect("Could not setup logging.");
+    SimpleLogger::new()
+        .init()
+        .expect("Could not setup logging.");
 
     log::info!(target: LOG_TARGET, "Starting metrics-server using...",);
 
@@ -103,7 +101,10 @@ fn main() {
                     Event::Evicted(e) => {
                         metrics::CONN_EVICTED.inc();
                         metrics::CONN_EVICTED_WITHINFO
-                            .with_label_values(&[&e.conn.addr.split(":").next().unwrap_or(""), &e.conn.network.to_string()])
+                            .with_label_values(&[
+                                &e.conn.addr.split(":").next().unwrap_or(""),
+                                &e.conn.network.to_string(),
+                            ])
                             .inc();
                     }
                     Event::Misbehaving(m) => {
@@ -249,17 +250,25 @@ fn main() {
             }
             shared::p2p::message::Msg::Feefilter(f) => {
                 metrics::P2P_FEEFILTER_FEERATE
-                    .with_label_values(&[direction, &f.fee.to_string()]).inc();
+                    .with_label_values(&[direction, &f.fee.to_string()])
+                    .inc();
             }
             shared::p2p::message::Msg::Reject(r) => {
                 if msg.meta.inbound {
                     metrics::P2P_REJECT_ADDR
-                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or(""), &r.rejected_command, &RejectReason::from_i32(r.reason).unwrap().to_string()])
+                        .with_label_values(&[
+                            &msg.meta.addr.split(":").next().unwrap_or(""),
+                            &r.rejected_command,
+                            &RejectReason::from_i32(r.reason).unwrap().to_string(),
+                        ])
                         .inc();
                     metrics::P2P_REJECT_MESSAGE
-                        .with_label_values(&[&r.rejected_command, &RejectReason::from_i32(r.reason).unwrap().to_string(), &r.reason_details])
+                        .with_label_values(&[
+                            &r.rejected_command,
+                            &RejectReason::from_i32(r.reason).unwrap().to_string(),
+                            &r.reason_details,
+                        ])
                         .inc();
-
                 }
             }
             _ => (),

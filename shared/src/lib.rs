@@ -1,4 +1,3 @@
-
 pub extern crate bitcoin;
 
 pub mod connection;

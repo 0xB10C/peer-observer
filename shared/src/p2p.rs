@@ -117,7 +117,12 @@ impl From<bitcoin::util::merkleblock::MerkleBlock> for MerkleBlock {
             header: merkle_block.header.into(),
             num_transactions: merkle_block.txn.num_transactions(),
             bits: merkle_block.txn.bits().to_vec(),
-            hashes: merkle_block.txn.hashes().iter().map(|h| h.to_vec()).collect(),
+            hashes: merkle_block
+                .txn
+                .hashes()
+                .iter()
+                .map(|h| h.to_vec())
+                .collect(),
         }
     }
 }
@@ -203,18 +208,18 @@ impl From<network::message_network::VersionMessage> for Version {
     fn from(version_msg: network::message_network::VersionMessage) -> Self {
         Version {
             version: version_msg.version,
-            services: version_msg.services.as_u64(),
+            services: version_msg.services.to_u64(),
             timestamp: version_msg.timestamp,
             receiver: Address {
                 timestamp: 0,
                 port: version_msg.receiver.port as u32,
-                services: version_msg.receiver.services.as_u64(),
+                services: version_msg.receiver.services.to_u64(),
                 address: Some(version_msg.receiver.into()),
             },
             sender: Address {
                 timestamp: 0,
                 port: version_msg.sender.port as u32,
-                services: version_msg.sender.services.as_u64(),
+                services: version_msg.sender.services.to_u64(),
                 address: Some(version_msg.sender.into()),
             },
             nonce: version_msg.nonce,

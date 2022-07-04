@@ -6,8 +6,8 @@ use nng::{Protocol, Socket};
 
 use prost::Message;
 
-use shared::bitcoin::network::message::NetworkMessage;
 use shared::bcc_types::*;
+use shared::bitcoin::network::message::NetworkMessage;
 use shared::connection;
 use shared::p2p;
 use shared::wrapper::wrapper::Wrap;

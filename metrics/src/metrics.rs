@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
-use prometheus::{self, Histogram, HistogramVec, IntCounter, IntCounterVec, IntGauge};
+use prometheus::{self, HistogramVec, IntCounter, IntCounterVec, IntGauge};
 use prometheus::{
-    register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
-    register_int_gauge, HistogramOpts, Opts,
+    register_histogram_vec, register_int_counter, register_int_counter_vec, register_int_gauge,
+    HistogramOpts, Opts,
 };
 
 // Prometheus Metrics

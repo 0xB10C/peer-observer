@@ -3,7 +3,6 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 
 use prost::Message;
-use shared::p2p;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 

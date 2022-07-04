@@ -67,7 +67,7 @@ impl From<(u32, network::address::Address)> for Address {
     fn from(addr_entry: (u32, network::address::Address)) -> Self {
         Address {
             timestamp: addr_entry.0,
-            services: addr_entry.1.services.as_u64(),
+            services: addr_entry.1.services.to_u64(),
             port: addr_entry.1.port as u32,
             address: Some(addr_entry.1.clone().into()),
         }
@@ -78,7 +78,7 @@ impl From<network::address::AddrV2Message> for Address {
     fn from(addrv2: network::address::AddrV2Message) -> Self {
         Address {
             timestamp: addrv2.time,
-            services: addrv2.services.as_u64(),
+            services: addrv2.services.to_u64(),
             port: addrv2.port as u32,
             address: Some(addrv2.addr.into()),
         }
