@@ -27,9 +27,10 @@ fn main() {
         .nth(1)
         .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
 
-    SimpleLogger::new()
-        .init()
-        .expect("Could not setup logging.");
+    // broken: 'Could not determine the UTC offset on this system.
+    //SimpleLogger::new()
+    //    .init()
+    //    .expect("Could not setup logging.");
 
     log::info!(target: LOG_TARGET, "Starting metrics-server using...",);
 
