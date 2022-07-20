@@ -63,7 +63,7 @@ checksum = "cf9ff0bbfd639f15c74af777d81383cf53efb7c93613f6cab67c6c11e05bbf8b"
 [[package]]
 name = "bitcoin"
 version = "0.28.0"
-source = "git+https://github.com/0xB10C/rust-bitcoin?branch=compact-blocks#9b2cd58c58dfa82afcfe7a3f858bb938ee23eb3f"
+source = "git+https://github.com/0xB10C/rust-bitcoin?branch=compact-blocks#8d06fd1a790edcf8ab867496ba500a0095840f3e"
 dependencies = [
  "bech32",
  "bitcoin_hashes",
@@ -72,9 +72,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hashes"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "006cc91e1a1d99819bc5b8214be3555c1f0611b169f527a1fdc54ed1f2b745b0"
+checksum = "90064b8dee6815a6470d60bad07bbbaee885c0e12d04177138fa3291a01b7bc4"
 
 [[package]]
 name = "bitflags"
@@ -480,18 +480,18 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "secp256k1"
-version = "0.22.1"
+version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26947345339603ae8395f68e2f3d85a6b0a8ddfe6315818e80b8504415099db0"
+checksum = "6ece73253dd9e1fb540ff324eae554113a31c25fb598d22fd13b088a6a03f90d"
 dependencies = [
  "secp256k1-sys",
 ]
 
 [[package]]
 name = "secp256k1-sys"
-version = "0.5.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "152e20a0fd0519390fc43ab404663af8a0b794273d2a91d60ad4a39f13ffe110"
+checksum = "7058dc8eaf3f2810d7828680320acda0b25a288f6d288e19278e249bbf74226b"
 dependencies = [
  "cc",
 ]

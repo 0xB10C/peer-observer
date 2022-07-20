@@ -18,7 +18,7 @@ impl From<bip152::HeaderAndShortIds> for CompactBlock {
             short_ids: cmpct_block
                 .short_ids
                 .iter()
-                .map(|id| id.0.to_vec())
+                .map(|id| id.to_bytes().to_vec())
                 .collect(),
             transactions: cmpct_block
                 .prefilled_txs
