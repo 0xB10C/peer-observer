@@ -7,9 +7,8 @@ edition = "2021"
 
 [dependencies]
 prost = "0.10"
-# Use custom branch until #249 is merged (and released)
-bitcoin = {git = "https://github.com/0xB10C/rust-bitcoin", branch = "compact-blocks"}
-#bitcoin = "0.27.1"
+# Use master until 0.29 is released
+bitcoin = {git = "https://github.com/rust-bitcoin/rust-bitcoin", branch = "master"}
 
 base32 = "0.4.0" # for encoding Tor/Onion addresses
 
