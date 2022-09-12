@@ -27,10 +27,10 @@ fn main() {
         .enable_probe("net:outbound_message", "trace_outbound_message")
         .unwrap();
     usdt_ctx
-        .enable_probe("net:evict_connection", "trace_evicted_connection")
+        .enable_probe("net:evicted_connection", "trace_evicted_connection")
         .unwrap();
     usdt_ctx
-        .enable_probe("net:closesocket_connection", "trace_closed_connection")
+        .enable_probe("net:closed_connection", "trace_closed_connection")
         .unwrap();
     usdt_ctx
         .enable_probe("net:inbound_connection", "trace_inbound_connection")

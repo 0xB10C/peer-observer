@@ -18,7 +18,7 @@ message ConnectionEvent {
 message Connection {
   required uint64  peer_id                 = 1;  // Peer id assigned by Bitcoin Core
   required string  addr                    = 2;  // Address of the peer
-  required primitive.ConnType conn_type    = 3;
+  required primitive.ConnType conn_type    = 3;  // Connection type
   required uint32  network                 = 4;  // The network this connection is on
   required uint64  net_group               = 5;  // The net_group assigend by Bitcoin Core
 }
@@ -26,29 +26,19 @@ message Connection {
 // A connection where the underlying socket has been closed.
 message ClosedConnection {
   required Connection conn = 1;
-  required uint64 last_block_time = 2;
-  required uint64 last_tx_time = 3;
-  required uint64 last_ping_time = 4;
-  required uint64 min_ping_time = 5;
-  required bool relays_txs = 6;
+  required uint64 time_established = 2; // Connection established UNIX epoch timestamp
 }
 
 // A connection that Bitcoin Core choose to evict.
 message EvictedConnection {
   required Connection conn = 1;
-  required uint64 last_block_time = 2;
-  required uint64 last_tx_time = 3;
-  required uint64 last_ping_time = 4;
-  required uint64 min_ping_time = 5;
-  required bool relays_txs = 6;
+  required uint64 time_established = 2; // Connection established UNIX epoch timestamp
 }
 
 // An inbound connection.
 message InboundConnection {
   required Connection conn = 1;
-  required uint64 services = 2;
-  required bool inbound_onion = 3;
-  required uint64 existing_connections = 4;
+  required uint64 existing_connections = 2;
 }
 
 // An outbound connection.
