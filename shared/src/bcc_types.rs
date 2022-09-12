@@ -278,25 +278,19 @@ impl fmt::Display for Connection {
 
 #[repr(C)]
 pub struct ClosedConnection {
+    /// The connection being closed
     pub connection: Connection,
-    pub last_block_time: u64,
-    pub last_tx_time: u64,
-    pub last_ping_time: u64,
-    pub min_ping_time: u64,
-    pub relays_txs: bool,
+    /// Connection established UNIX epoch timestamp
+    pub time_established: u64,
 }
 
 impl fmt::Display for ClosedConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "ClosedConnection(conn={}, last_block_time={}, last_tx_time={}, last_ping_time={}, min_ping_time={}, relays_txs={})",
+            "ClosedConnection(conn={}, time_established={})",
             self.connection,
-            self.last_block_time,
-            self.last_tx_time,
-            self.last_ping_time,
-            self.min_ping_time,
-            self.relays_txs,
+            self.time_established,
         )
     }
 }
@@ -309,9 +303,9 @@ impl ClosedConnection {
 
 #[repr(C)]
 pub struct InboundConnection {
+    /// The inbound connection being opened
     pub connection: Connection,
-    pub services: u64,
-    pub inbound_onion: bool,
+    /// Number of inbound connections existing (not including this newly opened one)
     pub existing_connections: u64,
 }
 
@@ -325,15 +319,17 @@ impl fmt::Display for InboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "InboundConnection(conn={}, services={}, inbound_onion={}, existing_connections={})",
-            self.connection, self.services, self.inbound_onion, self.existing_connections,
+            "InboundConnection(conn={}, existing_connections={})",
+            self.connection, self.existing_connections,
         )
     }
 }
 
 #[repr(C)]
 pub struct OutboundConnection {
+    /// The outbound connection being opened
     pub connection: Connection,
+    /// Number of outbound connections existing (not including this newly opened one)
     pub existing_connections: u64,
 }
 

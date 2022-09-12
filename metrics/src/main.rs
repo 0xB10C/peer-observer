@@ -72,9 +72,6 @@ fn main() {
                         metrics::CONN_INBOUND_NETGROUP
                             .with_label_values(&[&i.conn.net_group.to_string()])
                             .inc();
-                        metrics::CONN_INBOUND_SERVICE
-                            .with_label_values(&[&i.services.to_string()])
-                            .inc();
                         metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64 + 1);
                     }
                     Event::Outbound(o) => {

@@ -32,8 +32,8 @@ impl fmt::Display for ClosedConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "ClosedConnection(conn={}, last_block_time={}, last_tx_time={}, last_ping_time={}, min_ping_time={}, relays_tx={})",
-            self.conn, self.last_block_time, self.last_tx_time, self.last_ping_time, self.min_ping_time, self.relays_txs
+            "ClosedConnection(conn={}, time_established={})",
+            self.conn, self.time_established
         )
     }
 }
@@ -42,11 +42,7 @@ impl From<bcc_types::ClosedConnection> for ClosedConnection {
     fn from(cconn: bcc_types::ClosedConnection) -> Self {
         ClosedConnection {
             conn: cconn.connection.into(),
-            last_block_time: cconn.last_block_time,
-            last_tx_time: cconn.last_tx_time,
-            last_ping_time: cconn.last_ping_time,
-            min_ping_time: cconn.min_ping_time,
-            relays_txs: cconn.relays_txs,
+            time_established: cconn.time_established,
         }
     }
 }
@@ -55,8 +51,8 @@ impl fmt::Display for EvictedConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "EvictedConnection(conn={}, last_block_time={}, last_tx_time={}, last_ping_time={}, min_ping_time={}, relays_tx={})",
-            self.conn, self.last_block_time, self.last_tx_time, self.last_ping_time, self.min_ping_time, self.relays_txs
+            "EvictedConnection(conn={}, time_established={})",
+            self.conn, self.time_established
         )
     }
 }
@@ -65,11 +61,7 @@ impl From<bcc_types::ClosedConnection> for EvictedConnection {
     fn from(econn: bcc_types::ClosedConnection) -> Self {
         EvictedConnection {
             conn: econn.connection.into(),
-            last_block_time: econn.last_block_time,
-            last_tx_time: econn.last_tx_time,
-            last_ping_time: econn.last_ping_time,
-            min_ping_time: econn.min_ping_time,
-            relays_txs: econn.relays_txs,
+            time_established: econn.time_established,
         }
     }
 }
@@ -78,8 +70,8 @@ impl fmt::Display for InboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "InboundConnection(conn={}, services={}, inbound_onion={}, existing_connections={})",
-            self.conn, self.services, self.inbound_onion, self.existing_connections,
+            "InboundConnection(conn={}, existing_connections={})",
+            self.conn, self.existing_connections
         )
     }
 }
@@ -88,8 +80,6 @@ impl From<bcc_types::InboundConnection> for InboundConnection {
     fn from(iconn: bcc_types::InboundConnection) -> Self {
         InboundConnection {
             conn: iconn.connection.into(),
-            services: iconn.services,
-            inbound_onion: iconn.inbound_onion,
             existing_connections: iconn.existing_connections,
         }
     }

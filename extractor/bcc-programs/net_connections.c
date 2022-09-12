@@ -21,18 +21,12 @@ struct Connection
 struct ClosedConnection
 {
     struct Connection conn;
-    u64     last_block_time;
-    u64     last_tx_time;
-    u64     last_ping_time;
-    u64     min_ping_time;
-    bool    relays_txs;
+    u64    time_established;
 };
 
 struct InboundConnection
 {
     struct  Connection conn;
-    u64     services;
-    bool    inbound_onion;
     u64     existing_connections;
 };
 
@@ -59,11 +53,7 @@ int trace_evicted_connection(struct pt_regs *ctx) {
     bpf_usdt_readarg_p(3, ctx, &evicted.conn.type, MAX_PEER_CONN_TYPE_LENGTH);
     bpf_usdt_readarg(4, ctx, &evicted.conn.network);
     bpf_usdt_readarg(5, ctx, &evicted.conn.net_group);
-    bpf_usdt_readarg(6, ctx, &evicted.last_block_time);
-    bpf_usdt_readarg(7, ctx, &evicted.last_tx_time);
-    bpf_usdt_readarg(8, ctx, &evicted.last_ping_time);
-    bpf_usdt_readarg(9, ctx, &evicted.min_ping_time);
-    bpf_usdt_readarg(10, ctx, &evicted.relays_txs);
+    bpf_usdt_readarg(6, ctx, &evicted.time_established);
 
     evicted_connections.ringbuf_output(&evicted, sizeof(evicted), 0);
     return 0;
@@ -77,11 +67,7 @@ int trace_closed_connection(struct pt_regs *ctx) {
     bpf_usdt_readarg_p(3, ctx, &closed.conn.type, MAX_PEER_CONN_TYPE_LENGTH);
     bpf_usdt_readarg(4, ctx, &closed.conn.network);
     bpf_usdt_readarg(5, ctx, &closed.conn.net_group);
-    bpf_usdt_readarg(6, ctx, &closed.last_block_time);
-    bpf_usdt_readarg(7, ctx, &closed.last_tx_time);
-    bpf_usdt_readarg(8, ctx, &closed.last_ping_time);
-    bpf_usdt_readarg(9, ctx, &closed.min_ping_time);
-    bpf_usdt_readarg(10, ctx, &closed.relays_txs);
+    bpf_usdt_readarg(6, ctx, &closed.time_established);
 
     closed_connections.ringbuf_output(&closed, sizeof(closed), 0);
     return 0;
@@ -95,9 +81,7 @@ int trace_inbound_connection(struct pt_regs *ctx) {
     bpf_usdt_readarg_p(3, ctx, &inbound.conn.type, MAX_PEER_CONN_TYPE_LENGTH);
     bpf_usdt_readarg(4, ctx, &inbound.conn.network);
     bpf_usdt_readarg(5, ctx, &inbound.conn.net_group);
-    bpf_usdt_readarg(6, ctx, &inbound.services);
-    bpf_usdt_readarg(7, ctx, &inbound.inbound_onion);
-    bpf_usdt_readarg(8, ctx, &inbound.existing_connections);
+    bpf_usdt_readarg(6, ctx, &inbound.existing_connections);
 
     inbound_connections.ringbuf_output(&inbound, sizeof(inbound), 0);
     return 0;

@@ -228,15 +228,6 @@ lazy_static! {
         &[LABEL_CONN_ADDR]
     ).unwrap();
 
-    /// Number of inbound connections with their services.
-    pub static ref CONN_INBOUND_SERVICE: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inbound_service", "Number of inbound connections with their services.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_P2P_SERVICES]
-    ).unwrap();
-
     /// Number of inbound connections by network.
     pub static ref CONN_INBOUND_NETWORK: IntCounterVec =
     register_int_counter_vec!(
