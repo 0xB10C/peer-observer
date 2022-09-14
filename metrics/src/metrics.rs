@@ -47,6 +47,37 @@ pub const BUCKETS_INV_SIZE: [f64; 46] = [
     50_000f64,
 ];
 
+/// Connection life times in seconds
+pub const BUCKETS_CONNECTION_LIFETIME: [f64; 25] = [
+    // zero lifetime
+    0f64,
+    // positive lifetime
+    1f64,
+    2f64,
+    8f64,
+    16f64,
+    32f64,
+    64f64,
+    128f64,
+    256f64,
+    512f64,
+    1024f64,
+    2048f64,
+    4096f64,
+    8192f64,
+    16384f64,
+    32768f64,
+    65536f64,
+    131072f64,
+    262144f64,
+    524288f64,
+    1048576f64,
+    2097152f64,
+    4194304f64,
+    8388608f64,
+    16777216f64,
+];
+
 pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 32] = [
     0_f64,  // 0 NODE_NONE
     1_f64,  // 1 NODE_NETWORK
@@ -322,6 +353,36 @@ lazy_static! {
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_NETGROUP]
     ).unwrap();
+
+    /// Histogram of the connection lifetime (in seconds) for closed connections by connection type.
+    pub static ref CONN_CLOSED_LIFETIME: HistogramVec =
+        register_histogram_vec!(
+            HistogramOpts::new("closed_lifetime", "Histogram of the connection lifetime (in seconds) for closed connections by connection type.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_CONN)
+                .buckets(BUCKETS_CONNECTION_LIFETIME.to_vec()),
+            &[LABEL_P2P_CONNECTION_TYPE]
+        ).unwrap();
+
+    /// Histogram of the connection lifetime (in seconds) for closed connections by netgroup.
+    pub static ref CONN_CLOSED_LIFETIME_NETGROUP: HistogramVec =
+        register_histogram_vec!(
+            HistogramOpts::new("closed_lifetime_netgroup", "Histogram of the connection lifetime (in seconds) for closed connections by netgroup.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_CONN)
+                .buckets(BUCKETS_CONNECTION_LIFETIME.to_vec()),
+            &[LABEL_CONN_NETGROUP]
+        ).unwrap();
+
+    /// Histogram of the connection lifetime (in seconds) for closed connections by network.
+    pub static ref CONN_CLOSED_LIFETIME_NETWORK: HistogramVec =
+        register_histogram_vec!(
+            HistogramOpts::new("closed_lifetime_network", "Histogram of the connection lifetime (in seconds) for closed connections by network.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_CONN)
+                .buckets(BUCKETS_CONNECTION_LIFETIME.to_vec()),
+            &[LABEL_CONN_NETWORK]
+        ).unwrap();
 
     /// Number of evicted connections.
     pub static ref CONN_EVICTED: IntCounter =

@@ -90,6 +90,20 @@ fn main() {
                         metrics::CONN_CLOSED_NETGROUP
                             .with_label_values(&[&c.conn.net_group.to_string()])
                             .inc();
+                        let lifetime: i64 = c.time_established as i64 - unwrapped.timestamp as i64;
+                        if lifetime >= 0 {
+                            metrics::CONN_CLOSED_LIFETIME
+                                .with_label_values(&[&c.conn.conn_type().to_string()])
+                                .observe(lifetime as f64);
+                            metrics::CONN_CLOSED_LIFETIME_NETGROUP
+                                .with_label_values(&[&c.conn.net_group.to_string()])
+                                .observe(lifetime as f64);
+                            metrics::CONN_CLOSED_LIFETIME_NETWORK
+                                .with_label_values(&[&c.conn.network.to_string()])
+                                .observe(lifetime as f64);
+                        } else {
+                            log::debug!(target: LOG_TARGET, "negative connection lifetime of {} seconds", lifetime);
+                        }
                     }
                     Event::Evicted(e) => {
                         metrics::CONN_EVICTED.inc();
