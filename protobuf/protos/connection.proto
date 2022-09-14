@@ -14,12 +14,26 @@ message ConnectionEvent {
   }
 }
 
+// Networks connections can be on.
+// Don't remove networks here, even if they are removed in Bitcoin Core.
+// This breaks backwards compatibllity.
+enum Network {
+  unknown = 0;
+  ipv4 = 1;
+  ipv6 = 2;
+  onion = 3;
+  i2p = 4;
+  cjdns = 5;
+  unroutable = 6;
+  internal = 7;
+}
+
 // A P2P connection between two peers.
 message Connection {
   required uint64  peer_id                 = 1;  // Peer id assigned by Bitcoin Core
   required string  addr                    = 2;  // Address of the peer
   required primitive.ConnType conn_type    = 3;  // Connection type
-  required uint32  network                 = 4;  // The network this connection is on
+  required Network  network                = 4;  // The network this connection is on
   required uint64  net_group               = 5;  // The net_group assigend by Bitcoin Core
 }
 
