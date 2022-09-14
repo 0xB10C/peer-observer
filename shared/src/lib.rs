@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "strict", deny(warnings))]
+
 pub extern crate bitcoin;
 
 pub mod connection;

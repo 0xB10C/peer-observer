@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "strict", deny(warnings))]
+
 use bcc::ring_buf::{RingBufBuilder, RingCallback};
 use bcc::{BPFBuilder, USDTContext};
 

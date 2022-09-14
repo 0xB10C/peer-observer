@@ -8,3 +8,7 @@ shared = { path = "../shared" }
 
 prost = "0.10"
 nng = "1.0.1"
+
+[features]
+# Treat warnings as a build error.
+strict = []
