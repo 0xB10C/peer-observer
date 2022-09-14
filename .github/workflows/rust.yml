@@ -16,6 +16,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Install dependecies
+      run: |
+        # using a PPA as the BCC Ubunut packages are outdated
+        # https://github.com/iovisor/bcc/issues/2678
+        sudo add-apt-repository ppa:hadret/bpfcc
+        sudo apt update -y
+        sudo apt-get install -y libbpfcc libbpfcc-dev protobuf-compiler
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --verbose --all-features
