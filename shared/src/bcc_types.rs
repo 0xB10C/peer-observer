@@ -289,8 +289,7 @@ impl fmt::Display for ClosedConnection {
         write!(
             f,
             "ClosedConnection(conn={}, time_established={})",
-            self.connection,
-            self.time_established,
+            self.connection, self.time_established,
         )
     }
 }
