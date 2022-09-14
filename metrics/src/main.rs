@@ -9,8 +9,6 @@ use shared::p2p::reject::RejectReason;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 
-use simple_logger::SimpleLogger;
-
 use std::env;
 use std::time;
 
@@ -26,11 +24,6 @@ fn main() {
     let metricserver_address = env::args()
         .nth(1)
         .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
-
-    // broken: 'Could not determine the UTC offset on this system.
-    //SimpleLogger::new()
-    //    .init()
-    //    .expect("Could not setup logging.");
 
     log::info!(target: LOG_TARGET, "Starting metrics-server using...",);
 
