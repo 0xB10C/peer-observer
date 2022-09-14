@@ -156,6 +156,14 @@ impl From<bitcoin::Transaction> for Transaction {
     }
 }
 
+// These need to match Bitcoin Core's connection type strings.
+const CONNTYPE_INBOUND: &str = "inbound";
+const CONNTYPE_OUTBOUND_FULL_RELAY: &str = "outbound-full-relay";
+const CONNTYPE_BLOCK_RELAY_ONLY: &str = "block-relay-only";
+const CONNTYPE_FEELER: &str = "feeler";
+
+const CONNTYPE_UNKNOWN: &str = "unknown";
+
 impl From<String> for ConnType {
     fn from(conntype: String) -> Self {
         match conntype.as_str() {
@@ -164,6 +172,18 @@ impl From<String> for ConnType {
             "block-relay-only" => ConnType::BlockRelayOnly,
             "feeler" => ConnType::OutboundFullRelay,
             _ => ConnType::Unknown,
+        }
+    }
+}
+
+impl std::fmt::Display for ConnType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ConnType::Inbound => write!(f, "{}", CONNTYPE_INBOUND),
+            ConnType::OutboundFullRelay => write!(f, "{}", CONNTYPE_OUTBOUND_FULL_RELAY),
+            ConnType::BlockRelayOnly => write!(f, "{}", CONNTYPE_BLOCK_RELAY_ONLY),
+            ConnType::Feeler => write!(f, "{}", CONNTYPE_FEELER),
+            ConnType::Unknown => write!(f, "{}", CONNTYPE_UNKNOWN),
         }
     }
 }
