@@ -5,9 +5,9 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 
 use prost::Message;
-use shared::connection::connection_event::Event;
-use shared::p2p;
-use shared::p2p::reject::RejectReason;
+use shared::net_conn::connection_event::Event;
+use shared::net_msg;
+use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 
@@ -117,7 +117,7 @@ fn main() {
         }
     }
 
-    fn handle_p2p_message(msg: &p2p::Message, timestamp: u64) {
+    fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
         let conn_type = msg.meta.conn_type.to_string();
         let direction = if msg.meta.inbound {
             "inbound"
@@ -135,14 +135,14 @@ fn main() {
             .inc_by(msg.meta.size);
 
         match msg.msg.as_ref().unwrap() {
-            shared::p2p::message::Msg::Addr(addr) => {
+            Msg::Addr(addr) => {
                 metrics::P2P_ADDR_ADDRESS_HISTOGRAM
-                    .with_label_values(&[direction])
+                    .with_label_values(&[&direction])
                     .observe(addr.addresses.len() as f64);
                 let future_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[direction, "future"]);
+                    .with_label_values(&[&direction, "future"]);
                 let past_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[direction, "past"]);
+                    .with_label_values(&[&direction, "past"]);
                 for address in addr.addresses.iter() {
                     // We substract the timestamp in the address from the time we received the
                     // message. If the remaining offset is larger than or equal to zero, the address
@@ -157,23 +157,23 @@ fn main() {
                     for i in 0..32 {
                         if (1 << i) & address.services > 0 {
                             metrics::P2P_ADDR_SERVICES_HISTOGRAM
-                                .with_label_values(&[direction])
+                                .with_label_values(&[&direction])
                                 .observe(i as f64)
                         }
                     }
                     metrics::P2P_ADDR_SERVICES
-                        .with_label_values(&[direction, &address.services.to_string()])
+                        .with_label_values(&[&direction, &address.services.to_string()])
                         .inc();
                 }
             }
-            shared::p2p::message::Msg::Addrv2(addrv2) => {
+            Msg::Addrv2(addrv2) => {
                 metrics::P2P_ADDRV2_ADDRESS_HISTOGRAM
-                    .with_label_values(&[direction])
+                    .with_label_values(&[&direction])
                     .observe(addrv2.addresses.len() as f64);
                 let future_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[direction, "future"]);
+                    .with_label_values(&[&direction, "future"]);
                 let past_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[direction, "past"]);
+                    .with_label_values(&[&direction, "past"]);
                 for address in addrv2.addresses.iter() {
                     // We substract the timestamp in the address from the time we received the
                     // message. If the remaining offset is larger than or equal to zero, the address
@@ -189,16 +189,16 @@ fn main() {
                     for i in 0..32 {
                         if (1 << i) & address.services > 0 {
                             metrics::P2P_ADDRV2_SERVICES_HISTOGRAM
-                                .with_label_values(&[direction])
+                                .with_label_values(&[&direction])
                                 .observe(i as f64)
                         }
                     }
                     metrics::P2P_ADDRV2_SERVICES
-                        .with_label_values(&[direction, &address.services.to_string()])
+                        .with_label_values(&[&direction, &address.services.to_string()])
                         .inc();
                 }
             }
-            shared::p2p::message::Msg::Inv(inv) => {
+            Msg::Inv(inv) => {
                 let mut count_by_invtype: HashMap<String, u64> = HashMap::new();
                 for item in inv.items.iter() {
                     let count = count_by_invtype
@@ -208,30 +208,30 @@ fn main() {
                 }
                 for (inv_type, count) in &count_by_invtype {
                     metrics::P2P_INV_ENTRIES
-                        .with_label_values(&[direction, inv_type])
+                        .with_label_values(&[&direction, inv_type])
                         .inc_by(*count);
                 }
                 metrics::P2P_INV_ENTRIES_HISTOGRAM
-                    .with_label_values(&[direction])
+                    .with_label_values(&[&direction])
                     .observe(inv.items.len() as f64);
                 if count_by_invtype.len() == 1 {
                     metrics::P2P_INV_ENTRIES_HOMOGENOUS
-                        .with_label_values(&[direction])
+                        .with_label_values(&[&direction])
                         .inc();
                 } else {
                     metrics::P2P_INV_ENTRIES_HETEROGENEOUS
-                        .with_label_values(&[direction])
+                        .with_label_values(&[&direction])
                         .inc();
                 }
             }
-            shared::p2p::message::Msg::Ping(_) => {
+            Msg::Ping(_) => {
                 if msg.meta.inbound {
                     metrics::P2P_PING_ADDRESS
                         .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
                         .inc();
                 }
             }
-            shared::p2p::message::Msg::Version(v) => {
+            Msg::Version(v) => {
                 if msg.meta.inbound {
                     metrics::P2P_VERSION_ADDRESS
                         .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
@@ -241,12 +241,12 @@ fn main() {
                         .inc();
                 }
             }
-            shared::p2p::message::Msg::Feefilter(f) => {
+            Msg::Feefilter(f) => {
                 metrics::P2P_FEEFILTER_FEERATE
-                    .with_label_values(&[direction, &f.fee.to_string()])
+                    .with_label_values(&[&direction, &f.fee.to_string()])
                     .inc();
             }
-            shared::p2p::message::Msg::Reject(r) => {
+            Msg::Reject(r) => {
                 if msg.meta.inbound {
                     metrics::P2P_REJECT_ADDR
                         .with_label_values(&[

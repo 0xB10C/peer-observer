@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package connection;
+package net_conn;
 
 import "primitive.proto";
 
