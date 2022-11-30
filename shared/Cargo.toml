@@ -7,9 +7,7 @@ edition = "2021"
 
 [dependencies]
 prost = "0.10"
-# Use master until 0.29 is released
-bitcoin = "0.29"
-
+bitcoin = "0.29.0"
 base32 = "0.4.0" # for encoding Tor/Onion addresses
 
 [build-dependencies]

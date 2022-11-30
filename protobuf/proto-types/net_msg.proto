@@ -2,7 +2,7 @@ syntax = "proto2";
 
 import "primitive.proto";
 
-package p2p;
+package net_msg;
 
 // Metadata for a P2P message.
 message Metadata {
@@ -31,7 +31,7 @@ message Message {
     GetBlocks getblocks = 12;
     Version version = 13;
     NotFound notfound = 14;
-    Reject reject = 15;
+    Reject reject = 39;
     CompactBlock compactblock = 16;
     SendCompact sendcompact = 17;
     Block block = 18;

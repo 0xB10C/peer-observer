@@ -1,12 +1,13 @@
-use crate::bcc_types;
 use crate::primitive::ConnType;
 use std::fmt;
 
-// structs are generated via the connection.proto file
-include!(concat!(env!("OUT_DIR"), "/connection.rs"));
+use crate::ctypes;
 
-impl From<bcc_types::Connection> for Connection {
-    fn from(conn: bcc_types::Connection) -> Self {
+// structs are generated via the connection.proto file
+include!(concat!(env!("OUT_DIR"), "/net_conn.rs"));
+
+impl From<ctypes::Connection> for Connection {
+    fn from(conn: ctypes::Connection) -> Self {
         let conn_type: ConnType = conn.conn_type().into();
         Connection {
             peer_id: conn.id,
@@ -38,8 +39,8 @@ impl fmt::Display for ClosedConnection {
     }
 }
 
-impl From<bcc_types::ClosedConnection> for ClosedConnection {
-    fn from(cconn: bcc_types::ClosedConnection) -> Self {
+impl From<ctypes::ClosedConnection> for ClosedConnection {
+    fn from(cconn: ctypes::ClosedConnection) -> Self {
         ClosedConnection {
             conn: cconn.connection.into(),
             time_established: cconn.time_established,
@@ -57,8 +58,8 @@ impl fmt::Display for EvictedConnection {
     }
 }
 
-impl From<bcc_types::ClosedConnection> for EvictedConnection {
-    fn from(econn: bcc_types::ClosedConnection) -> Self {
+impl From<ctypes::ClosedConnection> for EvictedConnection {
+    fn from(econn: ctypes::ClosedConnection) -> Self {
         EvictedConnection {
             conn: econn.connection.into(),
             time_established: econn.time_established,
@@ -76,8 +77,8 @@ impl fmt::Display for InboundConnection {
     }
 }
 
-impl From<bcc_types::InboundConnection> for InboundConnection {
-    fn from(iconn: bcc_types::InboundConnection) -> Self {
+impl From<ctypes::InboundConnection> for InboundConnection {
+    fn from(iconn: ctypes::InboundConnection) -> Self {
         InboundConnection {
             conn: iconn.connection.into(),
             existing_connections: iconn.existing_connections,
@@ -95,8 +96,8 @@ impl fmt::Display for OutboundConnection {
     }
 }
 
-impl From<bcc_types::OutboundConnection> for OutboundConnection {
-    fn from(oconn: bcc_types::OutboundConnection) -> Self {
+impl From<ctypes::OutboundConnection> for OutboundConnection {
+    fn from(oconn: ctypes::OutboundConnection) -> Self {
         OutboundConnection {
             conn: oconn.connection.into(),
             existing_connections: oconn.existing_connections,
@@ -110,8 +111,8 @@ impl fmt::Display for MisbehavingConnection {
     }
 }
 
-impl From<bcc_types::MisbehavingConnection> for MisbehavingConnection {
-    fn from(mconn: bcc_types::MisbehavingConnection) -> Self {
+impl From<ctypes::MisbehavingConnection> for MisbehavingConnection {
+    fn from(mconn: ctypes::MisbehavingConnection) -> Self {
         MisbehavingConnection {
             id: mconn.id,
             score_before: mconn.score_before,

@@ -1,253 +1,290 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use bcc::ring_buf::{RingBufBuilder, RingCallback};
-use bcc::{BPFBuilder, USDTContext};
-
 use std::env;
+use std::time::Duration;
 use std::time::SystemTime;
+
+use libc;
+
+use libbpf_rs::RingBufferBuilder;
 
 use nng::{Protocol, Socket};
 
 use prost::Message;
 
-use shared::bcc_types::*;
 use shared::bitcoin::network::message::NetworkMessage;
-use shared::connection;
-use shared::p2p;
+use shared::ctypes::{
+    ClosedConnection, HugeP2PMessage, InboundConnection, LargeP2PMessage, MediumP2PMessage,
+    MisbehavingConnection, OutboundConnection, P2PMessageMetadata, P2PMessageSize,
+    RustBitcoinNetworkMessage, SmallP2PMessage,
+};
+use shared::net_conn;
+use shared::net_msg;
 use shared::wrapper::wrapper::Wrap;
 use shared::wrapper::Wrapper;
 
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
+fn bump_memlock_rlimit() {
+    let rlimit = libc::rlimit {
+        rlim_cur: 128 << 20,
+        rlim_max: 128 << 20,
+    };
 
-fn main() {
-    let bitcoind_path = env::args().nth(1).expect("No bitcoind path provided.");
-    let mut usdt_ctx = USDTContext::from_binary_path(bitcoind_path).unwrap();
-    usdt_ctx
-        .enable_probe("net:inbound_message", "trace_inbound_message_rb")
-        .unwrap();
-    usdt_ctx
-        .enable_probe("net:outbound_message", "trace_outbound_message")
-        .unwrap();
-    usdt_ctx
-        .enable_probe("net:evicted_connection", "trace_evicted_connection")
-        .unwrap();
-    usdt_ctx
-        .enable_probe("net:closed_connection", "trace_closed_connection")
-        .unwrap();
-    usdt_ctx
-        .enable_probe("net:inbound_connection", "trace_inbound_connection")
-        .unwrap();
-    usdt_ctx
-        .enable_probe("net:outbound_connection", "trace_outbound_connection")
-        .unwrap();
-    usdt_ctx
-        .enable_probe("net:misbehaving_connection", "trace_misbehaving_connection")
-        .unwrap();
-    let code = concat!(
-        "#include <uapi/linux/ptrace.h>",
-        "\n\n",
-        include_str!("../bcc-programs/net_in_outbound.c"),
-        include_str!("../bcc-programs/net_connections.c"),
-    );
-    let bpf = BPFBuilder::new(code)
-        .unwrap()
-        .add_usdt_context(usdt_ctx)
-        .unwrap()
-        .build()
-        .unwrap();
-
-    let small_msgs_rb = bpf.table("messages_small").unwrap();
-    let medium_msgs_rb = bpf.table("messages_medium").unwrap();
-    let large_msgs_rb = bpf.table("messages_large").unwrap();
-    let huge_msgs_rb = bpf.table("messages_huge").unwrap();
-
-    let closed_conns_rb = bpf.table("closed_connections").unwrap();
-    let outbound_conns_rb = bpf.table("outbound_connections").unwrap();
-    let inbound_conns_rb = bpf.table("inbound_connections").unwrap();
-    let misbehaving_conns_rb = bpf.table("misbehaving_connections").unwrap();
-    let evicted_conns_rb = bpf.table("evicted_connections").unwrap();
-
-    let s: Socket = Socket::new(Protocol::Pub0).unwrap();
-    s.listen(ADDRESS).unwrap();
-    println!("listening on {}", ADDRESS);
-
-    let small_msg_callback =
-        RingCallback::new(callback_p2p_message(P2PMessageSize::Small, s.clone()));
-    let medium_msg_callback =
-        RingCallback::new(callback_p2p_message(P2PMessageSize::Medium, s.clone()));
-    let large_msg_callback =
-        RingCallback::new(callback_p2p_message(P2PMessageSize::Large, s.clone()));
-    let huge_msg_callback =
-        RingCallback::new(callback_p2p_message(P2PMessageSize::Huge, s.clone()));
-
-    let mut p2p_messages = RingBufBuilder::new(small_msgs_rb, small_msg_callback)
-        .add(medium_msgs_rb, medium_msg_callback)
-        .add(large_msgs_rb, large_msg_callback)
-        .add(huge_msgs_rb, huge_msg_callback)
-        .build()
-        .unwrap();
-
-    let closed_connection_callback = RingCallback::new(callback_p2p_closed_connection(s.clone()));
-    let outbound_connection_callback =
-        RingCallback::new(callback_p2p_outbound_connection(s.clone()));
-    let inbound_connection_callback = RingCallback::new(callback_p2p_inbound_connection(s.clone()));
-    let evicted_connection_callback = RingCallback::new(callback_p2p_evicted_connection(s.clone()));
-    let misbehaving_connection_callback =
-        RingCallback::new(callback_p2p_misbehaving_connection(s.clone()));
-
-    let mut p2p_connections = RingBufBuilder::new(closed_conns_rb, closed_connection_callback)
-        .add(outbound_conns_rb, outbound_connection_callback)
-        .add(inbound_conns_rb, inbound_connection_callback)
-        .add(evicted_conns_rb, evicted_connection_callback)
-        .add(misbehaving_conns_rb, misbehaving_connection_callback)
-        .build()
-        .unwrap();
-
-    loop {
-        p2p_messages.poll(20);
-        p2p_connections.poll(20);
+    if unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlimit) } != 0 {
+        panic!("Failed to increase rlimit");
     }
 }
 
-fn callback_p2p_closed_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
-    Box::new(move |x| {
-        let closed = ClosedConnection::from_bytes(x);
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = now.as_secs();
-        let timestamp_subsec_millis = now.subsec_micros();
-        let proto = Wrapper {
-            timestamp: timestamp,
-            timestamp_subsec_micros: timestamp_subsec_millis,
-            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
-                event: Some(connection::connection_event::Event::Closed(closed.into())),
-            })),
-        };
-        s.send(&proto.encode_to_vec()).unwrap();
-    })
+#[path = "tracing.gen.rs"]
+mod tracing;
+
+const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
+
+fn hook_usdt(
+    tracing_fn: &mut libbpf_rs::Program,
+    pid: i32,
+    path: &str,
+    context: &str,
+    name: &str,
+) -> Result<libbpf_rs::Link, libbpf_rs::Error> {
+    match tracing_fn.attach_usdt(pid, &path, context, name) {
+        Ok(link) => Ok(link),
+        Err(e) => {
+            println!(
+                "Could not attach to USDT tracepoint {}:{} in '{}'",
+                context, name, path
+            );
+            Err(e)
+        }
+    }
 }
 
-fn callback_p2p_outbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
-    Box::new(move |x| {
-        let outbound = OutboundConnection::from_bytes(x);
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = now.as_secs();
-        let timestamp_subsec_millis = now.subsec_micros();
-        let proto = Wrapper {
-            timestamp: timestamp,
-            timestamp_subsec_micros: timestamp_subsec_millis,
-            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
-                event: Some(connection::connection_event::Event::Outbound(
-                    outbound.into(),
-                )),
-            })),
-        };
-        s.send(&proto.encode_to_vec()).unwrap();
-    })
+fn attach_usdt_tracepoints(
+    fns: &mut tracing::TracingProgsMut,
+    pid: i32,
+    path: &str,
+) -> Result<Vec<libbpf_rs::Link>, libbpf_rs::Error> {
+    let mut links = Vec::new();
+    // for readability of fn to -> context:name mappings, don't rustfmt this
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    {
+        // net msg
+        links.push(hook_usdt(fns.handle_net_msg_inbound(),      pid, path, "net", "inbound_message")?);
+        links.push(hook_usdt(fns.handle_net_msg_outbound(),     pid, path, "net", "outbound_message")?);
+        // net conn
+        links.push(hook_usdt(fns.handle_net_conn_inbound(),     pid, path, "net", "inbound_connection")?);
+        links.push(hook_usdt(fns.handle_net_conn_outbound(),    pid, path, "net", "outbound_connection")?);
+        links.push(hook_usdt(fns.handle_net_conn_closed(),      pid, path, "net", "closed_connection")?);
+        links.push(hook_usdt(fns.handle_net_conn_evicted(),     pid, path, "net", "evicted_connection")?);
+        links.push(hook_usdt(fns.handle_net_conn_misbehaving(), pid, path, "net", "misbehaving_connection")?);
+    }
+    Ok(links)
 }
 
-fn callback_p2p_inbound_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
-    Box::new(move |x| {
-        let inbound = InboundConnection::from_bytes(x);
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = now.as_secs();
-        let timestamp_subsec_millis = now.subsec_micros();
-        let proto = Wrapper {
-            timestamp: timestamp,
-            timestamp_subsec_micros: timestamp_subsec_millis,
-            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
-                event: Some(connection::connection_event::Event::Inbound(inbound.into())),
-            })),
+fn main() -> Result<(), libbpf_rs::Error> {
+    let bitcoind_path = env::args().nth(1).expect("No bitcoind path provided.");
+
+    let mut skel_builder = tracing::TracingSkelBuilder::default();
+    skel_builder.obj_builder.debug(true);
+
+    bump_memlock_rlimit();
+
+    let open_skel = skel_builder.open().unwrap();
+    let mut skel = match open_skel.load() {
+        Ok(skel) => skel,
+        Err(e) => {
+            panic!("Could not load skeleton file: {}", e);
+        }
+    };
+
+    let _links = attach_usdt_tracepoints(&mut skel.progs_mut(), -1, &bitcoind_path)
+        .expect("Could not attach to USDT tracepoints");
+
+    let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
+    socket.listen(ADDRESS).unwrap();
+    println!("listening on {}", ADDRESS);
+
+    let maps = skel.maps();
+    let mut ringbuff_builder = RingBufferBuilder::new();
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    ringbuff_builder
+        .add(maps.net_msg_small(), |data| { handle_net_message(data, P2PMessageSize::Small, socket.clone()) })?
+        .add(maps.net_msg_medium(), |data| { handle_net_message(data, P2PMessageSize::Medium, socket.clone()) })?
+        .add(maps.net_msg_large(), |data| { handle_net_message(data, P2PMessageSize::Large, socket.clone()) })?
+        .add(maps.net_msg_huge(), |data| { handle_net_message(data, P2PMessageSize::Huge, socket.clone()) })?
+        .add(maps.net_conn_inbound(), |data| { handle_net_conn_inbound(data, socket.clone()) })?
+        .add(maps.net_conn_outbound(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
+        .add(maps.net_conn_closed(), |data| { handle_net_conn_closed(data, socket.clone()) })?
+        .add(maps.net_conn_evicted(), |data| { handle_net_conn_evicted(data, socket.clone()) })?
+        .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?;
+    let ring_buffers = ringbuff_builder.build()?;
+
+    loop {
+        match ring_buffers.poll(Duration::from_millis(1)) {
+            Ok(_) => (),
+            Err(e) => println!("Failed to poll on ring buffers {}", e),
         };
-        s.send(&proto.encode_to_vec()).unwrap();
-    })
+    }
 }
 
-fn callback_p2p_evicted_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
-    Box::new(move |x| {
-        let evicted = ClosedConnection::from_bytes(x);
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = now.as_secs();
-        let timestamp_subsec_millis = now.subsec_micros();
-        let proto = Wrapper {
-            timestamp: timestamp,
-            timestamp_subsec_micros: timestamp_subsec_millis,
-            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
-                event: Some(connection::connection_event::Event::Evicted(evicted.into())),
-            })),
-        };
-        s.send(&proto.encode_to_vec()).unwrap();
-    })
+fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {
+    let closed = ClosedConnection::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Closed(closed.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
 }
 
-fn callback_p2p_misbehaving_connection(s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
-    Box::new(move |x| {
-        let misbehaving = MisbehavingConnection::from_bytes(x);
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = now.as_secs();
-        let timestamp_subsec_millis = now.subsec_micros();
-        let proto = Wrapper {
-            timestamp: timestamp,
-            timestamp_subsec_micros: timestamp_subsec_millis,
-            wrap: Some(Wrap::Conn(connection::ConnectionEvent {
-                event: Some(connection::connection_event::Event::Misbehaving(
-                    misbehaving.into(),
-                )),
-            })),
-        };
-        s.send(&proto.encode_to_vec()).unwrap();
-    })
+fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
+    let outbound = OutboundConnection::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Outbound(outbound.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
 }
 
-fn callback_p2p_message(bcc_msg_size: P2PMessageSize, s: Socket) -> Box<dyn FnMut(&[u8]) + Send> {
-    Box::new(move |x| {
-        let metadata: P2PMessageMetadata;
-        let network_msg: NetworkMessage;
+fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
+    let inbound = InboundConnection::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Inbound(inbound.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
 
-        match bcc_msg_size {
-            P2PMessageSize::Small => {
-                let msg = SmallP2PMessage::from_bytes(x);
-                metadata = msg.meta.clone();
-                network_msg = msg.rust_bitcoin_network_message();
+fn handle_net_conn_evicted(data: &[u8], s: Socket) -> i32 {
+    let evicted = ClosedConnection::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Evicted(evicted.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
+    let misbehaving = MisbehavingConnection::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Misbehaving(
+                misbehaving.into(),
+            )),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
+    let metadata: P2PMessageMetadata;
+    let network_msg: NetworkMessage;
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    match size {
+        P2PMessageSize::Small => {
+            let msg = SmallP2PMessage::from_bytes(data);
+            metadata = msg.meta.clone();
+            network_msg = match msg.rust_bitcoin_network_message() {
+                Ok(msg) => msg,
+                Err(e) => {
+                    // TODO: warn
+                    println!("could not handle small msg: {}", e);
+                    return -1;
+                }
             }
-            P2PMessageSize::Medium => {
-                let msg = MediumP2PMessage::from_bytes(x);
-                metadata = msg.meta.clone();
-                network_msg = msg.rust_bitcoin_network_message();
+        }
+        P2PMessageSize::Medium => {
+            let msg = MediumP2PMessage::from_bytes(data);
+            metadata = msg.meta.clone();
+            network_msg = match msg.rust_bitcoin_network_message() {
+                Ok(msg) => msg,
+                Err(e) => {
+                    // TODO: warn
+                    println!("could not handle medium msg: {}", e);
+                    return -1;
+                }
             }
-            P2PMessageSize::Large => {
-                let msg = LargeP2PMessage::from_bytes(x);
-                metadata = msg.meta.clone();
-                network_msg = msg.rust_bitcoin_network_message();
+        }
+        P2PMessageSize::Large => {
+            let msg = LargeP2PMessage::from_bytes(data);
+            metadata = msg.meta.clone();
+            network_msg = match msg.rust_bitcoin_network_message() {
+                Ok(msg) => msg,
+                Err(e) => {
+                    // TODO: warn
+                    println!("could not handle large msg: {}", e);
+                    return -1;
+                }
             }
-            P2PMessageSize::Huge => {
-                let msg = HugeP2PMessage::from_bytes(x);
-                metadata = msg.meta.clone();
-                network_msg = msg.rust_bitcoin_network_message();
+        }
+        P2PMessageSize::Huge => {
+            let msg = HugeP2PMessage::from_bytes(data);
+            metadata = msg.meta.clone();
+            network_msg = match msg.rust_bitcoin_network_message() {
+                Ok(msg) => msg,
+                Err(e) => {
+                    // TODO: warn
+                    println!("could not handle huge msg: {}", e);
+                    return -1;
+                }
             }
-        };
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
-        let timestamp = now.as_secs();
-        let timestamp_subsec_millis = now.subsec_micros();
-        let proto = Wrapper {
-            timestamp: timestamp,
-            timestamp_subsec_micros: timestamp_subsec_millis,
-            wrap: Some(Wrap::Msg(p2p::Message {
-                meta: metadata.create_protobuf_metadata(),
-                msg: Some((&network_msg).into()),
-            })),
-        };
-        s.send(&proto.encode_to_vec()).unwrap();
-    })
+        }
+    };
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Msg(net_msg::Message {
+            meta: metadata.create_protobuf_metadata(),
+            msg: Some((&network_msg).into()),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
 }

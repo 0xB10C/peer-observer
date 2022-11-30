@@ -1,0 +1,2 @@
+src/tracing.gen.rs
+src/bpf/vmlinux.h
