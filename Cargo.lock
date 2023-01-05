@@ -281,6 +281,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 [[package]]
 name = "libbpf-cargo"
 version = "0.13.1"
+source = "git+https://github.com/0xb10c/libbpf-rs?branch=2023-01-recent-libbpf#7221f3e450ba76ce7c5775c31d14dd6216cb60bb"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -301,6 +302,7 @@ dependencies = [
 [[package]]
 name = "libbpf-rs"
 version = "0.19.1"
+source = "git+https://github.com/0xb10c/libbpf-rs?branch=2023-01-recent-libbpf#7221f3e450ba76ce7c5775c31d14dd6216cb60bb"
 dependencies = [
  "bitflags",
  "lazy_static",
@@ -315,6 +317,7 @@ dependencies = [
 [[package]]
 name = "libbpf-sys"
 version = "1.0.4+v1.0.1"
+source = "git+https://github.com/0xb10c/libbpf-sys?branch=2023-01-recent-libbpf#90598197ef691ccabad5aefd407711bb7b69a288"
 dependencies = [
  "cc",
  "pkg-config",
