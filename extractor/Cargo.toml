@@ -10,11 +10,10 @@ shared = { path = "../shared" }
 
 prost = "0.10"
 nng = "1.0.1"
-libbpf-rs = { path = "/home/b10c/git/libbpf-rs/libbpf-rs" }#git = "https://github.com/libbpf/libbpf-rs", branch = "master" } #"0.19.1"
-
+libbpf-rs = { git = "https://github.com/0xb10c/libbpf-rs", branch = "2023-01-recent-libbpf" }
 libc = "0.2"
 [build-dependencies]
-libbpf-cargo = { path = "/home/b10c/git/libbpf-rs/libbpf-cargo" } #"0.13.1"
+libbpf-cargo = { git = "https://github.com/0xb10c/libbpf-rs", branch = "2023-01-recent-libbpf" }
 
 [features]
 # Treat warnings as a build error.
