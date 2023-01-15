@@ -58,12 +58,10 @@ fn worker(output_sender: &Sender<Output>, input_receiver: &Receiver<Input>) {
             Ipv4(ipv4) => {
                 if let Ok(ipv4_addr) = ipv4.parse() {
                     let socket = SocketAddr::new(IpAddr::V4(ipv4_addr), input.address.port as u16);
-                    let shaked_hands = handshake(socket);
                     let output = Output {
                         input,
-                        result: shaked_hands,
+                        result: try_connect(socket),
                     };
-
                     output_sender.send(output).unwrap();
                 }
             }
@@ -189,40 +187,21 @@ fn build_version_message() -> message::NetworkMessage {
     ))
 }
 
-fn handshake(address: SocketAddr) -> bool {
+fn try_connect(address: SocketAddr) -> bool {
     if let Ok(mut stream) = TcpStream::connect_timeout(&address, CONNECT_TIMEOUT) {
         let _ = stream.write_all(
             encode::serialize(&build_raw_network_message(build_version_message())).as_slice(),
         );
 
+        stream.set_read_timeout(Some(READ_TIMEOUT)).unwrap();
+
         if let Ok(read_stream) = stream.try_clone() {
             let mut stream_reader = BufReader::new(read_stream);
-            loop {
-                if let Ok(reply) = message::RawNetworkMessage::consensus_decode(&mut stream_reader)
-                {
-                    match reply.payload {
-                        message::NetworkMessage::Version(_) => {
-                            let second_message = message::RawNetworkMessage {
-                                magic: NETWORK.magic(),
-                                payload: message::NetworkMessage::Verack,
-                            };
-
-                            let _ = stream.write_all(encode::serialize(&second_message).as_slice());
-                        }
-                        message::NetworkMessage::Verack => {
-                            return true;
-                            break;
-                        }
-                        _ => {
-                            break;
-                        }
-                    }
-                }
+            if let Ok(reply) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
+                let _ = stream.shutdown(Shutdown::Both);
+                return true;
             }
         }
-        let _ = stream.shutdown(Shutdown::Both);
-    } else {
-        return false;
     }
-    return true;
+    return false;
 }
