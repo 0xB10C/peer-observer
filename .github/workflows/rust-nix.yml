@@ -1,0 +1,27 @@
+name: build (nix-shell)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Nix
+      uses: cachix/install-nix-action@v18
+      with:
+        nix_path: nixpkgs=channel:nixos-22.11
+    - name: Build
+      run: nix-shell --command "cargo build --verbose --all-features"
+    - name: Run tests
+      run: nix-shell --command "cargo test --verbose --all-features"
+    - name: Run cargo fmt
+      run: nix-shell --command "cargo fmt --all -- --check"
