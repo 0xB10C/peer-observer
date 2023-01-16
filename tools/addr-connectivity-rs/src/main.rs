@@ -30,6 +30,7 @@ mod metricserver;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 const METRICS_ADDRESS: &'static str = "127.0.0.1:36437";
+const WORKERS: usize = 8;
 
 const NETWORK: constants::Network = constants::Network::Bitcoin;
 const USER_AGENT: &str = "/bitnodes.io:0.3/";
@@ -111,49 +112,6 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
     }
 }
 
-fn main() {
-    let sub = Socket::new(Protocol::Sub0).unwrap();
-    sub.dial(ADDRESS).unwrap();
-
-    let all_topics = vec![];
-    sub.set_opt::<Subscribe>(all_topics).unwrap();
-
-    let (input_sender, input_receiver) = unbounded();
-    let (output_sender, output_receiver) = unbounded();
-    let n_workers = 4;
-
-    metricserver::start(&METRICS_ADDRESS).unwrap();
-
-    crossbeam::scope(|s| {
-        s.spawn(|_| {
-            loop {
-                let msg = sub.recv().unwrap();
-                let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
-
-                if let Some(event) = unwrapped {
-                    handle_event(event, input_sender.clone());
-                }
-            }
-
-            drop(input_sender);
-        });
-
-        for _ in 0..n_workers {
-            let (sender, receiver) = (output_sender.clone(), input_receiver.clone());
-            s.spawn(move |_| worker(&sender, &receiver));
-        }
-        drop(output_sender);
-
-        for output in output_receiver.iter() {
-            metrics::ADDR_PROCESSED.inc();
-            if output.result {
-                metrics::ADDR_SUCCESSFUL_HANDSHAKES.inc();
-            }
-            println!("Sink received {:?}", output);
-        }
-    })
-    .unwrap();
-}
 
 fn build_raw_network_message(payload: message::NetworkMessage) -> message::RawNetworkMessage {
     message::RawNetworkMessage {
@@ -204,4 +162,48 @@ fn try_connect(address: SocketAddr) -> bool {
         }
     }
     return false;
+}
+
+fn main() {
+    let sub = Socket::new(Protocol::Sub0).unwrap();
+    sub.dial(ADDRESS).unwrap();
+
+    let all_topics = vec![];
+    sub.set_opt::<Subscribe>(all_topics).unwrap();
+
+    let (input_sender, input_receiver) = unbounded();
+    let (output_sender, output_receiver) = unbounded();
+
+    metricserver::start(&METRICS_ADDRESS).unwrap();
+
+    crossbeam::scope(|s| {
+        s.spawn(|_| {
+            loop {
+                let msg = sub.recv().unwrap();
+                let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
+
+                if let Some(event) = unwrapped {
+                    handle_event(event, input_sender.clone());
+                }
+            }
+
+            drop(input_sender);
+        });
+
+        for _ in 0..WORKERS {
+            let (sender, receiver) = (output_sender.clone(), input_receiver.clone());
+            s.spawn(move |_| worker(&sender, &receiver));
+        }
+
+        drop(output_sender);
+
+        for output in output_receiver.iter() {
+            metrics::ADDR_PROCESSED.inc();
+            if output.result {
+                metrics::ADDR_SUCCESSFUL_HANDSHAKES.inc();
+            }
+            println!("Sink received {:?}", output);
+        }
+    })
+    .unwrap();
 }
