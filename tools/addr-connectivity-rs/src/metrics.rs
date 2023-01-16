@@ -12,12 +12,8 @@ const NAMESPACE: &str = "connectivitycheck";
 const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_ADDR: &str = "addr";
 
-pub const LABEL_CONN_NETWORK: &str = "network";
-pub const LABEL_CONN_NETGROUP: &str = "netgroup";
-pub const LABEL_CONN_ADDR: &str = "addr";
-pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
-pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "missbehavingmessage";
-pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
+pub const LABEL_NETWORK: &str = "network";
+pub const LABEL_ADDR_VERSION: &str = "addr_version";
 
 lazy_static! {
 
@@ -35,19 +31,25 @@ lazy_static! {
     // -------------------- General
 
     /// Number of addresses processed.
-    pub static ref ADDR_PROCESSED: IntCounter =
-        register_int_counter!(
-            Opts::new("processed", "Number of addresses processed.")
+    pub static ref ADDR_TRIED: IntCounterVec =
+        register_int_counter_vec!(
+            Opts::new("tried", "Number of addresses tried.")
                 .namespace(NAMESPACE)
                 .subsystem(SUBSYSTEM_ADDR),
-        ).unwrap();
+        &[LABEL_NETWORK, LABEL_ADDR_VERSION]
+    ).unwrap();
 
-    /// Number of successful handshakes.
-    pub static ref ADDR_SUCCESSFUL_HANDSHAKES: IntCounter =
-    register_int_counter!(
-        Opts::new("successful_handshakes", "/// Number of successful handshakes.")
+    /// Number of successful connections.
+    pub static ref ADDR_SUCCESSFUL_CONNECTION: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("successful_connection", "Number of successful connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_ADDR),
+        &[LABEL_NETWORK, LABEL_ADDR_VERSION]
     ).unwrap();
+
+
+
+
 
 }

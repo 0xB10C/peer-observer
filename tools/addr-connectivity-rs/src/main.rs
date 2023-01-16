@@ -1,18 +1,15 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
+use std::fmt;
 use std::io::{BufReader, Write};
 use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
-use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use shared::bitcoin;
 use shared::bitcoin::consensus::{encode, Decodable};
-use shared::bitcoin::network::message::NetworkMessage;
-use shared::bitcoin::network::message_network::VersionMessage;
 use shared::bitcoin::network::{address, constants, message, message_network};
 use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
-use shared::primitive::address::Address::Ipv4;
+use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
@@ -37,31 +34,72 @@ const USER_AGENT: &str = "/bitnodes.io:0.3/";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 
+#[derive(Clone, Debug)]
+enum AddrMessageVersion {
+    Addr,
+    Addrv2,
+}
+
+#[derive(Clone, Debug)]
+enum NetworkType {
+    IPv4,
+    IPv6,
+}
+
+impl fmt::Display for AddrMessageVersion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            AddrMessageVersion::Addr => write!(f, "addr"),
+            AddrMessageVersion::Addrv2 => write!(f, "addrv2"),
+        }
+    }
+}
+
+impl fmt::Display for NetworkType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            NetworkType::IPv4 => write!(f, "IPv4"),
+            NetworkType::IPv6 => write!(f, "IPv6"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Input {
     pub address: Address,
     pub peer_id: u64,
     pub source: String,
-    pub addrv2: bool,
+    pub version: AddrMessageVersion,
 }
 
 #[derive(Debug)]
 struct Output {
     pub input: Input,
     pub result: bool,
+    pub network: NetworkType,
 }
 
 fn worker(output_sender: &Sender<Output>, input_receiver: &Receiver<Input>) {
     for input in input_receiver.iter() {
-        let mut shaked_hands: bool = false;
-
         match input.clone().address.address.unwrap() {
-            Ipv4(ipv4) => {
+            AddressType::Ipv4(ipv4) => {
                 if let Ok(ipv4_addr) = ipv4.parse() {
                     let socket = SocketAddr::new(IpAddr::V4(ipv4_addr), input.address.port as u16);
                     let output = Output {
                         input,
                         result: try_connect(socket),
+                        network: NetworkType::IPv4,
+                    };
+                    output_sender.send(output).unwrap();
+                }
+            }
+            AddressType::Ipv6(ipv6) => {
+                if let Ok(ipv6_addr) = ipv6.parse() {
+                    let socket = SocketAddr::new(IpAddr::V6(ipv6_addr), input.address.port as u16);
+                    let output = Output {
+                        input,
+                        result: try_connect(socket),
+                        network: NetworkType::IPv6,
                     };
                     output_sender.send(output).unwrap();
                 }
@@ -91,7 +129,7 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                         address: addr,
                         peer_id: msg.meta.peer_id,
                         source: msg.meta.addr.clone(),
-                        addrv2: false,
+                        version: AddrMessageVersion::Addr,
                     };
                     input_sender.send(input).unwrap();
                 }
@@ -102,7 +140,7 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                         address: addr,
                         peer_id: msg.meta.peer_id,
                         source: msg.meta.addr.clone(),
-                        addrv2: true,
+                        version: AddrMessageVersion::Addrv2,
                     };
                     input_sender.send(input).unwrap();
                 }
@@ -111,7 +149,6 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
         }
     }
 }
-
 
 fn build_raw_network_message(payload: message::NetworkMessage) -> message::RawNetworkMessage {
     message::RawNetworkMessage {
@@ -155,7 +192,7 @@ fn try_connect(address: SocketAddr) -> bool {
 
         if let Ok(read_stream) = stream.try_clone() {
             let mut stream_reader = BufReader::new(read_stream);
-            if let Ok(reply) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
+            if let Ok(_) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
                 let _ = stream.shutdown(Shutdown::Both);
                 return true;
             }
@@ -177,17 +214,13 @@ fn main() {
     metricserver::start(&METRICS_ADDRESS).unwrap();
 
     crossbeam::scope(|s| {
-        s.spawn(|_| {
-            loop {
-                let msg = sub.recv().unwrap();
-                let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
+        s.spawn(|_| loop {
+            let msg = sub.recv().unwrap();
+            let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
 
-                if let Some(event) = unwrapped {
-                    handle_event(event, input_sender.clone());
-                }
+            if let Some(event) = unwrapped {
+                handle_event(event, input_sender.clone());
             }
-
-            drop(input_sender);
         });
 
         for _ in 0..WORKERS {
@@ -195,12 +228,20 @@ fn main() {
             s.spawn(move |_| worker(&sender, &receiver));
         }
 
-        drop(output_sender);
-
         for output in output_receiver.iter() {
-            metrics::ADDR_PROCESSED.inc();
+            metrics::ADDR_TRIED
+                .with_label_values(&[
+                    &output.network.to_string(),
+                    &output.input.version.to_string(),
+                ])
+                .inc();
             if output.result {
-                metrics::ADDR_SUCCESSFUL_HANDSHAKES.inc();
+                metrics::ADDR_SUCCESSFUL_CONNECTION
+                    .with_label_values(&[
+                        &output.network.to_string(),
+                        &output.input.version.to_string(),
+                    ])
+                    .inc();
             }
             println!("Sink received {:?}", output);
         }
