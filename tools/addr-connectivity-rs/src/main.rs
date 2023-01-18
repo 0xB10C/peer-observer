@@ -124,6 +124,11 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
     if let Some(inbound_msg) = msg.msg {
         match inbound_msg {
             Msg::Addr(addr) => {
+                if addr.addresses.len() == 1000 {
+                    println!("Received an addr message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
+                    return;
+                }
+
                 for addr in addr.addresses {
                     let input = Input {
                         address: addr,
@@ -135,6 +140,10 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                 }
             }
             Msg::Addrv2(addrv2) => {
+                if addrv2.addresses.len() == 1000 {
+                    println!("Received an addrv2 message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
+                    return;
+                }
                 for addr in addrv2.addresses {
                     let input = Input {
                         address: addr,
