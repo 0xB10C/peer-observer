@@ -3,7 +3,7 @@ import sys
 import csv
 import json
 
-sys.path.insert(1, os.path.join(sys.path[0], '../../protobuf/p2pnetobserver_types_py'))
+sys.path.insert(1, os.path.join(sys.path[0], '../../protobuf/python-types'))
 import wrapper_pb2
 
 from nanomsg import Socket, SUB, SUB_SUBSCRIBE
@@ -26,9 +26,11 @@ with Socket(SUB) as sub:
                 meta = msg.meta
                 if meta.inbound and meta.command == "ping":
                     row = data_to_row(meta, wrapped) + [msg.ping.value]
+                    print(row)
                     wp.writerow(row)
                 elif not meta.inbound and meta.command == "pong":
                     row = data_to_row(meta, wrapped) + [msg.pong.value]
+                    print(row)
                     wp.writerow(row)
                 elif meta.inbound and meta.command == "version":
                     row = data_to_row(meta, wrapped) + [msg.version.user_agent]
