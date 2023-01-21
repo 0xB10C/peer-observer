@@ -12,11 +12,10 @@ use nng::{Protocol, Socket};
 
 use prost::Message;
 
-use shared::bitcoin::network::message::NetworkMessage;
 use shared::ctypes::{
     ClosedConnection, HugeP2PMessage, InboundConnection, LargeP2PMessage, MediumP2PMessage,
     MisbehavingConnection, OutboundConnection, P2PMessageMetadata, P2PMessageSize,
-    RustBitcoinNetworkMessage, SmallP2PMessage,
+    ProtobufNetworkMessage, SmallP2PMessage,
 };
 use shared::net_conn;
 use shared::net_msg;
@@ -221,7 +220,7 @@ fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
 
 fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
     let metadata: P2PMessageMetadata;
-    let network_msg: NetworkMessage;
+    let message: net_msg::message::Msg;
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
@@ -231,8 +230,8 @@ fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
         P2PMessageSize::Small => {
             let msg = SmallP2PMessage::from_bytes(data);
             metadata = msg.meta.clone();
-            network_msg = match msg.rust_bitcoin_network_message() {
-                Ok(msg) => msg,
+            message = match msg.decode_to_protobuf_network_message() {
+                Ok(msg) => msg.into(),
                 Err(e) => {
                     // TODO: warn
                     println!("could not handle small msg: {}", e);
@@ -243,8 +242,8 @@ fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
         P2PMessageSize::Medium => {
             let msg = MediumP2PMessage::from_bytes(data);
             metadata = msg.meta.clone();
-            network_msg = match msg.rust_bitcoin_network_message() {
-                Ok(msg) => msg,
+            message = match msg.decode_to_protobuf_network_message() {
+                Ok(msg) => msg.into(),
                 Err(e) => {
                     // TODO: warn
                     println!("could not handle medium msg: {}", e);
@@ -255,7 +254,7 @@ fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
         P2PMessageSize::Large => {
             let msg = LargeP2PMessage::from_bytes(data);
             metadata = msg.meta.clone();
-            network_msg = match msg.rust_bitcoin_network_message() {
+            message = match msg.decode_to_protobuf_network_message() {
                 Ok(msg) => msg,
                 Err(e) => {
                     // TODO: warn
@@ -267,7 +266,7 @@ fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
         P2PMessageSize::Huge => {
             let msg = HugeP2PMessage::from_bytes(data);
             metadata = msg.meta.clone();
-            network_msg = match msg.rust_bitcoin_network_message() {
+            message = match msg.decode_to_protobuf_network_message() {
                 Ok(msg) => msg,
                 Err(e) => {
                     // TODO: warn
@@ -282,7 +281,7 @@ fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
         timestamp_subsec_micros: timestamp_subsec_millis,
         wrap: Some(Wrap::Msg(net_msg::Message {
             meta: metadata.create_protobuf_metadata(),
-            msg: Some((&network_msg).into()),
+            msg: Some(message),
         })),
     };
     s.send(&proto.encode_to_vec()).unwrap();

@@ -619,13 +619,15 @@ impl fmt::Display for message::Msg {
             message::Msg::Cfilter(cfilter) => write!(f, "{}", cfilter),
             message::Msg::Merkleblock(merkleblock) => write!(f, "{}", merkleblock),
             message::Msg::Unknown(unknown) => write!(f, "{}", unknown),
-            message::Msg::Filterclear(_) => write!(f, "FilterClear()"),
-            message::Msg::Verack(_) => write!(f, "Verack()"),
-            message::Msg::Sendheaders(_) => write!(f, "SendHeaders()"),
-            message::Msg::Getaddr(_) => write!(f, "Getaddr()"),
-            message::Msg::Mempool(_) => write!(f, "Mempool()"),
-            message::Msg::Wtxidrelay(_) => write!(f, "Wtxidrelay()"),
-            message::Msg::Sendaddrv2(_) => write!(f, "Sendaddrv2()"),
+            message::Msg::Filterclear(_) => write!(f, "filterclear"),
+            message::Msg::Verack(_) => write!(f, "verack"),
+            message::Msg::Sendheaders(_) => write!(f, "sendHeaders"),
+            message::Msg::Getaddr(_) => write!(f, "getaddr"),
+            message::Msg::Mempool(_) => write!(f, "mempool"),
+            message::Msg::Wtxidrelay(_) => write!(f, "wtxidrelay"),
+            message::Msg::Sendaddrv2(_) => write!(f, "sendaddrv2"),
+            message::Msg::Emptyaddrv2(_) => write!(f, "empty_addrv2"),
+            message::Msg::Oldping(_) => write!(f, "old_ping"),
         }
     }
 }

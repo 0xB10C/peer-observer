@@ -129,7 +129,6 @@ lazy_static! {
 
     // -------------------- Addr
 
-
     /// Histogram of the number of addresses contained in an "addr" message.
     pub static ref P2P_ADDR_ADDRESS_HISTOGRAM: HistogramVec =
         register_histogram_vec!(
@@ -208,6 +207,14 @@ lazy_static! {
             &[LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET]
         ).unwrap();
 
+    /// Number of empty addrv2 messages received and send (by address).
+    pub static ref P2P_EMPTYADDRV2: IntCounterVec =
+        register_int_counter_vec!(
+            Opts::new("addrv2_empty", "Number of empty addrv2 messages received and send (by address).")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_P2P),
+            &[LABEL_P2P_DIRECTION, LABEL_CONN_ADDR]
+        ).unwrap();
 
     // -------------------- Connections
 
@@ -403,6 +410,15 @@ lazy_static! {
     pub static ref P2P_PING_ADDRESS: IntCounterVec =
     register_int_counter_vec!(
         Opts::new("ping_address", "Number of Pings received by address.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_CONN_ADDR]
+    ).unwrap();
+
+    /// Number of "old" pings (without a value) received by address
+    pub static ref P2P_OLDPING_ADDRESS: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("oldping_address", "Number of 'old' Pings (without a value) received by address.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_P2P),
         &[LABEL_CONN_ADDR]

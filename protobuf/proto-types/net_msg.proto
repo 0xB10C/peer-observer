@@ -58,6 +58,9 @@ message Message {
 
     // A BIP37 "filterclear" message.
     bool filterclear = 38; // always true
+
+    bool emptyaddrv2 = 40; // always true
+    bool oldping = 41; // always true
   }
 }
 
