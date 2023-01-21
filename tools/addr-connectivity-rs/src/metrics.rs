@@ -1,9 +1,6 @@
 use lazy_static::lazy_static;
-use prometheus::{self, HistogramVec, IntCounter, IntCounterVec, IntGauge};
-use prometheus::{
-    register_histogram_vec, register_int_counter, register_int_counter_vec, register_int_gauge,
-    HistogramOpts, Opts,
-};
+use prometheus::{self, IntCounterVec, IntGauge};
+use prometheus::{register_int_counter_vec, register_int_gauge, Opts};
 
 // Prometheus Metrics
 
@@ -47,9 +44,5 @@ lazy_static! {
             .subsystem(SUBSYSTEM_ADDR),
         &[LABEL_NETWORK, LABEL_ADDR_VERSION]
     ).unwrap();
-
-
-
-
 
 }

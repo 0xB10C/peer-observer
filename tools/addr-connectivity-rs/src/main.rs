@@ -27,7 +27,7 @@ mod metricserver;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 const METRICS_ADDRESS: &'static str = "127.0.0.1:36437";
-const WORKERS: usize = 8;
+const WORKERS: usize = 50;
 
 const NETWORK: constants::Network = constants::Network::Bitcoin;
 const USER_AGENT: &str = "/bitnodes.io:0.3/";
@@ -67,8 +67,8 @@ impl fmt::Display for NetworkType {
 #[derive(Debug, Clone)]
 struct Input {
     pub address: Address,
-    pub peer_id: u64,
-    pub source: String,
+    pub _source_id: u64,
+    pub _source_ip: String,
     pub version: AddrMessageVersion,
 }
 
@@ -132,8 +132,8 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                 for addr in addr.addresses {
                     let input = Input {
                         address: addr,
-                        peer_id: msg.meta.peer_id,
-                        source: msg.meta.addr.clone(),
+                        _source_id: msg.meta.peer_id,
+                        _source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addr,
                     };
                     input_sender.send(input).unwrap();
@@ -147,8 +147,8 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                 for addr in addrv2.addresses {
                     let input = Input {
                         address: addr,
-                        peer_id: msg.meta.peer_id,
-                        source: msg.meta.addr.clone(),
+                        _source_id: msg.meta.peer_id,
+                        _source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addrv2,
                     };
                     input_sender.send(input).unwrap();
