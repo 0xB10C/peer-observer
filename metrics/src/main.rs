@@ -198,6 +198,14 @@ fn main() {
                         .inc();
                 }
             }
+            Msg::Emptyaddrv2(_) => {
+                metrics::P2P_EMPTYADDRV2
+                    .with_label_values(&[
+                        &direction,
+                        &msg.meta.addr.split(":").next().unwrap_or(""),
+                    ])
+                    .inc();
+            }
             Msg::Inv(inv) => {
                 let mut count_by_invtype: HashMap<String, u64> = HashMap::new();
                 for item in inv.items.iter() {
@@ -227,6 +235,13 @@ fn main() {
             Msg::Ping(_) => {
                 if msg.meta.inbound {
                     metrics::P2P_PING_ADDRESS
+                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
+                        .inc();
+                }
+            }
+            Msg::Oldping(_) => {
+                if msg.meta.inbound {
+                    metrics::P2P_OLDPING_ADDRESS
                         .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
                         .inc();
                 }
