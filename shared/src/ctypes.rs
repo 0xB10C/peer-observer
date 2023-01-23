@@ -77,7 +77,7 @@ impl fmt::Display for P2PMessageMetadata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "'{}'-msg ({} bytes) {} peer (id={}, addr={}, conntype={})",
+            "{}-msg ({} bytes) {} peer (id={}, addr={}, conntype={})",
             self.msg_type(),
             self.msg_size,
             if self.msg_inbound {
@@ -395,16 +395,26 @@ fn decode_weird_network_message(
     meta: &P2PMessageMetadata,
     payload: &[u8],
 ) -> Option<net_msg::message::Msg> {
-    // case: empty addrv2 message.
-    if meta.msg_type() == "addrv2" && meta.msg_size == 0 {
-        println!("emtpy addrv2 {}", meta);
-        return Some(net_msg::message::Msg::Emptyaddrv2(true));
-    // case: old ping message with no nonce.
-    } else if meta.msg_type() == "ping" && meta.msg_size == 0 {
-        println!("no-value ping {}", meta);
-        return Some(net_msg::message::Msg::Oldping(true));
-    } else if meta.msg_type() == "tx" && meta.msg_inbound {
-        println!("invalid (?) tx with {} byte: {}", meta.msg_size, payload.to_hex());
+
+    match meta.msg_type().as_str() {
+        "addrv2" => {
+            if meta.msg_size == 0 {
+                // case: empty addrv2 message.
+                println!("emtpy addrv2: {}", meta);
+                return Some(net_msg::message::Msg::Emptyaddrv2(true));
+            }
+        },
+        "ping" => {
+            if meta.msg_size == 0 {
+                // case: old ping message with no nonce.
+                println!("no-value ping: {}", meta);
+                return Some(net_msg::message::Msg::Oldping(true));
+            }
+        },
+        "tx" => {
+            println!("invalid (?) tx with {} byte: {}", meta.msg_size, payload.to_hex());
+        },
+        _ => (),
     }
     None
 }
