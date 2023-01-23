@@ -2,7 +2,7 @@ use std::{fmt, ptr};
 
 use bitcoin::consensus;
 use bitcoin::consensus::encode::Decodable;
-use bitcoin::hashes::{sha256d, Hash};
+use bitcoin::hashes::{sha256d, Hash, hex::ToHex};
 use bitcoin::network::message::{NetworkMessage, RawNetworkMessage};
 
 use crate::net_msg;
@@ -393,7 +393,7 @@ fn decode_rust_bitcoin_network_message(
 // effort basis.
 fn decode_weird_network_message(
     meta: &P2PMessageMetadata,
-    _: &[u8],
+    payload: &[u8],
 ) -> Option<net_msg::message::Msg> {
     // case: empty addrv2 message.
     if meta.msg_type() == "addrv2" && meta.msg_size == 0 {
@@ -403,6 +403,8 @@ fn decode_weird_network_message(
     } else if meta.msg_type() == "ping" && meta.msg_size == 0 {
         println!("no-value ping {}", meta);
         return Some(net_msg::message::Msg::Oldping(true));
+    } else if meta.msg_type() == "tx" && meta.msg_inbound {
+        println!("invalid (?) tx with {} byte: {}", meta.msg_size, payload.to_hex());
     }
     None
 }
