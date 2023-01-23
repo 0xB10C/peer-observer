@@ -77,17 +77,17 @@ impl fmt::Display for P2PMessageMetadata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} msg from peer {} ({}, {}): {} with {} bytes",
+            "'{}'-msg ({} bytes) {} peer (id={}, addr={}, conntype={})",
+            self.msg_type(),
+            self.msg_size,
             if self.msg_inbound {
-                "inbound"
+                "from"
             } else {
-                "outbound"
+                "to"
             },
             self.peer_id,
             self.peer_addr(),
             self.peer_conn_type(),
-            self.msg_type(),
-            self.msg_size,
         )
     }
 }
