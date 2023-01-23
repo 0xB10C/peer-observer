@@ -6,7 +6,7 @@
 #include <bpf/bpf_core_read.h>
 #include <bpf/usdt.bpf.h>
 
-#define RINGBUFFER(name, pages) struct {__uint(type, BPF_MAP_TYPE_RINGBUF); __uint(max_entries, PAGE_SIZE * pages); } name SEC(".maps");
+#define RINGBUFFER(name, size) struct {__uint(type, BPF_MAP_TYPE_RINGBUF); __uint(max_entries, size); } name SEC(".maps");
 
 #define MAX_PEER_ADDR_LENGTH 62 + 6
 #define MAX_PEER_CONN_TYPE_LENGTH 20
@@ -26,10 +26,10 @@
 
 // NET MESSAGES
 
-RINGBUFFER(net_msg_small, NET_MSG_PAGES)
-RINGBUFFER(net_msg_medium, NET_MSG_PAGES)
-RINGBUFFER(net_msg_large, NET_MSG_PAGES)
-RINGBUFFER(net_msg_huge, NET_MSG_PAGES)
+RINGBUFFER(net_msg_small, MAX_SMALL_MSG_LENGTH * 1024) // ~ 1 MB
+RINGBUFFER(net_msg_medium, MAX_MEDIUM_MSG_LENGTH * 1024) // ~ 4.2 MB
+RINGBUFFER(net_msg_large, MAX_LARGE_MSG_LENGTH * 1024) // ~ 67 MB
+RINGBUFFER(net_msg_huge, MAX_HUGE_MSG_LENGTH * 128) // ~ 536 MB
 
 struct Metadata {
     u64     id;
