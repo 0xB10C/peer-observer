@@ -59,7 +59,7 @@ fn main() {
                     Event::Inbound(i) => {
                         metrics::CONN_INBOUND.inc();
                         metrics::CONN_INBOUND_ADDRESS
-                            .with_label_values(&[&i.conn.addr.split(":").next().unwrap_or("")])
+                            .with_label_values(&[&ip(i.conn.addr)])
                             .inc();
                         metrics::CONN_INBOUND_NETWORK
                             .with_label_values(&[&i.conn.network.to_string()])
@@ -82,7 +82,7 @@ fn main() {
                     Event::Closed(c) => {
                         metrics::CONN_CLOSED.inc();
                         metrics::CONN_CLOSED_ADDRESS
-                            .with_label_values(&[&c.conn.addr.split(":").next().unwrap_or("")])
+                            .with_label_values(&[&ip(c.conn.addr)])
                             .inc();
                         metrics::CONN_CLOSED_NETWORK
                             .with_label_values(&[&c.conn.network.to_string()])
@@ -95,7 +95,7 @@ fn main() {
                         metrics::CONN_EVICTED.inc();
                         metrics::CONN_EVICTED_WITHINFO
                             .with_label_values(&[
-                                &e.conn.addr.split(":").next().unwrap_or(""),
+                                &ip(e.conn.addr),
                                 &e.conn.network.to_string(),
                             ])
                             .inc();
@@ -124,6 +124,7 @@ fn main() {
         } else {
             "outbound"
         };
+        let ip = ip(msg.meta.addr.clone());
         let mut labels = HashMap::<&str, &str>::new();
         labels.insert(metrics::LABEL_P2P_MSG_TYPE, &msg.meta.command);
         labels.insert(metrics::LABEL_P2P_CONNECTION_TYPE, &conn_type);
@@ -202,7 +203,7 @@ fn main() {
                 metrics::P2P_EMPTYADDRV2
                     .with_label_values(&[
                         &direction,
-                        &msg.meta.addr.split(":").next().unwrap_or(""),
+                        &ip,
                     ])
                     .inc();
             }
@@ -235,21 +236,23 @@ fn main() {
             Msg::Ping(_) => {
                 if msg.meta.inbound {
                     metrics::P2P_PING_ADDRESS
-                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
+                        .with_label_values(&[&ip])
                         .inc();
                 }
             }
             Msg::Oldping(_) => {
+                println!("old ping");
                 if msg.meta.inbound {
+                    println!("inbound old ping");
                     metrics::P2P_OLDPING_ADDRESS
-                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
+                        .with_label_values(&[&ip])
                         .inc();
                 }
             }
             Msg::Version(v) => {
                 if msg.meta.inbound {
                     metrics::P2P_VERSION_ADDRESS
-                        .with_label_values(&[&msg.meta.addr.split(":").next().unwrap_or("")])
+                        .with_label_values(&[&ip])
                         .inc();
                     metrics::P2P_VERSION_USERAGENT
                         .with_label_values(&[&v.user_agent])
@@ -265,7 +268,7 @@ fn main() {
                 if msg.meta.inbound {
                     metrics::P2P_REJECT_ADDR
                         .with_label_values(&[
-                            &msg.meta.addr.split(":").next().unwrap_or(""),
+                            &ip,
                             &r.rejected_command,
                             &RejectReason::from_i32(r.reason).unwrap().to_string(),
                         ])
@@ -281,5 +284,14 @@ fn main() {
             }
             _ => (),
         }
+    }
+}
+
+
+/// Split and return the IP from an ip:port combination.
+fn ip(addr: String) -> String {
+    match addr.rsplit_once(":") {
+        Some((ip, _)) => ip.to_string(),
+        None => addr,
     }
 }
