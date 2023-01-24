@@ -94,10 +94,7 @@ fn main() {
                     Event::Evicted(e) => {
                         metrics::CONN_EVICTED.inc();
                         metrics::CONN_EVICTED_WITHINFO
-                            .with_label_values(&[
-                                &ip(e.conn.addr),
-                                &e.conn.network.to_string(),
-                            ])
+                            .with_label_values(&[&ip(e.conn.addr), &e.conn.network.to_string()])
                             .inc();
                     }
                     Event::Misbehaving(m) => {
@@ -201,10 +198,7 @@ fn main() {
             }
             Msg::Emptyaddrv2(_) => {
                 metrics::P2P_EMPTYADDRV2
-                    .with_label_values(&[
-                        &direction,
-                        &ip,
-                    ])
+                    .with_label_values(&[&direction, &ip])
                     .inc();
             }
             Msg::Inv(inv) => {
@@ -235,25 +229,19 @@ fn main() {
             }
             Msg::Ping(_) => {
                 if msg.meta.inbound {
-                    metrics::P2P_PING_ADDRESS
-                        .with_label_values(&[&ip])
-                        .inc();
+                    metrics::P2P_PING_ADDRESS.with_label_values(&[&ip]).inc();
                 }
             }
             Msg::Oldping(_) => {
                 println!("old ping");
                 if msg.meta.inbound {
                     println!("inbound old ping");
-                    metrics::P2P_OLDPING_ADDRESS
-                        .with_label_values(&[&ip])
-                        .inc();
+                    metrics::P2P_OLDPING_ADDRESS.with_label_values(&[&ip]).inc();
                 }
             }
             Msg::Version(v) => {
                 if msg.meta.inbound {
-                    metrics::P2P_VERSION_ADDRESS
-                        .with_label_values(&[&ip])
-                        .inc();
+                    metrics::P2P_VERSION_ADDRESS.with_label_values(&[&ip]).inc();
                     metrics::P2P_VERSION_USERAGENT
                         .with_label_values(&[&v.user_agent])
                         .inc();
@@ -286,7 +274,6 @@ fn main() {
         }
     }
 }
-
 
 /// Split and return the IP from an ip:port combination.
 fn ip(addr: String) -> String {
