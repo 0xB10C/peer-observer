@@ -26,10 +26,7 @@
 
 // NET MESSAGES
 
-RINGBUFFER(net_msg_small, MAX_SMALL_MSG_LENGTH * 1024) // ~ 1 MB
-RINGBUFFER(net_msg_medium, MAX_MEDIUM_MSG_LENGTH * 1024) // ~ 4.2 MB
-RINGBUFFER(net_msg_large, MAX_LARGE_MSG_LENGTH * 1024) // ~ 67 MB
-RINGBUFFER(net_msg_huge, MAX_HUGE_MSG_LENGTH * 128) // ~ 536 MB
+#define METADATA_SIZE 8 + MAX_PEER_ADDR_LENGTH + MAX_PEER_CONN_TYPE_LENGTH + MAX_MSG_TYPE_LENGTH + 1 + 8
 
 struct Metadata {
     u64     id;
@@ -62,6 +59,12 @@ struct HugeP2PMessage
     u8                payload[MAX_HUGE_MSG_LENGTH];
 };
 
+RINGBUFFER(net_msg_small, (MAX_SMALL_MSG_LENGTH + METADATA_SIZE) * 1024) // ~ 1 MB
+RINGBUFFER(net_msg_medium, (MAX_MEDIUM_MSG_LENGTH + METADATA_SIZE) * 1024) // ~ 4.2 MB
+RINGBUFFER(net_msg_large, (MAX_LARGE_MSG_LENGTH + METADATA_SIZE) * 1024) // ~ 67 MB
+RINGBUFFER(net_msg_huge, (MAX_HUGE_MSG_LENGTH + METADATA_SIZE) * 128) // ~ 536 MB
+
+
 // Helper function to set some of the tracepoint arguments to Metadata.
 void set_meta_data1(struct Metadata *meta, u64 id, bool inbound, u64 msg_size) {
   meta->id = id;
@@ -86,7 +89,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -97,7 +100,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
       bpf_probe_read_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -107,7 +110,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -117,7 +120,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -136,7 +139,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -147,7 +150,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
       bpf_probe_read_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -157,7 +160,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -167,7 +170,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, sizeof(msg->payload), msg_payload);
+      bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
