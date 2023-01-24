@@ -2,7 +2,7 @@ use std::{fmt, ptr};
 
 use bitcoin::consensus;
 use bitcoin::consensus::encode::Decodable;
-use bitcoin::hashes::{sha256d, Hash, hex::ToHex};
+use bitcoin::hashes::{hex::ToHex, sha256d, Hash};
 use bitcoin::network::message::{NetworkMessage, RawNetworkMessage};
 
 use crate::net_msg;
@@ -13,16 +13,18 @@ const MAX_PEER_ADDR_LENGTH: usize = 62 + 6;
 const MAX_PEER_CONN_TYPE_LENGTH: usize = 20;
 const MAX_MSG_TYPE_LENGTH: usize = 12;
 const MAX_MISBEHAVING_MESSAGE_LENGTH: usize = 128;
+
 const MAX_SMALL_MSG_LENGTH: usize = 256;
 const MAX_MEDIUM_MSG_LENGTH: usize = 4096;
 const MAX_LARGE_MSG_LENGTH: usize = 65536;
 const MAX_HUGE_MSG_LENGTH: usize = 4194304;
 
+#[repr(usize)]
 pub enum P2PMessageSize {
-    Small,
-    Medium,
-    Large,
-    Huge,
+    Small = MAX_SMALL_MSG_LENGTH,
+    Medium = MAX_MEDIUM_MSG_LENGTH,
+    Large = MAX_LARGE_MSG_LENGTH,
+    Huge = MAX_HUGE_MSG_LENGTH,
 }
 
 /// The metadata for a P2P message.
@@ -80,11 +82,7 @@ impl fmt::Display for P2PMessageMetadata {
             "{}-msg ({} bytes) {} peer (id={}, addr={}, conntype={})",
             self.msg_type(),
             self.msg_size,
-            if self.msg_inbound {
-                "from"
-            } else {
-                "to"
-            },
+            if self.msg_inbound { "from" } else { "to" },
             self.peer_id,
             self.peer_addr(),
             self.peer_conn_type(),
@@ -93,14 +91,14 @@ impl fmt::Display for P2PMessageMetadata {
 }
 
 #[repr(C)]
-pub struct SmallP2PMessage {
+pub struct P2PMessage<const N: usize> {
     pub meta: P2PMessageMetadata,
-    pub payload: [u8; MAX_SMALL_MSG_LENGTH],
+    pub payload: [u8; N],
 }
 
-impl SmallP2PMessage {
-    pub fn from_bytes(x: &[u8]) -> SmallP2PMessage {
-        unsafe { ptr::read_unaligned(x.as_ptr() as *const SmallP2PMessage) }
+impl<const N: usize> P2PMessage<N> {
+    pub fn from_bytes(x: &[u8]) -> P2PMessage<N> {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const P2PMessage<N>) }
     }
 
     // The msg.payload is MAX_SMALL_MSG_LENGTH bytes long, however the acctual
@@ -109,91 +107,8 @@ impl SmallP2PMessage {
     pub fn trimmed_payload(&self) -> &[u8] {
         return &self.payload[..self.meta.msg_size as usize];
     }
-}
 
-impl ProtobufNetworkMessage for SmallP2PMessage {
-    fn decode_to_protobuf_network_message(
-        &self,
-    ) -> Result<net_msg::message::Msg, P2PMessageDecodeError> {
-        decode_network_message(&self.meta, self.trimmed_payload())
-    }
-}
-
-#[repr(C)]
-pub struct MediumP2PMessage {
-    pub meta: P2PMessageMetadata,
-    pub payload: [u8; MAX_MEDIUM_MSG_LENGTH],
-}
-
-impl MediumP2PMessage {
-    pub fn from_bytes(x: &[u8]) -> MediumP2PMessage {
-        unsafe { ptr::read_unaligned(x.as_ptr() as *const MediumP2PMessage) }
-    }
-
-    // The msg.payload is MAX_MEDIUM_MSG_LENGTH bytes long, however the acctual
-    // message size in meta.msg_size is likely smaller. Returns a slice
-    // with the acctual message payload.
-    pub fn trimmed_payload(&self) -> &[u8] {
-        return &self.payload[..self.meta.msg_size as usize];
-    }
-}
-
-impl ProtobufNetworkMessage for MediumP2PMessage {
-    fn decode_to_protobuf_network_message(
-        &self,
-    ) -> Result<net_msg::message::Msg, P2PMessageDecodeError> {
-        decode_network_message(&self.meta, self.trimmed_payload())
-    }
-}
-
-#[repr(C)]
-pub struct LargeP2PMessage {
-    pub meta: P2PMessageMetadata,
-    pub payload: [u8; MAX_LARGE_MSG_LENGTH],
-}
-
-impl LargeP2PMessage {
-    pub fn from_bytes(x: &[u8]) -> LargeP2PMessage {
-        unsafe { ptr::read_unaligned(x.as_ptr() as *const LargeP2PMessage) }
-    }
-
-    // The msg.payload is MAX_LARGE_MSG_LENGTH bytes long, however the acctual
-    // message size in meta.msg_size is likely smaller. Returns a slice
-    // with the acctual message payload.
-    pub fn trimmed_payload(&self) -> &[u8] {
-        return &self.payload[..self.meta.msg_size as usize];
-    }
-}
-
-impl ProtobufNetworkMessage for LargeP2PMessage {
-    fn decode_to_protobuf_network_message(
-        &self,
-    ) -> Result<net_msg::message::Msg, P2PMessageDecodeError> {
-        decode_network_message(&self.meta, self.trimmed_payload())
-    }
-}
-
-#[repr(C)]
-pub struct HugeP2PMessage {
-    pub meta: P2PMessageMetadata,
-    pub payload: [u8; MAX_HUGE_MSG_LENGTH],
-}
-
-impl HugeP2PMessage {
-    pub fn from_bytes(x: &[u8]) -> HugeP2PMessage {
-        unsafe { ptr::read_unaligned(x.as_ptr() as *const HugeP2PMessage) }
-    }
-
-    // The msg.payload is MAX_HUGE_MSG_LENGTH bytes long, however the acctual
-    // message size in meta.msg_size is likely smaller. Returns a slice
-    // with the acctual message payload.
-    pub fn trimmed_payload(&self) -> &[u8] {
-        return &self.payload[..self.meta.msg_size as usize];
-    }
-}
-
-impl ProtobufNetworkMessage for HugeP2PMessage {
-    fn decode_to_protobuf_network_message(
+    pub fn decode_to_protobuf_network_message(
         &self,
     ) -> Result<net_msg::message::Msg, P2PMessageDecodeError> {
         decode_network_message(&self.meta, self.trimmed_payload())
@@ -342,12 +257,6 @@ impl fmt::Display for MisbehavingConnection {
     }
 }
 
-pub trait ProtobufNetworkMessage {
-    fn decode_to_protobuf_network_message(
-        &self,
-    ) -> Result<net_msg::message::Msg, P2PMessageDecodeError>;
-}
-
 fn decode_network_message(
     meta: &P2PMessageMetadata,
     payload: &[u8],
@@ -395,7 +304,6 @@ fn decode_weird_network_message(
     meta: &P2PMessageMetadata,
     payload: &[u8],
 ) -> Option<net_msg::message::Msg> {
-
     match meta.msg_type().as_str() {
         "addrv2" => {
             if meta.msg_size == 0 {
@@ -403,17 +311,21 @@ fn decode_weird_network_message(
                 println!("emtpy addrv2: {}", meta);
                 return Some(net_msg::message::Msg::Emptyaddrv2(true));
             }
-        },
+        }
         "ping" => {
             if meta.msg_size == 0 {
                 // case: old ping message with no nonce.
                 println!("no-value ping: {}", meta);
                 return Some(net_msg::message::Msg::Oldping(true));
             }
-        },
+        }
         "tx" => {
-            println!("invalid (?) tx with {} byte: {}", meta.msg_size, payload.to_hex());
-        },
+            println!(
+                "invalid (?) tx with {} byte: {}",
+                meta.msg_size,
+                payload.to_hex()
+            );
+        }
         _ => (),
     }
     None
