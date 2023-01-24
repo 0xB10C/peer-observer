@@ -83,7 +83,6 @@ SEC("usdt")
 int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *msg_type, u64 msg_size, void *msg_payload)
 {
   bool IS_INBOUND = true;
-  bpf_printk("handling inbound msg: size=%d", msg_size);
   if (msg_size <= MAX_SMALL_MSG_LENGTH) {
     struct SmallP2PMessage *msg = bpf_ringbuf_reserve(&net_msg_small, sizeof(struct SmallP2PMessage), 0);
     if (msg) {
@@ -93,7 +92,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("small inbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("small inbound msg: not able to reserve. msg size is %d", msg_size);
   } else if (msg_size <= MAX_MEDIUM_MSG_LENGTH) {
     struct MediumP2PMessage *msg = bpf_ringbuf_reserve(&net_msg_medium, sizeof(struct MediumP2PMessage), 0);
     if (msg) {
@@ -104,7 +103,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("medium inbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("medium inbound msg: not able to reserve. msg size is %d", msg_size);
   } else if (msg_size <= MAX_LARGE_MSG_LENGTH) {
     struct LargeP2PMessage *msg = bpf_ringbuf_reserve(&net_msg_large, sizeof(struct LargeP2PMessage), 0);
     if (msg) {
@@ -114,7 +113,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("large inbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("large inbound msg: not able to reserve. msg size is %d", msg_size);
   } else if (msg_size <= MAX_HUGE_MSG_LENGTH) {
     struct HugeP2PMessage *msg = bpf_ringbuf_reserve(&net_msg_huge, sizeof(struct HugeP2PMessage), 0);
     if (msg) {
@@ -124,9 +123,9 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("huge inbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("huge inbound msg: not able to reserve. msg size is %d", msg_size);
   }
-  bpf_printk("inbound msg: return -1 :( msg size is %d", msg_size);
+  bpf_printk("inbound msg: return -1.( msg size is %d", msg_size);
   return -1;
 }
 
@@ -143,7 +142,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("small outbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("small outbound msg: not able to reserve. msg size is %d", msg_size);
   } else if (msg_size <= MAX_MEDIUM_MSG_LENGTH) {
     struct MediumP2PMessage *msg = bpf_ringbuf_reserve(&net_msg_medium, sizeof(struct MediumP2PMessage), 0);
     if (msg) {
@@ -154,7 +153,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("medium outbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("medium outbound msg: not able to reserve. msg size is %d", msg_size);
   } else if (msg_size <= MAX_LARGE_MSG_LENGTH) {
     struct LargeP2PMessage *msg = bpf_ringbuf_reserve(&net_msg_large, sizeof(struct LargeP2PMessage), 0);
     if (msg) {
@@ -164,7 +163,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("large outbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("large outbound msg: not able to reserve. msg size is %d", msg_size);
   } else if (msg_size <= MAX_HUGE_MSG_LENGTH) {
     struct HugeP2PMessage *msg = bpf_ringbuf_reserve(&net_msg_huge, sizeof(struct HugeP2PMessage), 0);
     if (msg) {
@@ -174,9 +173,9 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
-    bpf_printk("huge outbound msg: not able to reserve :( msg size is %d", msg_size);
+    bpf_printk("huge outbound msg: not able to reserve. msg size is %d", msg_size);
   }
-  bpf_printk("outbound msg: return -1 :( msg size is %d", msg_size);
+  bpf_printk("outbound msg: return -1. msg size is %d", msg_size);
   return -1;
 }
 
