@@ -13,9 +13,8 @@ use nng::{Protocol, Socket};
 use prost::Message;
 
 use shared::ctypes::{
-    ClosedConnection, HugeP2PMessage, InboundConnection, LargeP2PMessage, MediumP2PMessage,
-    MisbehavingConnection, OutboundConnection, P2PMessageMetadata, P2PMessageSize,
-    ProtobufNetworkMessage, SmallP2PMessage,
+    ClosedConnection, InboundConnection, MisbehavingConnection, OutboundConnection, P2PMessage,
+    P2PMessageSize,
 };
 use shared::net_conn;
 use shared::net_msg;
@@ -107,10 +106,10 @@ fn main() -> Result<(), libbpf_rs::Error> {
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     ringbuff_builder
-        .add(maps.net_msg_small(), |data| { handle_net_message(data, P2PMessageSize::Small, socket.clone()) })?
-        .add(maps.net_msg_medium(), |data| { handle_net_message(data, P2PMessageSize::Medium, socket.clone()) })?
-        .add(maps.net_msg_large(), |data| { handle_net_message(data, P2PMessageSize::Large, socket.clone()) })?
-        .add(maps.net_msg_huge(), |data| { handle_net_message(data, P2PMessageSize::Huge, socket.clone()) })?
+        .add(maps.net_msg_small(), |data| { handle_net_message::<{ P2PMessageSize::Small as usize }>(data, socket.clone()) })?
+        .add(maps.net_msg_medium(), |data| { handle_net_message::<{ P2PMessageSize::Medium as usize }>(data, socket.clone()) })?
+        .add(maps.net_msg_large(), |data| { handle_net_message::<{ P2PMessageSize::Large as usize }>(data, socket.clone()) })?
+        .add(maps.net_msg_huge(), |data| { handle_net_message::<{ P2PMessageSize::Huge as usize }>(data, socket.clone()) })?
         .add(maps.net_conn_inbound(), |data| { handle_net_conn_inbound(data, socket.clone()) })?
         .add(maps.net_conn_outbound(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
         .add(maps.net_conn_closed(), |data| { handle_net_conn_closed(data, socket.clone()) })?
@@ -218,70 +217,27 @@ fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
     0
 }
 
-fn handle_net_message(data: &[u8], size: P2PMessageSize, s: Socket) -> i32 {
-    let metadata: P2PMessageMetadata;
-    let message: net_msg::message::Msg;
+fn handle_net_message<const SIZE: usize>(data: &[u8], s: Socket) -> i32 {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    match size {
-        P2PMessageSize::Small => {
-            let msg = SmallP2PMessage::from_bytes(data);
-            metadata = msg.meta.clone();
-            message = match msg.decode_to_protobuf_network_message() {
-                Ok(msg) => msg.into(),
-                Err(e) => {
-                    // TODO: warn
-                    println!("could not handle small msg: {}", e);
-                    return -1;
-                }
-            }
-        }
-        P2PMessageSize::Medium => {
-            let msg = MediumP2PMessage::from_bytes(data);
-            metadata = msg.meta.clone();
-            message = match msg.decode_to_protobuf_network_message() {
-                Ok(msg) => msg.into(),
-                Err(e) => {
-                    // TODO: warn
-                    println!("could not handle medium msg: {}", e);
-                    return -1;
-                }
-            }
-        }
-        P2PMessageSize::Large => {
-            let msg = LargeP2PMessage::from_bytes(data);
-            metadata = msg.meta.clone();
-            message = match msg.decode_to_protobuf_network_message() {
-                Ok(msg) => msg,
-                Err(e) => {
-                    // TODO: warn
-                    println!("could not handle large msg: {}", e);
-                    return -1;
-                }
-            }
-        }
-        P2PMessageSize::Huge => {
-            let msg = HugeP2PMessage::from_bytes(data);
-            metadata = msg.meta.clone();
-            message = match msg.decode_to_protobuf_network_message() {
-                Ok(msg) => msg,
-                Err(e) => {
-                    // TODO: warn
-                    println!("could not handle huge msg: {}", e);
-                    return -1;
-                }
-            }
+    let message = P2PMessage::<SIZE>::from_bytes(data);
+    let protobuf_message = match message.decode_to_protobuf_network_message() {
+        Ok(msg) => msg.into(),
+        Err(e) => {
+            // TODO: warn
+            println!("could not handle msg with size={}: {}", SIZE, e);
+            return -1;
         }
     };
     let proto = Wrapper {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
         wrap: Some(Wrap::Msg(net_msg::Message {
-            meta: metadata.create_protobuf_metadata(),
-            msg: Some(message),
+            meta: message.meta.create_protobuf_metadata(),
+            msg: Some(protobuf_message),
         })),
     };
     s.send(&proto.encode_to_vec()).unwrap();
