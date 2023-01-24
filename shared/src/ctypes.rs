@@ -356,3 +356,40 @@ impl Error for P2PMessageDecodeError {
     }
 }
 */
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn p2p_message_from_bytes_1() {
+        const PAYLOAD_SIZE: usize = 8;
+
+        // The acctual message ends after the "92e4200d3021c21b" payload. It's a few bytes larger
+        // on purpose to test that it's still parsed correctly.
+        let data_hex = "c79e9300000000003230392e3232322e3235322e34303a36343830390000000069746e6573732076657273696f6e20726573657276656420666f7220736f66742d666f726b20757067726164696e626f756e64005583899738227ad1576a13fc70696e6700000000f5d60e67005930cb080000000000000092e4200d3021c21b649b92000000000033";
+        let data = hex::decode(data_hex).unwrap();
+
+        let expected_peer_id = 9674439u64;
+        let expected_peer_addr = "209.222.252.40:64809";
+        let expected_peer_conn_type = "inbound";
+        let expected_msg_type = "ping";
+        let expected_msg_inbound = false;
+        let expected_msg_size = 8u64;
+        let expected_payload = hex::decode("92e4200d3021c21b").unwrap();
+
+        let message = P2PMessage::<PAYLOAD_SIZE>::from_bytes(&data);
+
+        assert_eq!(expected_peer_id, message.meta.peer_id);
+        assert_eq!(expected_peer_addr, message.meta.peer_addr());
+        assert_eq!(expected_peer_conn_type, message.meta.peer_conn_type());
+        assert_eq!(expected_msg_type, message.meta.msg_type());
+        assert_eq!(expected_msg_inbound, message.meta.msg_inbound);
+        assert_eq!(expected_msg_size, message.meta.msg_size);
+        assert_eq!(expected_payload, message.payload);
+
+        message.decode_to_protobuf_network_message().unwrap();
+    }
+}
+
