@@ -392,4 +392,3 @@ mod tests {
         message.decode_to_protobuf_network_message().unwrap();
     }
 }
-

@@ -16,6 +16,7 @@ const SUBSYSTEM_CONN: &str = "conn";
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
 pub const LABEL_P2P_DIRECTION: &str = "direction";
+pub const LABEL_P2P_SUBNET: &str = "subnet";
 
 pub const LABEL_P2P_SERVICES: &str = "services";
 pub const LABEL_P2P_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
@@ -235,6 +236,15 @@ lazy_static! {
         &[LABEL_CONN_ADDR]
     ).unwrap();
 
+    /// Number of inbound connections by subnet (where applicable).
+    pub static ref CONN_INBOUND_SUBNET: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound_subnet", "Number of inbound connections by subnet (where applicable).")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_P2P_SUBNET]
+    ).unwrap();
+
     /// Number of inbound connections by network.
     pub static ref CONN_INBOUND_NETWORK: IntCounterVec =
     register_int_counter_vec!(
@@ -413,6 +423,15 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_P2P),
         &[LABEL_CONN_ADDR]
+    ).unwrap();
+
+    /// Number of Pings received by subnet (where applicable)
+    pub static ref P2P_PING_SUBNET: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("ping_subnet", "Number of Pings received by subnet (where applicable).")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_P2P),
+        &[LABEL_P2P_SUBNET]
     ).unwrap();
 
     /// Number of "old" pings (without a value) received by address
