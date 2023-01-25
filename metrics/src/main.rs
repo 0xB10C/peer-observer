@@ -12,9 +12,8 @@ use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 
 use std::env;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time;
-
-use std::collections::HashMap;
 
 mod metrics;
 mod metricserver;
@@ -57,9 +56,13 @@ fn main() {
                 }
                 Wrap::Conn(c) => match c.event.unwrap() {
                     Event::Inbound(i) => {
+                        let ip = ip(i.conn.addr);
                         metrics::CONN_INBOUND.inc();
                         metrics::CONN_INBOUND_ADDRESS
-                            .with_label_values(&[&ip(i.conn.addr)])
+                            .with_label_values(&[&ip])
+                            .inc();
+                        metrics::CONN_INBOUND_SUBNET
+                            .with_label_values(&[&subnet_24_or_64_or_ip(ip)])
                             .inc();
                         metrics::CONN_INBOUND_NETWORK
                             .with_label_values(&[&i.conn.network.to_string()])
@@ -230,6 +233,7 @@ fn main() {
             Msg::Ping(_) => {
                 if msg.meta.inbound {
                     metrics::P2P_PING_ADDRESS.with_label_values(&[&ip]).inc();
+                    metrics::P2P_PING_ADDRESS.with_label_values(&[&subnet_24_or_64_or_ip(ip)]).inc();
                 }
             }
             Msg::Oldping(_) => {
@@ -276,9 +280,64 @@ fn main() {
 }
 
 /// Split and return the IP from an ip:port combination.
-fn ip(addr: String) -> String {
+pub fn ip(addr: String) -> String {
     match addr.rsplit_once(":") {
-        Some((ip, _)) => ip.to_string(),
+        Some((ip, _)) => ip.replace("[", "").replace("]", "").to_string(),
         None => addr,
+    }
+}
+
+/// Returns the /24 subnet for IPv4 or the /64 subnet for IPv6 address.
+/// If [ip] is not a valid IPv4 or IPv6 address, the original ip is returned.
+/// This is the case for Tor and I2P addresses.
+/// TODO: make sure this works for CJDNS IPs too.
+pub fn subnet_24_or_64_or_ip(ip: String) -> String {
+    let cleaned_ip = ip.replace("[", "").replace("]", "");
+    if let Ok(ip_addr) = cleaned_ip.parse() {
+        match ip_addr {
+            IpAddr::V4(a) => {
+                let o = a.octets();
+                return Ipv4Addr::new(o[0], o[1], o[2], 0).to_string();
+            }
+            IpAddr::V6(a) => {
+                let s = a.segments();
+                return Ipv6Addr::new(s[0], s[1], s[2], s[3], 0, 0, 0, 0).to_string();
+            }
+        }
+    }
+    return ip;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_ip() {
+        assert_eq!(ip(String::from("127.0.0.1:8333")).as_str(), "127.0.0.1");
+        assert_eq!(ip(String::from("::1:8333")).as_str(), "::1");
+        assert_eq!(
+            ip(String::from("::ffff:a.b.c.d:8333")).as_str(),
+            "::ffff:a.b.c.d"
+        );
+        assert_eq!(
+            ip(String::from("[::ffff:a.b.c.d]:8333")).as_str(),
+            "::ffff:a.b.c.d"
+        );
+    }
+
+    #[test]
+    fn test_subnet_24_or_64_or_ip() {
+        assert_eq!(
+            subnet_24_or_64_or_ip(String::from("127.0.0.1")).as_str(),
+            "127.0.0.0"
+        );
+        assert_eq!(
+            subnet_24_or_64_or_ip(String::from("2604:d500:4:1::3:a2")).as_str(),
+            "2604:d500:4:1::"
+        );
+        assert_eq!(
+            subnet_24_or_64_or_ip(String::from("[2604:d500:4:1::3:a2]")).as_str(),
+            "2604:d500:4:1::"
+        );
     }
 }
