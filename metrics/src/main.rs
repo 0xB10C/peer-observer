@@ -233,7 +233,9 @@ fn main() {
             Msg::Ping(_) => {
                 if msg.meta.inbound {
                     metrics::P2P_PING_ADDRESS.with_label_values(&[&ip]).inc();
-                    metrics::P2P_PING_ADDRESS.with_label_values(&[&subnet_24_or_64_or_ip(ip)]).inc();
+                    metrics::P2P_PING_SUBNET
+                        .with_label_values(&[&subnet_24_or_64_or_ip(ip)])
+                        .inc();
                 }
             }
             Msg::Oldping(_) => {
