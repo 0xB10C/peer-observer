@@ -71,6 +71,7 @@ impl fmt::Display for NetworkType {
 struct Input {
     pub address: Address,
     pub _source_id: u64,
+    pub timestamp: u64,
     pub source_ip: String,
     pub version: AddrMessageVersion,
 }
@@ -153,18 +154,18 @@ fn worker(
     }
 }
 
-fn handle_event(event: Wrap, input_sender: Sender<Input>) {
+fn handle_event(event: Wrap, timestamp: u64, input_sender: Sender<Input>) {
     match event {
         Wrap::Msg(msg) => {
             if msg.meta.inbound {
-                handle_inbound_message(msg, input_sender);
+                handle_inbound_message(msg, timestamp, input_sender);
             }
         }
         _ => (),
     }
 }
 
-fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
+fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<Input>) {
     if let Some(inbound_msg) = msg.msg {
         match inbound_msg {
             Msg::Addr(addr) => {
@@ -176,6 +177,7 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                 for addr in addr.addresses {
                     let input = Input {
                         address: addr,
+                        timestamp,
                         _source_id: msg.meta.peer_id,
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addr,
@@ -192,6 +194,7 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                 for addr in addrv2.addresses {
                     let input = Input {
                         address: addr,
+                        timestamp,
                         _source_id: msg.meta.peer_id,
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addrv2,
@@ -278,9 +281,10 @@ fn main() {
     crossbeam::scope(|s| {
         s.spawn(|_| loop {
             let msg = sub.recv().unwrap();
-            let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
+            let wrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap();
+            let unwrapped = wrapped.wrap;
             if let Some(event) = unwrapped {
-                handle_event(event, input_sender.clone());
+                handle_event(event, wrapped.timestamp, input_sender.clone());
             }
         });
 
@@ -313,9 +317,22 @@ fn main() {
                     .inc();
             }
             if output.cached {
-                metrics::ADDR_CACHED.with_label_values(&[&network, &version])
+                metrics::ADDR_CACHED
+                    .with_label_values(&[&network, &version])
                     .inc();
             }
+
+            // We substract the timestamp in the address from the time we received the
+            // message. If the remaining offset is larger than or equal to zero, the address
+            // timestamp lies in the past. If the offset is smaller than zero, the address
+            // timestamp lies in the future.
+            let offset = output.input.timestamp as i64 - output.input.address.timestamp as i64;
+            let offset_direction = if offset >= 0 { "past" } else { "future" };
+            let successful = if output.result { "yes" } else { "no" };
+
+            metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
+                .with_label_values(&[&network, &version, &offset_direction, &successful])
+                .observe(offset.abs() as f64);
         }
     })
     .unwrap();
