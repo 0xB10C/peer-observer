@@ -1,9 +1,11 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
+use std::collections::HashMap;
 use std::fmt;
 use std::io::{BufReader, Write};
 use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use shared::bitcoin::consensus::{encode, Decodable};
 use shared::bitcoin::network::{address, constants, message, message_network};
@@ -33,6 +35,7 @@ const NETWORK: constants::Network = constants::Network::Bitcoin;
 const USER_AGENT: &str = "/bitnodes.io:0.3/";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
+const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Clone, Debug)]
 enum AddrMessageVersion {
@@ -76,36 +79,77 @@ struct Input {
 struct Output {
     pub input: Input,
     pub result: bool,
+    pub cached: bool,
     pub network: NetworkType,
 }
 
-fn worker(output_sender: &Sender<Output>, input_receiver: &Receiver<Input>) {
+fn worker(
+    output_sender: &Sender<Output>,
+    input_receiver: &Receiver<Input>,
+    recent_succesful_connections_cache: Arc<Mutex<HashMap<String, Instant>>>,
+) {
     for input in input_receiver.iter() {
-        match input.clone().address.address.unwrap() {
-            AddressType::Ipv4(ipv4) => {
-                if let Ok(ipv4_addr) = ipv4.parse() {
-                    let socket = SocketAddr::new(IpAddr::V4(ipv4_addr), input.address.port as u16);
-                    let output = Output {
-                        input,
-                        result: try_connect(socket),
-                        network: NetworkType::IPv4,
-                    };
-                    output_sender.send(output).unwrap();
-                }
+        let address = input.clone().address.address.unwrap();
+        let key = format!(
+            "{}--{}",
+            input.clone().address.address.unwrap(),
+            input.clone().address.port
+        );
+        let recent_succesful_connection = match recent_succesful_connections_cache
+            .lock()
+            .expect("could not lock cache for lookup")
+            .get(&key)
+        {
+            Some(last_succesful_connection_time) => {
+                last_succesful_connection_time.elapsed() < RECENT_CONNECTION_DURATION
             }
-            AddressType::Ipv6(ipv6) => {
-                if let Ok(ipv6_addr) = ipv6.parse() {
-                    let socket = SocketAddr::new(IpAddr::V6(ipv6_addr), input.address.port as u16);
-                    let output = Output {
-                        input,
-                        result: try_connect(socket),
-                        network: NetworkType::IPv6,
-                    };
-                    output_sender.send(output).unwrap();
-                }
-            }
-            _ => (),
+            None => false,
         };
+
+        let network_type_opt: Option<NetworkType> = match address.clone() {
+            AddressType::Ipv4(_) => Some(NetworkType::IPv4),
+            AddressType::Ipv6(_) => Some(NetworkType::IPv6),
+            _ => None, // TODO: only IPv4 and IPv6 supported for now
+        };
+        if let Some(network_type) = network_type_opt {
+            let ip_addr_opt: Option<IpAddr> = match address.clone() {
+                AddressType::Ipv4(ipv4) => match ipv4.parse() {
+                    Ok(ipv4_addr) => Some(IpAddr::V4(ipv4_addr)),
+                    Err(_) => None,
+                },
+                AddressType::Ipv6(ipv6) => match ipv6.parse() {
+                    Ok(ipv6_addr) => Some(IpAddr::V6(ipv6_addr)),
+                    Err(_) => None,
+                },
+                _ => None,
+            };
+
+            if let Some(ip_addr) = ip_addr_opt {
+                let result: bool = match recent_succesful_connection {
+                    true => true,
+                    false => {
+                        if try_connect(SocketAddr::new(ip_addr, input.address.port as u16)) {
+                            recent_succesful_connections_cache
+                                .lock()
+                                .expect("could not lock cache for insert")
+                                .insert(key, Instant::now());
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                };
+
+                output_sender
+                    .send(Output {
+                        input,
+                        result,
+                        cached: recent_succesful_connection,
+                        network: network_type,
+                    })
+                    .unwrap();
+            }
+        }
     }
 }
 
@@ -144,6 +188,7 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                     println!("Received an addrv2 message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
                     return;
                 }
+
                 for addr in addrv2.addresses {
                     let input = Input {
                         address: addr,
@@ -239,9 +284,12 @@ fn main() {
             }
         });
 
+        let recent_succesful_connections_cache: Arc<Mutex<HashMap<String, Instant>>> =
+            Arc::new(Mutex::new(HashMap::new()));
         for _ in 0..WORKERS {
             let (sender, receiver) = (output_sender.clone(), input_receiver.clone());
-            s.spawn(move |_| worker(&sender, &receiver));
+            let cache = recent_succesful_connections_cache.clone();
+            s.spawn(move |_| worker(&sender, &receiver, cache));
         }
 
         for output in output_receiver.iter() {
@@ -262,6 +310,10 @@ fn main() {
             } else {
                 metrics::ADDR_UNSUCCESSFUL_CONNECTION
                     .with_label_values(&[&network, &version, &ip])
+                    .inc();
+            }
+            if output.cached {
+                metrics::ADDR_CACHED.with_label_values(&[&network, &version])
                     .inc();
             }
         }
