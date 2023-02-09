@@ -1,6 +1,8 @@
 use lazy_static::lazy_static;
-use prometheus::{self, IntCounterVec, IntGauge};
-use prometheus::{register_int_counter_vec, register_int_gauge, Opts};
+use prometheus::{self, HistogramVec, IntCounterVec, IntGauge};
+use prometheus::{
+    register_histogram_vec, register_int_counter_vec, register_int_gauge, HistogramOpts, Opts,
+};
 
 // Prometheus Metrics
 
@@ -10,8 +12,40 @@ const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_ADDR: &str = "addr";
 
 pub const LABEL_NETWORK: &str = "network";
+pub const LABEL_SUCCESSFUL: &str = "successful";
 pub const LABEL_ADDR_VERSION: &str = "addr_version";
 pub const LABEL_SOURCE_IP: &str = "source_ip";
+pub const LABEL_ADDR_TIMESTAMP_OFFSET: &str = "timestamp_offset";
+
+// Buckets for addr(v2) message timestamp offset in seconds.
+pub const BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET: [f64; 26] = [
+    0f64,
+    1f64,
+    2f64,
+    4f64,
+    8f64,
+    16f64,
+    32f64,
+    64f64,
+    128f64,
+    256f64,
+    512f64,
+    1024f64,
+    2048f64,
+    4096f64,
+    8192f64,
+    16384f64,
+    32768f64,
+    65536f64,
+    131072f64,
+    262144f64,
+    524288f64,
+    1048576f64,
+    2097152f64,
+    4194304f64,
+    8388608f64,
+    16777216f64,
+];
 
 lazy_static! {
 
@@ -63,5 +97,15 @@ lazy_static! {
             .subsystem(SUBSYSTEM_ADDR),
         &[LABEL_NETWORK, LABEL_ADDR_VERSION, LABEL_SOURCE_IP]
     ).unwrap();
+
+    /// Histogram of the timestamp offset (in seconds) of addresses contained in an "addr" message.
+    pub static ref P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM: HistogramVec =
+        register_histogram_vec!(
+            HistogramOpts::new("addr_timestamp_offset_seconds", "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addr' message.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_ADDR)
+                .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
+            &[LABEL_NETWORK, LABEL_ADDR_VERSION, LABEL_ADDR_TIMESTAMP_OFFSET, LABEL_SUCCESSFUL]
+        ).unwrap();
 
 }
