@@ -37,6 +37,15 @@ lazy_static! {
         &[LABEL_NETWORK, LABEL_ADDR_VERSION]
     ).unwrap();
 
+    /// Number of cached addresses.
+    pub static ref ADDR_CACHED: IntCounterVec =
+        register_int_counter_vec!(
+            Opts::new("cached", "Number of addresses cached.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_ADDR),
+        &[LABEL_NETWORK, LABEL_ADDR_VERSION]
+    ).unwrap();
+
     /// Number of successful connections.
     pub static ref ADDR_SUCCESSFUL_CONNECTION: IntCounterVec =
     register_int_counter_vec!(
