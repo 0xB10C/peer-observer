@@ -125,6 +125,7 @@ fn main() {
             "outbound"
         };
         let ip = ip(msg.meta.addr.clone());
+        let subnet = subnet_24_or_64_or_ip(ip.clone());
         let mut labels = HashMap::<&str, &str>::new();
         labels.insert(metrics::LABEL_P2P_MSG_TYPE, &msg.meta.command);
         labels.insert(metrics::LABEL_P2P_CONNECTION_TYPE, &conn_type);
@@ -134,6 +135,13 @@ fn main() {
         metrics::P2P_MESSAGE_BYTES
             .with(&labels)
             .inc_by(msg.meta.size);
+
+        metrics::P2P_MESSAGE_BYTES_BY_SUBNET
+            .with_label_values(&[&direction, &subnet])
+            .inc_by(msg.meta.size);
+        metrics::P2P_MESSAGE_COUNT_BY_SUBNET
+            .with_label_values(&[&direction, &subnet])
+            .inc();
 
         match msg.msg.as_ref().unwrap() {
             Msg::Addr(addr) => {
