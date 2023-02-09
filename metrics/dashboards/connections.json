@@ -30,164 +30,6 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 16,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 33,
-      "options": {
-        "calculate": false,
-        "cellGap": 0,
-        "color": {
-          "exponent": 1.5,
-          "fill": "red",
-          "min": 1,
-          "mode": "opacity",
-          "reverse": false,
-          "scale": "linear",
-          "scheme": "PiYG",
-          "steps": 65
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {},
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "reverse": false
-        }
-      },
-      "pluginVersion": "9.3.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
-          },
-          "editorMode": "code",
-          "expr": "increase(networkobserver_conn_inbound_address{addr=~\"(209.222.252.*)\"}[1m])",
-          "interval": "1m",
-          "legendFormat": "{{addr}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Connections from 209.222.252.0/24",
-      "type": "heatmap"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 16,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 34,
-      "options": {
-        "calculate": false,
-        "cellGap": 0,
-        "color": {
-          "exponent": 2,
-          "fill": "red",
-          "min": 1,
-          "mode": "opacity",
-          "reverse": false,
-          "scale": "linear",
-          "scheme": "PiYG",
-          "steps": 64
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "reverse": false
-        }
-      },
-      "pluginVersion": "9.3.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "P1809F7CD0C75ACF3"
-          },
-          "editorMode": "code",
-          "expr": "increase(networkobserver_conn_inbound_address{addr=~\"(162.218.65.*)\"}[1m])",
-          "interval": "1m",
-          "legendFormat": "{{addr}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Connections from 162.218.65.0/24",
-      "type": "heatmap"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
         "uid": "prometheus"
       },
       "fieldConfig": {
@@ -278,7 +120,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 0
       },
       "id": 22,
       "options": {
@@ -380,7 +222,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 0
       },
       "id": 5,
       "options": {
@@ -469,7 +311,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 9
       },
       "id": 20,
       "options": {
@@ -570,7 +412,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "162.218.65.0 (forked.net)"
+                "value": "162.218.65.0 [lionlink-1]"
               }
             ]
           },
@@ -582,7 +424,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "209.222.252.0 (forked.net)"
+                "value": "209.222.252.0 [lionlink-1]"
               }
             ]
           },
@@ -594,31 +436,19 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "2604:d500:4:1:: (forked.net)"
+                "value": "2604:d500:4:1:: [lionlink-1]"
               }
             ]
           },
           {
-            "__systemRef": "hideSeriesFrom",
             "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "91.198.115.0"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
+              "id": "byName",
+              "options": "91.198.115.0"
             },
             "properties": [
               {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
+                "id": "displayName",
+                "value": "91.198.115.0 [lionlink-1]"
               }
             ]
           }
@@ -628,7 +458,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 9
       },
       "id": 31,
       "options": {
@@ -717,7 +547,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 17
       },
       "id": 2,
       "options": {
@@ -814,7 +644,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 18
       },
       "id": 4,
       "options": {
@@ -934,6 +764,18 @@
                 "value": "IPv6"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tor"
+              }
+            ]
           }
         ]
       },
@@ -941,7 +783,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 26
       },
       "id": 26,
       "options": {
@@ -978,7 +820,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "P1809F7CD0C75ACF3"
       },
       "fieldConfig": {
         "defaults": {
@@ -1036,7 +878,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 27
       },
       "id": 17,
       "options": {
@@ -1057,12 +899,14 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "delta(networkobserver_conn_closed[1m])",
+          "expr": "increase(networkobserver_conn_closed[1m])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 4,
           "legendFormat": "closed",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1077,37 +921,13 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "align": "left",
+            "displayMode": "auto",
+            "filterable": true,
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -1116,6 +936,10 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
               },
               {
                 "color": "red",
@@ -1127,41 +951,67 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 10,
         "w": 12,
         "x": 12,
-        "y": 51
+        "y": 35
       },
       "id": 11,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "footer": {
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "id"
+          }
+        ]
       },
+      "pluginVersion": "9.3.1",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "networkobserver_conn_misbehaving",
-          "interval": "",
-          "legendFormat": "",
-          "range": true,
-          "refId": "A"
+          "exemplar": false,
+          "expr": "last_over_time(networkobserver_conn_misbehaving_score_increase[1h])",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
         }
       ],
-      "title": "Misbehaving",
-      "type": "timeseries"
+      "title": "Misbehaving connections",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Time": "",
+              "Value": "score_increase"
+            }
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -1252,7 +1102,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 52
+        "y": 36
       },
       "id": 27,
       "options": {
@@ -1410,7 +1260,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 45
       },
       "id": 13,
       "options": {
@@ -1510,7 +1360,7 @@
         "h": 17,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 51
       },
       "id": 29,
       "options": {
@@ -1548,159 +1398,6 @@
       ],
       "title": "3 or more connections by this netgroup in the last hour",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 100
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 84
-      },
-      "id": 16,
-      "options": {
-        "displayMode": "basic",
-        "minVizHeight": 10,
-        "minVizWidth": 0,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true
-      },
-      "pluginVersion": "9.3.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "exemplar": true,
-          "expr": "sum(networkobserver_conn_misbehaving_score_increase) by (id)",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{id}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Misbehaving",
-      "type": "bargauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 100
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 96
-      },
-      "id": 18,
-      "options": {
-        "displayMode": "basic",
-        "minVizHeight": 10,
-        "minVizWidth": 0,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true
-      },
-      "pluginVersion": "9.3.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "exemplar": true,
-          "expr": "sum(networkobserver_conn_misbehaving) by (missbehavingmessage)",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{missbehavingmessage}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Misbehaving",
-      "transformations": [],
-      "type": "bargauge"
     },
     {
       "datasource": {
@@ -1770,7 +1467,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 108
+        "y": 68
       },
       "id": 19,
       "options": {
@@ -1813,7 +1510,7 @@
     "list": []
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {},
