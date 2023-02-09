@@ -11,6 +11,7 @@ const SUBSYSTEM_ADDR: &str = "addr";
 
 pub const LABEL_NETWORK: &str = "network";
 pub const LABEL_ADDR_VERSION: &str = "addr_version";
+pub const LABEL_SOURCE_IP: &str = "source_ip";
 
 lazy_static! {
 
@@ -42,7 +43,16 @@ lazy_static! {
         Opts::new("successful_connection", "Number of successful connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_ADDR),
-        &[LABEL_NETWORK, LABEL_ADDR_VERSION]
+        &[LABEL_NETWORK, LABEL_ADDR_VERSION, LABEL_SOURCE_IP]
+    ).unwrap();
+
+    /// Number of unsuccessful connections by source.
+    pub static ref ADDR_UNSUCCESSFUL_CONNECTION: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("unsuccessful_connection", "Number of unsuccessful connections by source.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_ADDR),
+        &[LABEL_NETWORK, LABEL_ADDR_VERSION, LABEL_SOURCE_IP]
     ).unwrap();
 
 }

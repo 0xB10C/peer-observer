@@ -68,7 +68,7 @@ impl fmt::Display for NetworkType {
 struct Input {
     pub address: Address,
     pub _source_id: u64,
-    pub _source_ip: String,
+    pub source_ip: String,
     pub version: AddrMessageVersion,
 }
 
@@ -133,7 +133,7 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                     let input = Input {
                         address: addr,
                         _source_id: msg.meta.peer_id,
-                        _source_ip: msg.meta.addr.clone(),
+                        source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addr,
                     };
                     input_sender.send(input).unwrap();
@@ -148,7 +148,7 @@ fn handle_inbound_message(msg: NetMessage, input_sender: Sender<Input>) {
                     let input = Input {
                         address: addr,
                         _source_id: msg.meta.peer_id,
-                        _source_ip: msg.meta.addr.clone(),
+                        source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addrv2,
                     };
                     input_sender.send(input).unwrap();
@@ -210,6 +210,14 @@ fn try_connect(address: SocketAddr) -> bool {
     return false;
 }
 
+/// Split and return the IP from an ip:port combination.
+pub fn ip(addr: String) -> String {
+    match addr.rsplit_once(":") {
+        Some((ip, _)) => ip.replace("[", "").replace("]", "").to_string(),
+        None => addr,
+    }
+}
+
 fn main() {
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
@@ -226,7 +234,6 @@ fn main() {
         s.spawn(|_| loop {
             let msg = sub.recv().unwrap();
             let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
-
             if let Some(event) = unwrapped {
                 handle_event(event, input_sender.clone());
             }
@@ -238,21 +245,25 @@ fn main() {
         }
 
         for output in output_receiver.iter() {
+            println!("Sink received {:?}", output);
+
+            let network = output.network.to_string();
+            let version = output.input.version.to_string();
+            let ip = ip(output.input.source_ip);
+
             metrics::ADDR_TRIED
-                .with_label_values(&[
-                    &output.network.to_string(),
-                    &output.input.version.to_string(),
-                ])
+                .with_label_values(&[&network, &version])
                 .inc();
+
             if output.result {
                 metrics::ADDR_SUCCESSFUL_CONNECTION
-                    .with_label_values(&[
-                        &output.network.to_string(),
-                        &output.input.version.to_string(),
-                    ])
+                    .with_label_values(&[&network, &version, &ip])
+                    .inc();
+            } else {
+                metrics::ADDR_UNSUCCESSFUL_CONNECTION
+                    .with_label_values(&[&network, &version, &ip])
                     .inc();
             }
-            println!("Sink received {:?}", output);
         }
     })
     .unwrap();
