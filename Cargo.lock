@@ -512,6 +512,7 @@ dependencies = [
  "prost",
  "shared",
  "simple_logger 1.16.0",
+ "utils",
 ]
 
 [[package]]

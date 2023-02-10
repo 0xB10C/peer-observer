@@ -58,6 +58,9 @@ fn main() {
                     Event::Inbound(i) => {
                         let ip = ip(i.conn.addr);
                         metrics::CONN_INBOUND.inc();
+                        if utils::torexitips::is_tor_exit_node(&ip) {
+                            metrics::CONN_INBOUND_TOR_EXIT.inc();
+                        }
                         metrics::CONN_INBOUND_ADDRESS
                             .with_label_values(&[&ip])
                             .inc();
