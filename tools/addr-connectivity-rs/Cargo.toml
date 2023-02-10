@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 shared = { path = "../../shared" }
+utils = { path= "../../utils" }
 
 prost = "0.10"
 nng = "1.0.1"
@@ -16,7 +17,6 @@ prometheus = "0.13.3"
 lazy_static = "1.4.0"
 log = "0.4.17"
 simple_logger = "4.0.0"
-
 
 
 [features]

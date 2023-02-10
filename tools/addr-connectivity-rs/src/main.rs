@@ -16,6 +16,8 @@ use shared::primitive::Address;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 
+use utils::torexitips;
+
 use crossbeam;
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use nng::options::protocol::pubsub::Subscribe;
@@ -301,7 +303,7 @@ fn main() {
 
             let network = output.network.to_string();
             let version = output.input.version.to_string();
-            let ip = ip(output.input.source_ip);
+            let source_ip = ip(output.input.source_ip);
 
             metrics::ADDR_TRIED
                 .with_label_values(&[&network, &version])
@@ -309,11 +311,11 @@ fn main() {
 
             if output.result {
                 metrics::ADDR_SUCCESSFUL_CONNECTION
-                    .with_label_values(&[&network, &version, &ip])
+                    .with_label_values(&[&network, &version, &source_ip])
                     .inc();
             } else {
                 metrics::ADDR_UNSUCCESSFUL_CONNECTION
-                    .with_label_values(&[&network, &version, &ip])
+                    .with_label_values(&[&network, &version, &source_ip])
                     .inc();
             }
             if output.cached {
@@ -333,6 +335,18 @@ fn main() {
             metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
                 .with_label_values(&[&network, &version, &offset_direction, &successful])
                 .observe(offset.abs() as f64);
+
+            if torexitips::is_tor_exit_node(&source_ip) {
+                metrics::ADDR_TRIED_FROM_TOR_EXIT
+                    .with_label_values(&[&network, &version])
+                    .inc();
+
+                if output.result {
+                    metrics::ADDR_SUCCESSFUL_CONNECTION_TOR_EXIT
+                        .with_label_values(&[&network, &version])
+                        .inc();
+                }
+            }
         }
     })
     .unwrap();

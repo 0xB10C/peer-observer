@@ -71,6 +71,7 @@ lazy_static! {
         &[LABEL_NETWORK, LABEL_ADDR_VERSION]
     ).unwrap();
 
+
     /// Number of cached addresses.
     pub static ref ADDR_CACHED: IntCounterVec =
         register_int_counter_vec!(
@@ -107,5 +108,25 @@ lazy_static! {
                 .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
             &[LABEL_NETWORK, LABEL_ADDR_VERSION, LABEL_ADDR_TIMESTAMP_OFFSET, LABEL_SUCCESSFUL]
         ).unwrap();
+
+    // -------------------- source: Tor exit node
+
+    /// Number of addresses tried that we received from a Tor exit node.
+    pub static ref ADDR_TRIED_FROM_TOR_EXIT: IntCounterVec =
+        register_int_counter_vec!(
+            Opts::new("tried_tor_exit", "Number of addresses tried that we received from a Tor exit node.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_ADDR),
+        &[LABEL_NETWORK, LABEL_ADDR_VERSION]
+    ).unwrap();
+
+    /// Number of successful connections to addresses that we received from a Tor exit node.
+    pub static ref ADDR_SUCCESSFUL_CONNECTION_TOR_EXIT: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("successful_connection_tor_exit", "Number of successful connections to addresses that we received from a Tor exit node.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_ADDR),
+        &[LABEL_NETWORK, LABEL_ADDR_VERSION]
+    ).unwrap();
 
 }
