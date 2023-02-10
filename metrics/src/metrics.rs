@@ -240,7 +240,7 @@ lazy_static! {
     /// Number of inbound connections.
     pub static ref CONN_INBOUND: IntCounter =
     register_int_counter!(
-        Opts::new("inbound", "Number of opnened inbound connections.")
+        Opts::new("inbound", "Number of inbound connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
@@ -279,6 +279,14 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_NETGROUP]
+    ).unwrap();
+
+    /// Number of inbound connections from Tor exit nodes.
+    pub static ref CONN_INBOUND_TOR_EXIT: IntCounter =
+    register_int_counter!(
+        Opts::new("inbound_tor_exit", "Number of inbound connections from Tor exit nodes.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
     /// Number of currently open inbound connections.
