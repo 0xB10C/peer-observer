@@ -26,6 +26,8 @@ use nng::{Protocol, Socket};
 use prost::Message as ProstMessage;
 use rand::Rng;
 
+use csv::WriterBuilder;
+
 mod metrics;
 mod metricserver;
 
@@ -34,7 +36,7 @@ const METRICS_ADDRESS: &'static str = "127.0.0.1:36437";
 const WORKERS: usize = 50;
 
 const NETWORK: constants::Network = constants::Network::Bitcoin;
-const USER_AGENT: &str = "/bitnodes.io:0.3/";
+const USER_AGENT: &str = "/bitnodes.oi:0.2/";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
@@ -72,7 +74,7 @@ impl fmt::Display for NetworkType {
 #[derive(Debug, Clone)]
 struct Input {
     pub address: Address,
-    pub _source_id: u64,
+    pub source_id: u64,
     pub timestamp: u64,
     pub source_ip: String,
     pub version: AddrMessageVersion,
@@ -84,6 +86,22 @@ struct Output {
     pub result: bool,
     pub cached: bool,
     pub network: NetworkType,
+}
+
+#[derive(serde::Serialize)]
+struct Row {
+    result_timestamp: u64,
+    addr_address: String,
+    addr_port: u32,
+    addr_services: u64,
+    addr_timestamp: u64,
+    addr_network_type: String,
+    addr_version: String,
+    source_address: String,
+    source_id: u64,
+    source_tor_exit_node: bool,
+    result_success: bool,
+    result_cached: bool,
 }
 
 fn worker(
@@ -180,7 +198,7 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
                     let input = Input {
                         address: addr,
                         timestamp,
-                        _source_id: msg.meta.peer_id,
+                        source_id: msg.meta.peer_id,
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addr,
                     };
@@ -197,7 +215,7 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
                     let input = Input {
                         address: addr,
                         timestamp,
-                        _source_id: msg.meta.peer_id,
+                        source_id: msg.meta.peer_id,
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addrv2,
                     };
@@ -298,6 +316,10 @@ fn main() {
             s.spawn(move |_| worker(&sender, &receiver, cache));
         }
 
+        let mut wtr = WriterBuilder::new()
+            .from_path("addr-connectivity.csv")
+            .unwrap();
+
         for output in output_receiver.iter() {
             println!("Sink received {:?}", output);
 
@@ -336,7 +358,7 @@ fn main() {
                 .with_label_values(&[&network, &version, &offset_direction, &successful])
                 .observe(offset.abs() as f64);
 
-            if torexitips::is_tor_exit_node(&source_ip) {
+            if torexitips::is_tor_exit_node(&source_ip.clone()) {
                 metrics::ADDR_TRIED_FROM_TOR_EXIT
                     .with_label_values(&[&network, &version])
                     .inc();
@@ -347,6 +369,32 @@ fn main() {
                         .inc();
                 }
             }
+
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Time error")
+                .as_secs();
+
+            wtr.serialize(Row {
+                result_timestamp: timestamp,
+                addr_address: output
+                    .input
+                    .address
+                    .address
+                    .expect("should be some address")
+                    .to_string(),
+                addr_port: output.input.address.port,
+                addr_services: output.input.address.services,
+                addr_timestamp: output.input.timestamp,
+                addr_network_type: network,
+                addr_version: version,
+                source_address: source_ip.clone(),
+                source_id: output.input.source_id,
+                source_tor_exit_node: torexitips::is_tor_exit_node(&source_ip),
+                result_success: output.result,
+                result_cached: output.cached,
+            })
+            .unwrap();
         }
     })
     .unwrap();
