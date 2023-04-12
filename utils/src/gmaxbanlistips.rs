@@ -1,4 +1,4 @@
-// includes an auto-generated function to match Tor exit node IPs
+// includes an auto-generated function to match IPs
 // the generation code can be found in build.rs
 include!(concat!(env!("OUT_DIR"), "/gmaxbanlist.rs"));
 
@@ -12,7 +12,7 @@ mod tests {
         ));
 
         // The IP addresses defined in RFC5737 for use in documentation likely
-        // won't be used as Tor exit nodes any time soon (?).
+        // won't be added to the banlist (?).
         //
         // https://www.rfc-editor.org/rfc/rfc5737
         assert!(!is_on_gmax_banlist("192.0.2.222")); // TEST-NET-1
