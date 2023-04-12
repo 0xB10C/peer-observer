@@ -11,6 +11,7 @@ use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 
+use std::collections::HashMap;
 use std::env;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time;
