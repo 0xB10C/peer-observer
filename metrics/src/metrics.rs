@@ -289,6 +289,24 @@ lazy_static! {
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
+    /// Number of inbound connections from IPs on the Monero banlist.
+    pub static ref CONN_INBOUND_BANLIST_MONERO: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound_banlist_monero", "Number of inbound connections from IPs on the Monero banlist.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_ADDR]
+    ).unwrap();
+
+    /// Number of inbound connections from IPs on the GMax banlist.
+    pub static ref CONN_INBOUND_BANLIST_GMAX: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("inbound_banlist_gmax", "Number of inbound connections from IPs on the gmax banlist.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_ADDR]
+    ).unwrap();
+
     /// Number of currently open inbound connections.
     pub static ref CONN_INBOUND_CURRENT: IntGauge =
     register_int_gauge!(
