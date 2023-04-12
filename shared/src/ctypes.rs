@@ -349,13 +349,90 @@ impl fmt::Display for P2PMessageDecodeError {
     }
 }
 
-/*
-impl Error for P2PMessageDecodeError {
-    fn description(&self) -> &str {
-        self.as_str()
+
+#[repr(C)]
+pub struct AddrmanInsertNew {
+    pub inserted: bool,
+    pub bucket: i32,
+    pub bucket_pos: i32,
+    pub addr: [u8; MAX_PEER_ADDR_LENGTH],
+    pub addr_as: u32,
+    pub source: [u8; MAX_PEER_ADDR_LENGTH],
+    pub source_as: u32,
+}
+
+impl AddrmanInsertNew {
+    // TODO: comment
+    pub fn addr(&self) -> String {
+        String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+    }
+
+    // TODO: comment
+    pub fn source(&self) -> String {
+        String::from_utf8_lossy(&self.source.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+    }
+
+    pub fn from_bytes(x: &[u8]) -> AddrmanInsertNew {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const AddrmanInsertNew) }
     }
 }
-*/
+
+impl fmt::Display for AddrmanInsertNew {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "AddrmanInsertNew(inserted={}, bucket={}, bucket_pos={}, addr={}, addr_AS={}, source={}, source_AS={})",
+            self.inserted,
+            self.bucket,
+            self.bucket_pos,
+            self.addr(),
+            self.addr_as,
+            self.source(),
+            self.source_as,
+        )
+    }
+}
+
+#[repr(C)]
+pub struct AddrmanInsertTried {
+    pub bucket: i32,
+    pub bucket_pos: i32,
+    pub addr: [u8; MAX_PEER_ADDR_LENGTH],
+    pub addr_as: u32,
+    pub source: [u8; MAX_PEER_ADDR_LENGTH],
+    pub source_as: u32,
+}
+
+impl AddrmanInsertTried {
+    // TODO: comment
+    pub fn addr(&self) -> String {
+        String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+    }
+
+    // TODO: comment
+    pub fn source(&self) -> String {
+        String::from_utf8_lossy(&self.source.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+    }
+
+    pub fn from_bytes(x: &[u8]) -> AddrmanInsertTried {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const AddrmanInsertTried) }
+    }
+}
+
+impl fmt::Display for AddrmanInsertTried {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "AddrmanInsertTried(bucket={}, bucket_pos={}, addr={}, addr_AS={}, source={}, source_AS={})",
+            self.bucket,
+            self.bucket_pos,
+            self.addr(),
+            self.addr_as,
+            self.source(),
+            self.source_as,
+        )
+    }
+}
 
 #[cfg(test)]
 mod tests {

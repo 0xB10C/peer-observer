@@ -127,6 +127,9 @@ fn main() {
                             .inc_by(m.score_increase as u64);
                     }
                 },
+                Wrap::Addrman(a) => {
+                    println!("{:#?}", a);
+                },
             }
         }
     }
