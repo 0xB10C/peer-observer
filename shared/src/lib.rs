@@ -2,6 +2,7 @@
 
 pub extern crate bitcoin;
 
+pub mod addrman;
 pub mod ctypes;
 pub mod net_conn;
 pub mod net_msg;

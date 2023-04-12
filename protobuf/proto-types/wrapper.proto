@@ -4,6 +4,7 @@ package wrapper;
 
 import "net_msg.proto";
 import "net_conn.proto";
+import "addrman.proto";
 
 message Wrapper {
   required uint64  timestamp = 10;  // Timestamp (seconds since UNIX epoch) when the message was received.
@@ -11,6 +12,7 @@ message Wrapper {
   oneof wrap {
     net_msg.Message msg = 1;
     net_conn.ConnectionEvent conn = 2;
+    addrman.AddrmanEvent addrman = 3;
   }
 }
 

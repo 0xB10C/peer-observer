@@ -38,6 +38,11 @@ fn main() {
                         "# CONN {}", c.event.unwrap()
                     };
                 }
+                Wrap::Addrman(a) => {
+                    println! {
+                        "@Addrman {}", a.event.unwrap()
+                    };
+                }
             }
         }
     }

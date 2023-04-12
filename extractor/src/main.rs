@@ -13,13 +13,12 @@ use nng::{Protocol, Socket};
 use prost::Message;
 
 use shared::ctypes::{
-    ClosedConnection, InboundConnection, MisbehavingConnection, OutboundConnection, P2PMessage,
-    P2PMessageSize,
+    AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection,
+    MisbehavingConnection, OutboundConnection, P2PMessage, P2PMessageSize,
 };
-use shared::net_conn;
-use shared::net_msg;
 use shared::wrapper::wrapper::Wrap;
 use shared::wrapper::Wrapper;
+use shared::{addrman, net_conn, net_msg};
 
 fn bump_memlock_rlimit() {
     let rlimit = libc::rlimit {
@@ -74,6 +73,9 @@ fn attach_usdt_tracepoints(
         links.push(hook_usdt(fns.handle_net_conn_closed(),      pid, path, "net", "closed_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_evicted(),     pid, path, "net", "evicted_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_misbehaving(), pid, path, "net", "misbehaving_connection")?);
+        // addrman
+        links.push(hook_usdt(fns.handle_addrman_new(),          pid, path, "addrman", "attempt_add")?);
+        links.push(hook_usdt(fns.handle_addrman_tried(),        pid, path, "addrman", "move_to_good")?);
     }
     Ok(links)
 }
@@ -114,7 +116,9 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .add(maps.net_conn_outbound(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
         .add(maps.net_conn_closed(), |data| { handle_net_conn_closed(data, socket.clone()) })?
         .add(maps.net_conn_evicted(), |data| { handle_net_conn_evicted(data, socket.clone()) })?
-        .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?;
+        .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?
+        .add(maps.addrman_insert_new(), |data| { handle_addrman_new(data, socket.clone()) })?
+        .add(maps.addrman_insert_tried(), |data| { handle_addrman_tried(data, socket.clone()) })?;
     let ring_buffers = ringbuff_builder.build()?;
 
     loop {
@@ -238,6 +242,42 @@ fn handle_net_message<const SIZE: usize>(data: &[u8], s: Socket) -> i32 {
         wrap: Some(Wrap::Msg(net_msg::Message {
             meta: message.meta.create_protobuf_metadata(),
             msg: Some(protobuf_message),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
+    let new = AddrmanInsertNew::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Addrman(addrman::AddrmanEvent {
+            event: Some(addrman::addrman_event::Event::New(new.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
+    let tried = AddrmanInsertTried::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Addrman(addrman::AddrmanEvent {
+            event: Some(addrman::addrman_event::Event::Tried(tried.into())),
         })),
     };
     s.send(&proto.encode_to_vec()).unwrap();
