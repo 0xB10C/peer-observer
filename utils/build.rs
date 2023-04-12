@@ -36,12 +36,17 @@ pub fn {}(ip: &str) -> bool {{
         ),
     )
     .expect("can write to file");
+    println!("cargo:rerun-if-changed={}", input);
 }
 
 fn main() {
     gen_ip_match_fn("./torbulkexitlist", "torexitlist.rs", "is_tor_exit_node");
     gen_ip_match_fn("./gmaxbanlist.txt", "gmaxbanlist.rs", "is_on_gmax_banlist");
+    gen_ip_match_fn(
+        "./monerobanlist.txt",
+        "monerobanlist.rs",
+        "is_on_monero_banlist",
+    );
 
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=./torbulkexitlist");
 }
