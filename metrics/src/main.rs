@@ -16,7 +16,6 @@ use shared::wrapper::wrapper::Wrap;
 
 use std::collections::HashMap;
 use std::env;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time;
 
 mod metrics;
@@ -71,7 +70,7 @@ fn main() {
     fn handle_connection_event(cevent: connection_event::Event) {
         match cevent {
             connection_event::Event::Inbound(i) => {
-                let ip = ip(i.conn.addr);
+                let ip = util::ip_from_ipport(i.conn.addr);
                 metrics::CONN_INBOUND.inc();
                 if util::is_tor_exit_node(&ip) {
                     metrics::CONN_INBOUND_TOR_EXIT.inc();
@@ -80,7 +79,7 @@ fn main() {
                     .with_label_values(&[&ip])
                     .inc();
                 metrics::CONN_INBOUND_SUBNET
-                    .with_label_values(&[&subnet_24_or_64_or_ip(ip)])
+                    .with_label_values(&[&util::subnet(ip)])
                     .inc();
                 metrics::CONN_INBOUND_NETWORK
                     .with_label_values(&[&i.conn.network.to_string()])
@@ -103,7 +102,7 @@ fn main() {
             connection_event::Event::Closed(c) => {
                 metrics::CONN_CLOSED.inc();
                 metrics::CONN_CLOSED_ADDRESS
-                    .with_label_values(&[&ip(c.conn.addr)])
+                    .with_label_values(&[&util::ip_from_ipport(c.conn.addr)])
                     .inc();
                 metrics::CONN_CLOSED_NETWORK
                     .with_label_values(&[&c.conn.network.to_string()])
@@ -115,7 +114,10 @@ fn main() {
             connection_event::Event::Evicted(e) => {
                 metrics::CONN_EVICTED.inc();
                 metrics::CONN_EVICTED_WITHINFO
-                    .with_label_values(&[&ip(e.conn.addr), &e.conn.network.to_string()])
+                    .with_label_values(&[
+                        &util::ip_from_ipport(e.conn.addr),
+                        &e.conn.network.to_string(),
+                    ])
                     .inc();
             }
             connection_event::Event::Misbehaving(m) => {
@@ -153,8 +155,8 @@ fn main() {
         } else {
             "outbound"
         };
-        let ip = ip(msg.meta.addr.clone());
-        let subnet = subnet_24_or_64_or_ip(ip.clone());
+        let ip = util::ip_from_ipport(msg.meta.addr.clone());
+        let subnet = util::subnet(ip.clone());
         let mut labels = HashMap::<&str, &str>::new();
         labels.insert(metrics::LABEL_P2P_MSG_TYPE, &msg.meta.command);
         labels.insert(metrics::LABEL_P2P_CONNECTION_TYPE, &conn_type);
@@ -271,7 +273,7 @@ fn main() {
                 if msg.meta.inbound {
                     metrics::P2P_PING_ADDRESS.with_label_values(&[&ip]).inc();
                     metrics::P2P_PING_SUBNET
-                        .with_label_values(&[&subnet_24_or_64_or_ip(ip)])
+                        .with_label_values(&[&util::subnet(ip)])
                         .inc();
                 }
             }
@@ -315,68 +317,5 @@ fn main() {
             }
             _ => (),
         }
-    }
-}
-
-/// Split and return the IP from an ip:port combination.
-pub fn ip(addr: String) -> String {
-    match addr.rsplit_once(":") {
-        Some((ip, _)) => ip.replace("[", "").replace("]", "").to_string(),
-        None => addr,
-    }
-}
-
-/// Returns the /24 subnet for IPv4 or the /64 subnet for IPv6 address.
-/// If [ip] is not a valid IPv4 or IPv6 address, the original ip is returned.
-/// This is the case for Tor and I2P addresses.
-/// TODO: make sure this works for CJDNS IPs too.
-pub fn subnet_24_or_64_or_ip(ip: String) -> String {
-    let cleaned_ip = ip.replace("[", "").replace("]", "");
-    if let Ok(ip_addr) = cleaned_ip.parse() {
-        match ip_addr {
-            IpAddr::V4(a) => {
-                let o = a.octets();
-                return Ipv4Addr::new(o[0], o[1], o[2], 0).to_string();
-            }
-            IpAddr::V6(a) => {
-                let s = a.segments();
-                return Ipv6Addr::new(s[0], s[1], s[2], s[3], 0, 0, 0, 0).to_string();
-            }
-        }
-    }
-    return ip;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_ip() {
-        assert_eq!(ip(String::from("127.0.0.1:8333")).as_str(), "127.0.0.1");
-        assert_eq!(ip(String::from("::1:8333")).as_str(), "::1");
-        assert_eq!(
-            ip(String::from("::ffff:a.b.c.d:8333")).as_str(),
-            "::ffff:a.b.c.d"
-        );
-        assert_eq!(
-            ip(String::from("[::ffff:a.b.c.d]:8333")).as_str(),
-            "::ffff:a.b.c.d"
-        );
-    }
-
-    #[test]
-    fn test_subnet_24_or_64_or_ip() {
-        assert_eq!(
-            subnet_24_or_64_or_ip(String::from("127.0.0.1")).as_str(),
-            "127.0.0.0"
-        );
-        assert_eq!(
-            subnet_24_or_64_or_ip(String::from("2604:d500:4:1::3:a2")).as_str(),
-            "2604:d500:4:1::"
-        );
-        assert_eq!(
-            subnet_24_or_64_or_ip(String::from("[2604:d500:4:1::3:a2]")).as_str(),
-            "2604:d500:4:1::"
-        );
     }
 }

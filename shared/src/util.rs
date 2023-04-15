@@ -1,3 +1,5 @@
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
 // The generation code for the following includes!() can be found in build.rs.
 
 // Includes an auto-generated function to check if IPs are on the gmax banlist
@@ -9,9 +11,68 @@ include!(concat!(env!("OUT_DIR"), "/monerobanlist.rs"));
 // Includes an auto-generated function to check if IPs are Tor exit node IPs
 include!(concat!(env!("OUT_DIR"), "/torexitlist.rs"));
 
+/// Split and return the IP from an ip:port combination.
+pub fn ip_from_ipport(addr: String) -> String {
+    match addr.rsplit_once(":") {
+        Some((ip, _)) => ip.replace("[", "").replace("]", "").to_string(),
+        None => addr,
+    }
+}
+
+/// Returns the /24 subnet for IPv4 or the /64 subnet for IPv6 address.
+/// If [ip] is not a valid IPv4 or IPv6 address, the original ip is returned.
+/// This is the case for Tor and I2P addresses.
+/// TODO: make sure this works for CJDNS IPs too.
+pub fn subnet(ip: String) -> String {
+    let cleaned_ip = ip.replace("[", "").replace("]", "");
+    if let Ok(ip_addr) = cleaned_ip.parse() {
+        match ip_addr {
+            IpAddr::V4(a) => {
+                let o = a.octets();
+                return Ipv4Addr::new(o[0], o[1], o[2], 0).to_string();
+            }
+            IpAddr::V6(a) => {
+                let s = a.segments();
+                return Ipv6Addr::new(s[0], s[1], s[2], s[3], 0, 0, 0, 0).to_string();
+            }
+        }
+    }
+    return ip;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_ip_from_ipport() {
+        assert_eq!(
+            ip_from_ipport(String::from("127.0.0.1:8333")).as_str(),
+            "127.0.0.1"
+        );
+        assert_eq!(ip_from_ipport(String::from("::1:8333")).as_str(), "::1");
+        assert_eq!(
+            ip_from_ipport(String::from("::ffff:a.b.c.d:8333")).as_str(),
+            "::ffff:a.b.c.d"
+        );
+        assert_eq!(
+            ip_from_ipport(String::from("[::ffff:a.b.c.d]:8333")).as_str(),
+            "::ffff:a.b.c.d"
+        );
+    }
+
+    #[test]
+    fn test_subnet_24_or_64_or_ip() {
+        assert_eq!(subnet(String::from("127.0.0.1")).as_str(), "127.0.0.0");
+        assert_eq!(
+            subnet(String::from("2604:d500:4:1::3:a2")).as_str(),
+            "2604:d500:4:1::"
+        );
+        assert_eq!(
+            subnet(String::from("[2604:d500:4:1::3:a2]")).as_str(),
+            "2604:d500:4:1::"
+        );
+    }
 
     #[test]
     fn test_gmaxbanlistip() {
