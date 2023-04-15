@@ -6,7 +6,7 @@ use nng::{Protocol, Socket};
 
 use prost::Message;
 use shared::addrman::addrman_event;
-use shared::net_conn::connection_event::Event;
+use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::wrapper;
@@ -56,81 +56,77 @@ fn main() {
                 Wrap::Msg(msg) => {
                     handle_p2p_message(&msg, unwrapped.timestamp);
                 }
-                Wrap::Conn(c) => match c.event.unwrap() {
-                    Event::Inbound(i) => {
-                        let ip = ip(i.conn.addr);
-                        metrics::CONN_INBOUND.inc();
-                        if utils::torexitips::is_tor_exit_node(&ip) {
-                            metrics::CONN_INBOUND_TOR_EXIT.inc();
-                        }
-                        if utils::gmaxbanlistips::is_on_gmax_banlist(&ip) {
-                            metrics::CONN_INBOUND_BANLIST_GMAX
-                                .with_label_values(&[&ip])
-                                .inc();
-                        }
-                        if utils::monerobanlistips::is_on_monero_banlist(&ip) {
-                            metrics::CONN_INBOUND_BANLIST_MONERO
-                                .with_label_values(&[&ip])
-                                .inc();
-                        }
-                        metrics::CONN_INBOUND_ADDRESS
-                            .with_label_values(&[&ip])
-                            .inc();
-                        metrics::CONN_INBOUND_SUBNET
-                            .with_label_values(&[&subnet_24_or_64_or_ip(ip)])
-                            .inc();
-                        metrics::CONN_INBOUND_NETWORK
-                            .with_label_values(&[&i.conn.network.to_string()])
-                            .inc();
-                        metrics::CONN_INBOUND_NETGROUP
-                            .with_label_values(&[&i.conn.net_group.to_string()])
-                            .inc();
-                        metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64 + 1);
-                    }
-                    Event::Outbound(o) => {
-                        metrics::CONN_OUTBOUND.inc();
-                        metrics::CONN_OUTBOUND_NETWORK
-                            .with_label_values(&[&o.conn.network.to_string()])
-                            .inc();
-                        metrics::CONN_OUTBOUND_NETGROUP
-                            .with_label_values(&[&o.conn.net_group.to_string()])
-                            .inc();
-                        metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64 + 1);
-                    }
-                    Event::Closed(c) => {
-                        metrics::CONN_CLOSED.inc();
-                        metrics::CONN_CLOSED_ADDRESS
-                            .with_label_values(&[&ip(c.conn.addr)])
-                            .inc();
-                        metrics::CONN_CLOSED_NETWORK
-                            .with_label_values(&[&c.conn.network.to_string()])
-                            .inc();
-                        metrics::CONN_CLOSED_NETGROUP
-                            .with_label_values(&[&c.conn.net_group.to_string()])
-                            .inc();
-                    }
-                    Event::Evicted(e) => {
-                        metrics::CONN_EVICTED.inc();
-                        metrics::CONN_EVICTED_WITHINFO
-                            .with_label_values(&[&ip(e.conn.addr), &e.conn.network.to_string()])
-                            .inc();
-                    }
-                    Event::Misbehaving(m) => {
-                        metrics::CONN_MISBEHAVING
-                            .with_label_values(&[
-                                &m.id.to_string(),
-                                &m.score_increase.to_string(),
-                                &m.xmessage,
-                            ])
-                            .inc();
-                        metrics::CONN_MISBEHAVING_SCORE_INC
-                            .with_label_values(&[&m.id.to_string(), &m.xmessage])
-                            .inc_by(m.score_increase as u64);
-                    }
-                },
+                Wrap::Conn(c) => {
+                    handle_connection_event(c.event.unwrap());
+                }
                 Wrap::Addrman(a) => {
                     handle_addrman_event(&a.event.unwrap());
                 }
+            }
+        }
+    }
+
+    fn handle_connection_event(cevent: connection_event::Event) {
+        match cevent {
+            connection_event::Event::Inbound(i) => {
+                let ip = ip(i.conn.addr);
+                metrics::CONN_INBOUND.inc();
+                if utils::torexitips::is_tor_exit_node(&ip) {
+                    metrics::CONN_INBOUND_TOR_EXIT.inc();
+                }
+                metrics::CONN_INBOUND_ADDRESS
+                    .with_label_values(&[&ip])
+                    .inc();
+                metrics::CONN_INBOUND_SUBNET
+                    .with_label_values(&[&subnet_24_or_64_or_ip(ip)])
+                    .inc();
+                metrics::CONN_INBOUND_NETWORK
+                    .with_label_values(&[&i.conn.network.to_string()])
+                    .inc();
+                metrics::CONN_INBOUND_NETGROUP
+                    .with_label_values(&[&i.conn.net_group.to_string()])
+                    .inc();
+                metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64 + 1);
+            }
+            connection_event::Event::Outbound(o) => {
+                metrics::CONN_OUTBOUND.inc();
+                metrics::CONN_OUTBOUND_NETWORK
+                    .with_label_values(&[&o.conn.network.to_string()])
+                    .inc();
+                metrics::CONN_OUTBOUND_NETGROUP
+                    .with_label_values(&[&o.conn.net_group.to_string()])
+                    .inc();
+                metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64 + 1);
+            }
+            connection_event::Event::Closed(c) => {
+                metrics::CONN_CLOSED.inc();
+                metrics::CONN_CLOSED_ADDRESS
+                    .with_label_values(&[&ip(c.conn.addr)])
+                    .inc();
+                metrics::CONN_CLOSED_NETWORK
+                    .with_label_values(&[&c.conn.network.to_string()])
+                    .inc();
+                metrics::CONN_CLOSED_NETGROUP
+                    .with_label_values(&[&c.conn.net_group.to_string()])
+                    .inc();
+            }
+            connection_event::Event::Evicted(e) => {
+                metrics::CONN_EVICTED.inc();
+                metrics::CONN_EVICTED_WITHINFO
+                    .with_label_values(&[&ip(e.conn.addr), &e.conn.network.to_string()])
+                    .inc();
+            }
+            connection_event::Event::Misbehaving(m) => {
+                metrics::CONN_MISBEHAVING
+                    .with_label_values(&[
+                        &m.id.to_string(),
+                        &m.score_increase.to_string(),
+                        &m.xmessage,
+                    ])
+                    .inc();
+                metrics::CONN_MISBEHAVING_SCORE_INC
+                    .with_label_values(&[&m.id.to_string(), &m.xmessage])
+                    .inc_by(m.score_increase as u64);
             }
         }
     }
