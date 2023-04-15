@@ -14,10 +14,9 @@ use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
 use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
+use shared::util;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
-
-use utils::torexitips;
 
 use crossbeam;
 use crossbeam::channel::{unbounded, Receiver, Sender};
@@ -361,7 +360,7 @@ fn main() {
                 .with_label_values(&[&network, &version, &offset_direction, &successful])
                 .observe(offset.abs() as f64);
 
-            if torexitips::is_tor_exit_node(&source_ip.clone()) {
+            if util::is_tor_exit_node(&source_ip.clone()) {
                 metrics::ADDR_TRIED_FROM_TOR_EXIT
                     .with_label_values(&[&network, &version])
                     .inc();
@@ -393,7 +392,7 @@ fn main() {
                 addr_version: version,
                 source_address: source_ip.clone(),
                 source_id: output.input.source_id,
-                source_tor_exit_node: torexitips::is_tor_exit_node(&source_ip),
+                source_tor_exit_node: util::is_tor_exit_node(&source_ip),
                 result_success: output.result,
                 result_cached: output.cached,
             })
