@@ -12,6 +12,7 @@ const NAMESPACE: &str = "networkobserver";
 const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_P2P: &str = "p2p";
 const SUBSYSTEM_CONN: &str = "conn";
+const SUBSYSTEM_ADDRMAN: &str = "addrman";
 
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
@@ -33,6 +34,7 @@ pub const LABEL_CONN_ADDR: &str = "addr";
 pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
 pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "missbehavingmessage";
 pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
+pub const LABEL_ADDRMAN_NEW_INSERT_SUCCESS: &str = "inserted";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
@@ -538,4 +540,24 @@ lazy_static! {
             .subsystem(SUBSYSTEM_P2P),
         &[LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON, LABEL_P2P_REJECT_MESSAGE]
     ).unwrap();
+
+    // -------------------- Addrman
+
+    /// Number of attempted inserts into the addrman new table with their success as label.
+    pub static ref ADDRMAN_NEW_INSERT: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("new_insert", "Number of attempted inserts into the addrman new table with their success as label.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_ADDRMAN),
+        &[LABEL_ADDRMAN_NEW_INSERT_SUCCESS]
+    ).unwrap();
+
+    /// Number of inserts into the addrman tried table.
+    pub static ref ADDRMAN_TRIED_INSERT: IntCounter =
+    register_int_counter!(
+        Opts::new("tried_insert", "Number of inserts into the addrman tried table")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_ADDRMAN),
+    ).unwrap();
+
 }
