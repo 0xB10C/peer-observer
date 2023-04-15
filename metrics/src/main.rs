@@ -5,6 +5,7 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 
 use prost::Message;
+use shared::addrman::addrman_event;
 use shared::net_conn::connection_event::Event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
@@ -128,8 +129,21 @@ fn main() {
                     }
                 },
                 Wrap::Addrman(a) => {
-                    println!("{:#?}", a);
-                },
+                    handle_addrman_event(&a.event.unwrap());
+                }
+            }
+        }
+    }
+
+    fn handle_addrman_event(aevent: &addrman_event::Event) {
+        match aevent {
+            addrman_event::Event::New(new) => {
+                metrics::ADDRMAN_NEW_INSERT
+                    .with_label_values(&[&new.inserted.to_string()])
+                    .inc();
+            }
+            addrman_event::Event::Tried(_) => {
+                metrics::ADDRMAN_TRIED_INSERT.inc();
             }
         }
     }
