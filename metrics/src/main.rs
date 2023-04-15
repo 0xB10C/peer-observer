@@ -5,10 +5,12 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 
 use prost::Message;
+
 use shared::addrman::addrman_event;
 use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
+use shared::util;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 
@@ -71,7 +73,7 @@ fn main() {
             connection_event::Event::Inbound(i) => {
                 let ip = ip(i.conn.addr);
                 metrics::CONN_INBOUND.inc();
-                if utils::torexitips::is_tor_exit_node(&ip) {
+                if util::is_tor_exit_node(&ip) {
                     metrics::CONN_INBOUND_TOR_EXIT.inc();
                 }
                 metrics::CONN_INBOUND_ADDRESS

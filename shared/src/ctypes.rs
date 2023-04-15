@@ -349,7 +349,6 @@ impl fmt::Display for P2PMessageDecodeError {
     }
 }
 
-
 #[repr(C)]
 pub struct AddrmanInsertNew {
     pub inserted: bool,
