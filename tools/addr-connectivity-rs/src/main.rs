@@ -276,14 +276,6 @@ fn try_connect(address: SocketAddr) -> bool {
     return false;
 }
 
-/// Split and return the IP from an ip:port combination.
-pub fn ip(addr: String) -> String {
-    match addr.rsplit_once(":") {
-        Some((ip, _)) => ip.replace("[", "").replace("]", "").to_string(),
-        None => addr,
-    }
-}
-
 fn main() {
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
@@ -327,7 +319,7 @@ fn main() {
 
             let network = output.network.to_string();
             let version = output.input.version.to_string();
-            let source_ip = ip(output.input.source_ip);
+            let source_ip = util::ip_from_ipport(output.input.source_ip);
 
             metrics::ADDR_TRIED
                 .with_label_values(&[&network, &version])
