@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::fs::OpenOptions;
 use std::io::{BufReader, Write};
 use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
@@ -25,8 +26,6 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 use prost::Message as ProstMessage;
 use rand::Rng;
-
-use csv::WriterBuilder;
 
 mod metrics;
 mod metricserver;
@@ -316,9 +315,13 @@ fn main() {
             s.spawn(move |_| worker(&sender, &receiver, cache));
         }
 
-        let mut wtr = WriterBuilder::new()
-            .from_path("addr-connectivity.csv")
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .append(true)
+            .open("addr-connectivity.csv")
             .unwrap();
+        let mut wtr = csv::Writer::from_writer(file);
 
         for output in output_receiver.iter() {
             println!("Sink received {:?}", output);
