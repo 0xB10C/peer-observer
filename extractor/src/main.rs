@@ -1,12 +1,15 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 use std::env;
-use std::time::Duration;
-use std::time::SystemTime;
+use std::sync::mpsc;
+use std::sync::mpsc::channel;
+use std::thread;
+use std::time::{Duration, Instant, SystemTime};
 
 use libc;
 
 use libbpf_rs::RingBufferBuilder;
+use libbpf_rs::UprobeOpts;
 
 use nng::{Protocol, Socket};
 
@@ -16,10 +19,22 @@ use shared::ctypes::{
     ClosedConnection, InboundConnection, MisbehavingConnection, OutboundConnection, P2PMessage,
     P2PMessageSize,
 };
+use shared::fn_timings::function_timings::Function;
+use shared::fn_timings::FunctionTimings;
 use shared::net_conn;
 use shared::net_msg;
 use shared::wrapper::wrapper::Wrap;
 use shared::wrapper::Wrapper;
+
+// readelf --syms --wide ./src/bitcoind
+const UPROBE_SYMBOL_SENDMESSAGES: &str = "_ZN12_GLOBAL__N_115PeerManagerImpl12SendMessagesEP5CNode";
+const UPROBE_SYMBOL_PROCESSMESSAGES: &str =
+    "_Z18AcceptToMemoryPoolR10ChainstateRKSt10shared_ptrIK12CTransactionElbb";
+const UPROBE_SYMBOL_ATMP: &str =
+    "_Z18AcceptToMemoryPoolR10ChainstateRKSt10shared_ptrIK12CTransactionElbb";
+
+const MAX_FNTIME_BUFFER_AGE: Duration = Duration::from_secs(3);
+const MAX_FMTIME_BUFFER_SIZE: usize = 200;
 
 fn bump_memlock_rlimit() {
     let rlimit = libc::rlimit {
@@ -56,6 +71,35 @@ fn hook_usdt(
     }
 }
 
+fn hook_uprobe(
+    tracing_fn: &mut libbpf_rs::Program,
+    pid: i32,
+    path: &str,
+    retprobe: bool,
+    func_offset: usize,
+    func_name: String,
+) -> Result<libbpf_rs::Link, libbpf_rs::Error> {
+    match tracing_fn.attach_uprobe_with_opts(
+        pid,
+        &path,
+        func_offset,
+        UprobeOpts {
+            retprobe,
+            func_name: func_name.clone(),
+            ..Default::default()
+        },
+    ) {
+        Ok(link) => Ok(link),
+        Err(e) => {
+            println!(
+                "Could not attach uprobe (ret: {}) to function {} in '{}'",
+                retprobe, func_name, path
+            );
+            Err(e)
+        }
+    }
+}
+
 fn attach_usdt_tracepoints(
     fns: &mut tracing::TracingProgsMut,
     pid: i32,
@@ -75,6 +119,37 @@ fn attach_usdt_tracepoints(
         links.push(hook_usdt(fns.handle_net_conn_evicted(),     pid, path, "net", "evicted_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_misbehaving(), pid, path, "net", "misbehaving_connection")?);
     }
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    {
+        // SendMessages uprobe and uretprobe
+        if let Ok(link_uprobe) = hook_uprobe(fns.uprobe_netprocessing_sendmessages(), pid, path, false, 0, UPROBE_SYMBOL_SENDMESSAGES.to_string()) {
+            if let Ok(link_uretprobe) = hook_uprobe(fns.uretprobe_netprocessing_sendmessages(), pid, path, true, 0, UPROBE_SYMBOL_SENDMESSAGES.to_string()) {
+                links.push(link_uprobe);
+                links.push(link_uretprobe);
+                println!("Attached u(ret)probes to {}", UPROBE_SYMBOL_SENDMESSAGES);
+            }
+        }
+
+        // ProcessMessages uprobe and uretprobe
+        if let Ok(link_uprobe) = hook_uprobe(fns.uprobe_netprocessing_processmessages(), pid, path, false, 0, UPROBE_SYMBOL_PROCESSMESSAGES.to_string()) {
+            if let Ok(link_uretprobe) = hook_uprobe(fns.uretprobe_netprocessing_processmessages(), pid, path, true, 0, UPROBE_SYMBOL_PROCESSMESSAGES.to_string()) {
+                links.push(link_uprobe);
+                links.push(link_uretprobe);
+                println!("Attached u(ret)probes to {}", UPROBE_SYMBOL_PROCESSMESSAGES);
+            }
+        }
+
+        // ATMP uprobe and uretprobe
+        if let Ok(link_uprobe) = hook_uprobe(fns.uprobe_validation_atmp(), pid, path, false, 0, UPROBE_SYMBOL_ATMP.to_string()) {
+            if let Ok(link_uretprobe) = hook_uprobe(fns.uprobe_validation_atmp(), pid, path, true, 0, UPROBE_SYMBOL_ATMP.to_string()) {
+                links.push(link_uprobe);
+                links.push(link_uretprobe);
+                println!("Attached u(ret)probes to {}", UPROBE_SYMBOL_ATMP);
+            }
+        }
+    }
+
     Ok(links)
 }
 
@@ -101,6 +176,15 @@ fn main() -> Result<(), libbpf_rs::Error> {
     socket.listen(ADDRESS).unwrap();
     println!("listening on {}", ADDRESS);
 
+    let (chan_timing_sendmessages_send, chan_timing_sendmessages_recv) = channel();
+    let (chan_timing_processmessages_send, chan_timing_processmessages_recv) = channel();
+
+    handle_batched_fntime_netprocessing_processmessages(
+        socket.clone(),
+        chan_timing_processmessages_recv,
+    );
+    handle_batched_fntime_netprocessing_sendmessages(socket.clone(), chan_timing_sendmessages_recv);
+
     let maps = skel.maps();
     let mut ringbuff_builder = RingBufferBuilder::new();
 
@@ -114,7 +198,10 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .add(maps.net_conn_outbound(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
         .add(maps.net_conn_closed(), |data| { handle_net_conn_closed(data, socket.clone()) })?
         .add(maps.net_conn_evicted(), |data| { handle_net_conn_evicted(data, socket.clone()) })?
-        .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?;
+        .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?
+        .add(maps.fntime_validation_atmp(), |data| { handle_fntime_validation_atmp(data, socket.clone()) })?
+        .add(maps.fntime_netprocessing_sendmessages(), |data| { handle_fntime_netprocessing_messages(data, chan_timing_sendmessages_send.clone()) })?
+        .add(maps.fntime_netprocessing_processmessages(), |data| { handle_fntime_netprocessing_messages(data, chan_timing_processmessages_send.clone()) })?;
     let ring_buffers = ringbuff_builder.build()?;
 
     loop {
@@ -123,6 +210,89 @@ fn main() -> Result<(), libbpf_rs::Error> {
             Err(e) => println!("Failed to poll on ring buffers {}", e),
         };
     }
+}
+
+fn construct_wrapped_proto_message(wrap: Wrap) -> Wrapper {
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(wrap),
+    }
+}
+
+fn handle_batched_fntime_netprocessing_sendmessages(s: Socket, receiver: mpsc::Receiver<u64>) {
+    thread::spawn(move || {
+        let mut last_send = Instant::now();
+        let mut buffer_send_messages: Vec<u64> = Vec::new();
+        loop {
+            let timing = receiver.recv().unwrap();
+            buffer_send_messages.push(timing.clone());
+            if buffer_send_messages.len() >= MAX_FMTIME_BUFFER_SIZE
+                || last_send.elapsed() > MAX_FNTIME_BUFFER_AGE
+            {
+                let wrap = Wrap::Fntime(FunctionTimings {
+                    function: Some(Function::Sendmsgs(
+                        shared::fn_timings::NetProcessingSendMessages {
+                            times: buffer_send_messages.clone(),
+                        },
+                    )),
+                });
+                let protobuf_msg = construct_wrapped_proto_message(wrap);
+                s.send(&protobuf_msg.encode_to_vec()).unwrap();
+                buffer_send_messages.clear();
+                last_send = Instant::now();
+            }
+        }
+    });
+}
+
+fn handle_batched_fntime_netprocessing_processmessages(s: Socket, receiver: mpsc::Receiver<u64>) {
+    thread::spawn(move || {
+        let mut buffer_process_messages: Vec<u64> = Vec::new();
+        let mut last_send = Instant::now();
+        loop {
+            let timing = receiver.recv().unwrap();
+            buffer_process_messages.push(timing.clone());
+            if buffer_process_messages.len() >= MAX_FMTIME_BUFFER_SIZE
+                || last_send.elapsed() > MAX_FNTIME_BUFFER_AGE
+            {
+                let wrap = Wrap::Fntime(FunctionTimings {
+                    function: Some(Function::Processmsgs(
+                        shared::fn_timings::NetProcessingProcessMessages {
+                            times: buffer_process_messages.clone(),
+                        },
+                    )),
+                });
+                let protobuf_msg = construct_wrapped_proto_message(wrap);
+                s.send(&protobuf_msg.encode_to_vec()).unwrap();
+                buffer_process_messages.clear();
+                last_send = Instant::now();
+            }
+        }
+    });
+}
+
+fn handle_fntime_netprocessing_messages(data: &[u8], tx: mpsc::Sender<u64>) -> i32 {
+    let delta = u64::from_le_bytes(data.try_into().expect("slice with incorrect length"));
+    tx.send(delta / 1000).unwrap(); // as µs
+    0
+}
+
+fn handle_fntime_validation_atmp(data: &[u8], s: Socket) -> i32 {
+    let delta = u64::from_le_bytes(data.try_into().expect("slice with incorrect length"));
+    let wrap = Wrap::Fntime(FunctionTimings {
+        function: Some(Function::Atmp(shared::fn_timings::ValidationAtmp {
+            times: vec![delta / 1000].into(), // as µs
+        })),
+    });
+    let protobuf_msg = construct_wrapped_proto_message(wrap);
+    s.send(&protobuf_msg.encode_to_vec()).unwrap();
+    0
 }
 
 fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {

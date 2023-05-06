@@ -287,7 +287,121 @@ int BPF_USDT(handle_net_conn_misbehaving, u64 id, s32 score_before, s32 howmuch,
     return bpf_ringbuf_output(&net_conn_misbehaving, &misbehaving, sizeof(misbehaving), 0);
 };
 
+// uprobes with timings for "interesting" functions
 
 
+// A BPF_ARRAY that holds the last function entry time for each of the
+// "interesting" functions. Only functions called from a single thread
+// are valid here.
+#define NUM_FUNCENTRYTIME_FUNCTIONS 3
+#define FUNCENTRYTIME_SENDMESSAGES_INDEX 0
+#define FUNCENTRYTIME_PROCESSMESSAGES_INDEX 1
+#define FUNCENTRYTIME_ATMP_INDEX 2
+struct {
+	__uint(type, BPF_MAP_TYPE_ARRAY);
+	__uint(max_entries, NUM_FUNCENTRYTIME_FUNCTIONS);
+	__type(key, u32);
+	__type(value, u64);
+} func_entry_time SEC(".maps");
+
+// net_processing.cpp: SendMessages()
+
+RINGBUFFER(fntime_netprocessing_sendmessages, sizeof(u64) * 65536)
+
+SEC("uprobe")
+int BPF_KPROBE(uprobe_netprocessing_sendmessages)
+{
+  const u32 index = FUNCENTRYTIME_SENDMESSAGES_INDEX;
+  u64 nsec = bpf_ktime_get_ns();
+	bpf_map_update_elem(&func_entry_time, &index, &nsec, BPF_ANY);
+	return 0;
+}
+
+SEC("uretprobe")
+int BPF_KRETPROBE(uretprobe_netprocessing_sendmessages)
+{
+  const u32 index = FUNCENTRYTIME_SENDMESSAGES_INDEX;
+	u64 nsec = bpf_ktime_get_ns();
+  u64 *start_time;
+  u64 delta;
+
+  start_time = bpf_map_lookup_elem(&func_entry_time, &index);
+	if (!start_time)
+		return 0;
+
+  delta = nsec - *start_time;
+  u64 res = bpf_ringbuf_output(&fntime_netprocessing_sendmessages, &delta, sizeof(delta), 0);
+  if (res < 0) {
+    bpf_printk("could not push SendMessages() function timing. Ringbuffer full?");
+  }
+	return 0;
+}
+
+// net_processing.cpp: ProcessMessages()
+
+RINGBUFFER(fntime_netprocessing_processmessages, sizeof(u64) * 65536)
+
+SEC("uprobe")
+int BPF_KPROBE(uprobe_netprocessing_processmessages)
+{
+  const u32 index = FUNCENTRYTIME_PROCESSMESSAGES_INDEX;
+  u64 nsec = bpf_ktime_get_ns();
+	bpf_map_update_elem(&func_entry_time, &index, &nsec, BPF_ANY);
+	return 0;
+}
+
+SEC("uretprobe")
+int BPF_KRETPROBE(uretprobe_netprocessing_processmessages)
+{
+  const u32 index = FUNCENTRYTIME_PROCESSMESSAGES_INDEX;
+	u64 nsec = bpf_ktime_get_ns();
+  u64 *start_time;
+  u64 delta;
+
+  start_time = bpf_map_lookup_elem(&func_entry_time, &index);
+	if (!start_time)
+		return 0;
+
+  delta = nsec - *start_time;
+  u64 res = bpf_ringbuf_output(&fntime_netprocessing_processmessages, &delta, sizeof(delta), 0);
+  if (res < 0) {
+    bpf_printk("could not push ProcessMessages() function timing. Ringbuffer full?");
+  }
+	return 0;
+}
+
+// validation.cpp: ATMP()
+
+RINGBUFFER(fntime_validation_atmp, sizeof(u64) * 1024)
+
+SEC("uprobe")
+int BPF_KPROBE(uprobe_validation_atmp)
+{
+  const u32 index = FUNCENTRYTIME_ATMP_INDEX;
+  u64 nsec = bpf_ktime_get_ns();
+	bpf_map_update_elem(&func_entry_time, &index, &nsec, BPF_ANY);
+	return 0;
+}
+
+SEC("uretprobe")
+int BPF_KRETPROBE(uretprobe_validation_atmp)
+{
+  const u32 index = FUNCENTRYTIME_ATMP_INDEX;
+	u64 nsec = bpf_ktime_get_ns();
+  u64 *start_time;
+  u64 delta;
+
+  start_time = bpf_map_lookup_elem(&func_entry_time, &index);
+	if (!start_time)
+		return 0;
+
+  delta = nsec - *start_time;
+  u64 res = bpf_ringbuf_output(&fntime_validation_atmp, &delta, sizeof(delta), 0);
+  if (res < 0) {
+    bpf_printk("could not push ATMP() function timing. Ringbuffer full?");
+  }
+  bpf_printk("ATMP() took %d ns", delta);
+	return 0;
+}
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";

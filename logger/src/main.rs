@@ -38,6 +38,11 @@ fn main() {
                         "# CONN {}", c.event.unwrap()
                     };
                 }
+                Wrap::Fntime(t) => {
+                    println! {
+                        "X {}", t.function.unwrap()
+                    };
+                }
             }
         }
     }

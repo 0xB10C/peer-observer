@@ -5,6 +5,9 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 
 use prost::Message;
+
+use shared::fn_timings::function_timings::Function;
+use shared::fn_timings::FunctionTimings;
 use shared::net_conn::connection_event::Event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
@@ -54,6 +57,9 @@ fn main() {
             match event {
                 Wrap::Msg(msg) => {
                     handle_p2p_message(&msg, unwrapped.timestamp);
+                }
+                Wrap::Fntime(timing) => {
+                    handle_fn_timings(&timing);
                 }
                 Wrap::Conn(c) => match c.event.unwrap() {
                     Event::Inbound(i) => {
@@ -127,6 +133,26 @@ fn main() {
                             .inc_by(m.score_increase as u64);
                     }
                 },
+            }
+        }
+    }
+
+    fn handle_fn_timings(timings: &FunctionTimings) {
+        match timings.function.as_ref().unwrap() {
+            Function::Sendmsgs(timings) => {
+                for time in timings.times.clone() {
+                    metrics::FNTIMINGS_NETPROCESSING_SENDMESSAGES.observe(time as f64);
+                }
+            }
+            Function::Processmsgs(timings) => {
+                for time in timings.times.clone() {
+                    metrics::FNTIMINGS_NETPROCESSING_PROCESSMESSAGES.observe(time as f64);
+                }
+            }
+            Function::Atmp(timings) => {
+                for time in timings.times.clone() {
+                    metrics::FNTIMINGS_VALIDATION_ATMP.observe(time as f64);
+                }
             }
         }
     }

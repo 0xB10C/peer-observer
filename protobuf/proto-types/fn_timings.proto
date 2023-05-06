@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package fn_timings;
+
+message FunctionTimings {
+  oneof function {
+    NetProcessingSendMessages sendmsgs = 1;
+    NetProcessingProcessMessages processmsgs = 2;
+    ValidationATMP atmp = 3;
+  }
+}
+
+message NetProcessingSendMessages {
+  repeated uint64 times = 1;
+}
+
+message NetProcessingProcessMessages {
+  repeated uint64 times = 1;
+}
+
+message ValidationATMP {
+  repeated uint64 times = 1;
+}

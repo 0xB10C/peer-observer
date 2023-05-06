@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 use prometheus::{self, HistogramVec, IntCounter, IntCounterVec, IntGauge};
 use prometheus::{
-    register_histogram_vec, register_int_counter, register_int_counter_vec, register_int_gauge,
-    HistogramOpts, Opts,
+    register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
+    register_int_gauge, Histogram, HistogramOpts, Opts,
 };
 
 // Prometheus Metrics
@@ -12,6 +12,7 @@ const NAMESPACE: &str = "networkobserver";
 const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_P2P: &str = "p2p";
 const SUBSYSTEM_CONN: &str = "conn";
+const SUBSYSTEM_FNTIME: &str = "fntime";
 
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
@@ -46,6 +47,52 @@ pub const BUCKETS_INV_SIZE: [f64; 46] = [
     900f64, 999f64, 1000f64, 2000f64, 3000f64, 4000f64, 5000f64, 6000f64, 7000f64, 8000f64,
     9000f64, 10_000f64, 20_000f64, 25_000f64, 30_000f64, 35_000f64, 40_000f64, 45_000f64,
     50_000f64,
+];
+
+/// in µs
+pub const BUCKETS_FN_TIMINGS: [f64; 42] = [
+    1f64,
+    10f64,
+    12f64,
+    16f64,
+    18f64,
+    20f64,
+    30f64,
+    40f64,
+    50f64,
+    60f64,
+    70f64,
+    80f64,
+    90f64,
+    100f64,
+    120f64,
+    140f64,
+    160f64,
+    180f64,
+    200f64,
+    240f64,
+    280f64,
+    320f64,
+    380f64,
+    450f64,
+    550f64,
+    700f64,
+    800f64,
+    1000f64, // 1ms
+    2000f64,
+    5000f64,
+    10_000f64,
+    20_000f64,
+    50_000f64,
+    100_000f64,
+    200_000f64,
+    300_000f64,
+    500_000f64,
+    750_000f64,
+    1_000_000f64, // 1s
+    2_000_000f64,
+    5_000_000f64,
+    10_000_000f64, // 10s
 ];
 
 pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 32] = [
@@ -538,4 +585,33 @@ lazy_static! {
             .subsystem(SUBSYSTEM_P2P),
         &[LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON, LABEL_P2P_REJECT_MESSAGE]
     ).unwrap();
+
+    // -------------------- Function Timings
+
+    /// Histogram of function timings (in µs) of the net_processing.cpp SendMessages() function.
+    pub static ref FNTIMINGS_NETPROCESSING_SENDMESSAGES: Histogram =
+        register_histogram!(
+            HistogramOpts::new("netprocessing_sendmessages", "Histogram of function timings (in µs) of the net_processing.cpp SendMessages() function.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_FNTIME)
+                .buckets(BUCKETS_FN_TIMINGS.to_vec()),
+        ).unwrap();
+
+    /// Histogram of function timings (in µs) of the net_processing.cpp ProcessMessages() function.
+    pub static ref FNTIMINGS_NETPROCESSING_PROCESSMESSAGES: Histogram =
+        register_histogram!(
+            HistogramOpts::new("netprocessing_processmessages", "Histogram of function timings (in µs) of the net_processing.cpp ProcessMessages() function.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_FNTIME)
+                .buckets(BUCKETS_FN_TIMINGS.to_vec()),
+        ).unwrap();
+
+    /// Histogram of function timings (in µs) of the validation.cpp ATMP() function.
+    pub static ref FNTIMINGS_VALIDATION_ATMP: Histogram =
+        register_histogram!(
+            HistogramOpts::new("validation_atmp", "Histogram of function timings (in µs) of the validation.cpp ATMP() function.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_FNTIME)
+                .buckets(BUCKETS_FN_TIMINGS.to_vec()),
+        ).unwrap();
 }

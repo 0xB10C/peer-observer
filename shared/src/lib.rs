@@ -3,6 +3,7 @@
 pub extern crate bitcoin;
 
 pub mod ctypes;
+pub mod fn_timings;
 pub mod net_conn;
 pub mod net_msg;
 pub mod primitive;
