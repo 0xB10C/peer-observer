@@ -25,8 +25,9 @@
             <select name="highlight" id="highlight">
                 <option value="no-highlight">no highlight</option>
                 <option value="same-source">same source</option>
+                <option value="same-address-subnet">same address subnet</option>
+                <option value="same-source-subnet">same address subnet</option>
                 <option value="same-address">same address</option>
-                <option value="same-netgroup">same netgroup</option>
                 <option value="same-port">same port</option>
             </select>
         </label>
@@ -73,21 +74,12 @@
             return "unknown"
         }
 
-        function address_net_group(addrinfo) {
-            if (addrinfo.addr.split(".").length == 4) {
-                let addressParts = addrinfo.addr.split(".");
-                return `${addressParts[0]}.${addressParts[1]}.0.0/16`
-            }
-            return "unknown"
-        }
-
         function port(addrinfo) {
             return addrinfo.addr.split(":").slice(-1)
         }
 
         function preprocess(addrinfo) {
             addrinfo.port = port(addrinfo)
-            addrinfo.net_group = address_net_group(addrinfo)
             addrinfo.net_type = address_network_type(addrinfo)
             return addrinfo
         }
@@ -209,8 +201,11 @@
                 case "same-source":
                     addrToHighlight = newTable.filter(Boolean).filter(a => a.source == addrInfo.source)
                     break;
-                case "same-netgroup":
-                    addrToHighlight = newTable.filter(Boolean).filter(a => a.net_group == addrInfo.net_group)
+                case "same-addr-subnet":
+                    addrToHighlight = newTable.filter(Boolean).filter(a => a.addr_subnet == addrInfo.addr_subnet)
+                    break;
+                case "same-src-subnet":
+                    addrToHighlight = newTable.filter(Boolean).filter(a => a.source_subnet == addrInfo.source_subnet)
                     break;
                 case "same-port":
                     addrToHighlight = newTable.filter(Boolean).filter(a => a.port == addrInfo.port)
@@ -299,9 +294,10 @@
             return `
             <table>
                 <tr><td>address</td><td>${addrinfo.addr}</td></tr>
+                <tr><td>addr subnet</td><td>${addrinfo.addr_subnet}</td></tr>
                 <tr><td>network</td><td>${addrinfo.net_type}</td></tr>
-                <tr><td>netgroup</td><td>${addrinfo.net_group}</td></tr>
                 <tr><td>source</td><td>${addrinfo.source}</td></tr>
+                <tr><td>src subnet</td><td>${addrinfo.source_subnet}</td></tr>
                 <tr><td>bucket</td><td>${addrinfo.bucket}</td></tr>
                 <tr><td>position</td><td>${addrinfo.bucket_pos}</td></tr>
             </table>`

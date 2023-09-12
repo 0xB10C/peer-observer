@@ -8,6 +8,7 @@ use std::sync::{
 
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
+use shared::util;
 
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
 use nng::options::protocol::pubsub::Subscribe;
@@ -32,7 +33,9 @@ static NEXT_CLIENT_ID: AtomicUsize = AtomicUsize::new(1);
 #[derive(Clone, Serialize, Debug)]
 struct AddrInfo {
     pub addr: String,
+    pub addr_subnet: String,
     pub source: String,
+    pub source_subnet: String,
     pub bucket: i32,
     pub bucket_pos: i32,
     pub time_added: u64,
@@ -85,8 +88,10 @@ async fn main() {
                                 continue;
                             }
                             let info = AddrInfo {
-                                addr: new.addr,
-                                source: new.source,
+                                addr: new.addr.clone(),
+                                addr_subnet: util::subnet(util::ip_from_ipport(new.addr)),
+                                source: new.source.clone(),
+                                source_subnet: util::subnet(new.source),
                                 bucket: new.bucket,
                                 bucket_pos: new.bucket_pos,
                                 time_added: 0,
@@ -106,8 +111,10 @@ async fn main() {
                         }
                         shared::addrman::addrman_event::Event::Tried(tried) => {
                             let info = AddrInfo {
-                                addr: tried.addr,
-                                source: tried.source,
+                                addr: tried.addr.clone(),
+                                addr_subnet: util::subnet(util::ip_from_ipport(tried.addr)),
+                                source: tried.source.clone(),
+                                source_subnet: util::subnet(tried.source),
                                 bucket: tried.bucket,
                                 bucket_pos: tried.bucket_pos,
                                 time_added: 0,
