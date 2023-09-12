@@ -378,7 +378,7 @@ lazy_static! {
     /// Number of evicted connections.
     pub static ref CONN_EVICTED: IntCounter =
     register_int_counter!(
-        Opts::new("evicted", "Number of evicted connections.")
+        Opts::new("evicted_inbound", "Number of evicted inbund connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN)
     ).unwrap();
@@ -386,7 +386,7 @@ lazy_static! {
     /// Number of evicted connections with information about their address and network.
     pub static ref CONN_EVICTED_WITHINFO: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("evicted_withinfo", "Number of evicted connections with information about their address and network.")
+        Opts::new("evicted_inbound_withinfo", "Number of evicted inbound connections with information about their address and network.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]

@@ -188,7 +188,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
 RINGBUFFER(net_conn_inbound, NET_CONN_PAGES)
 RINGBUFFER(net_conn_outbound, NET_CONN_PAGES)
 RINGBUFFER(net_conn_closed, NET_CONN_PAGES)
-RINGBUFFER(net_conn_evicted, NET_CONN_PAGES)
+RINGBUFFER(net_conn_inbound_evicted, NET_CONN_PAGES)
 RINGBUFFER(net_conn_misbehaving, NET_CONN_PAGES)
 
 struct Connection
@@ -266,12 +266,12 @@ int BPF_USDT(handle_net_conn_closed, u64 id, void *addr, void *type, u64 network
 };
 
 SEC("usdt")
-int BPF_USDT(handle_net_conn_evicted, u64 id, void *addr, void *type, u64 network, u64 time_established) {
+int BPF_USDT(handle_net_conn_inbound_evicted, u64 id, void *addr, void *type, u64 network, u64 time_established) {
     struct ClosedConnection evicted = {};
     set_conn_data1(&evicted.conn, id, network);
     set_conn_data2(&evicted.conn, addr, type);
     evicted.time_established = time_established;
-    return bpf_ringbuf_output(&net_conn_evicted, &evicted, sizeof(evicted), 0);
+    return bpf_ringbuf_output(&net_conn_inbound_evicted, &evicted, sizeof(evicted), 0);
 };
 
 SEC("usdt")

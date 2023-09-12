@@ -71,7 +71,7 @@ fn attach_usdt_tracepoints(
         links.push(hook_usdt(fns.handle_net_conn_inbound(),     pid, path, "net", "inbound_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_outbound(),    pid, path, "net", "outbound_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_closed(),      pid, path, "net", "closed_connection")?);
-        links.push(hook_usdt(fns.handle_net_conn_evicted(),     pid, path, "net", "evicted_connection")?);
+        links.push(hook_usdt(fns.handle_net_conn_inbound_evicted(),     pid, path, "net", "evicted_inbound_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_misbehaving(), pid, path, "net", "misbehaving_connection")?);
         // addrman
         // links.push(hook_usdt(fns.handle_addrman_new(),          pid, path, "addrman", "attempt_add")?);
@@ -115,7 +115,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .add(maps.net_conn_inbound(), |data| { handle_net_conn_inbound(data, socket.clone()) })?
         .add(maps.net_conn_outbound(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
         .add(maps.net_conn_closed(), |data| { handle_net_conn_closed(data, socket.clone()) })?
-        .add(maps.net_conn_evicted(), |data| { handle_net_conn_evicted(data, socket.clone()) })?
+        .add(maps.net_conn_inbound_evicted(), |data| { handle_net_conn_inbound_evicted(data, socket.clone()) })?
         .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?
         .add(maps.addrman_insert_new(), |data| { handle_addrman_new(data, socket.clone()) })?
         .add(maps.addrman_insert_tried(), |data| { handle_addrman_tried(data, socket.clone()) })?;
@@ -183,7 +183,7 @@ fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
     0
 }
 
-fn handle_net_conn_evicted(data: &[u8], s: Socket) -> i32 {
+fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
     let evicted = ClosedConnection::from_bytes(data);
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -194,7 +194,9 @@ fn handle_net_conn_evicted(data: &[u8], s: Socket) -> i32 {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
         wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
-            event: Some(net_conn::connection_event::Event::Evicted(evicted.into())),
+            event: Some(net_conn::connection_event::Event::InboundEvicted(
+                evicted.into(),
+            )),
         })),
     };
     s.send(&proto.encode_to_vec()).unwrap();

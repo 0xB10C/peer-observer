@@ -108,7 +108,7 @@ fn main() {
                     .with_label_values(&[&util::subnet(ip)])
                     .inc();
             }
-            connection_event::Event::Evicted(e) => {
+            connection_event::Event::InboundEvicted(e) => {
                 metrics::CONN_EVICTED.inc();
                 metrics::CONN_EVICTED_WITHINFO
                     .with_label_values(&[

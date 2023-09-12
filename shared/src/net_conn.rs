@@ -47,19 +47,19 @@ impl From<ctypes::ClosedConnection> for ClosedConnection {
     }
 }
 
-impl fmt::Display for EvictedConnection {
+impl fmt::Display for EvictedInboundConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "EvictedConnection(conn={}, time_established={})",
+            "EvictedInboundConnection(conn={}, time_established={})",
             self.conn, self.time_established
         )
     }
 }
 
-impl From<ctypes::ClosedConnection> for EvictedConnection {
+impl From<ctypes::ClosedConnection> for EvictedInboundConnection {
     fn from(econn: ctypes::ClosedConnection) -> Self {
-        EvictedConnection {
+        EvictedInboundConnection {
             conn: econn.connection.into(),
             time_established: econn.time_established,
         }
@@ -126,7 +126,7 @@ impl fmt::Display for connection_event::Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             connection_event::Event::Closed(closed) => write!(f, "{}", closed),
-            connection_event::Event::Evicted(evicted) => write!(f, "{}", evicted),
+            connection_event::Event::InboundEvicted(evicted) => write!(f, "{}", evicted),
             connection_event::Event::Inbound(inbound) => write!(f, "{}", inbound),
             connection_event::Event::Outbound(outbound) => write!(f, "{}", outbound),
             connection_event::Event::Misbehaving(misbehaving) => {

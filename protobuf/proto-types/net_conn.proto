@@ -7,7 +7,7 @@ import "primitive.proto";
 message ConnectionEvent {
   oneof event {
     ClosedConnection closed = 1;
-    EvictedConnection evicted = 2;
+    EvictedInboundConnection inbound_evicted = 2;
     InboundConnection inbound = 3;
     OutboundConnection outbound = 4;
     MisbehavingConnection misbehaving = 5;
@@ -29,7 +29,7 @@ message ClosedConnection {
 }
 
 // A connection that Bitcoin Core choose to evict.
-message EvictedConnection {
+message EvictedInboundConnection {
   required Connection conn = 1;
   required uint64 time_established = 2; // Connection established UNIX epoch timestamp
 }
