@@ -84,31 +84,28 @@ fn main() {
                 metrics::CONN_INBOUND_NETWORK
                     .with_label_values(&[&i.conn.network.to_string()])
                     .inc();
-                metrics::CONN_INBOUND_NETGROUP
-                    .with_label_values(&[&i.conn.net_group.to_string()])
-                    .inc();
                 metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64 + 1);
             }
             connection_event::Event::Outbound(o) => {
+                let ip = util::ip_from_ipport(o.conn.addr);
                 metrics::CONN_OUTBOUND.inc();
                 metrics::CONN_OUTBOUND_NETWORK
                     .with_label_values(&[&o.conn.network.to_string()])
                     .inc();
-                metrics::CONN_OUTBOUND_NETGROUP
-                    .with_label_values(&[&o.conn.net_group.to_string()])
+                metrics::CONN_OUTBOUND_SUBNET
+                    .with_label_values(&[&util::subnet(ip)])
                     .inc();
                 metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64 + 1);
             }
             connection_event::Event::Closed(c) => {
+                let ip = util::ip_from_ipport(c.conn.addr);
                 metrics::CONN_CLOSED.inc();
-                metrics::CONN_CLOSED_ADDRESS
-                    .with_label_values(&[&util::ip_from_ipport(c.conn.addr)])
-                    .inc();
+                metrics::CONN_CLOSED_ADDRESS.with_label_values(&[&ip]).inc();
                 metrics::CONN_CLOSED_NETWORK
                     .with_label_values(&[&c.conn.network.to_string()])
                     .inc();
-                metrics::CONN_CLOSED_NETGROUP
-                    .with_label_values(&[&c.conn.net_group.to_string()])
+                metrics::CONN_CLOSED_SUBNET
+                    .with_label_values(&[&util::subnet(ip)])
                     .inc();
             }
             connection_event::Event::Evicted(e) => {

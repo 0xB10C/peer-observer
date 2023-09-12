@@ -121,7 +121,6 @@ pub struct Connection {
     pub addr: [u8; MAX_PEER_ADDR_LENGTH],
     pub conn_type: [u8; MAX_PEER_CONN_TYPE_LENGTH],
     pub network: u32,
-    pub net_group: u64,
 }
 
 impl Connection {
@@ -141,12 +140,11 @@ impl fmt::Display for Connection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Connection(peer={}, addr={}, type={}, network={}, netgroup={})",
+            "Connection(peer={}, addr={}, type={}, network={})",
             self.id,
             self.addr(),
             self.conn_type(),
             self.network,
-            self.net_group,
         )
     }
 }

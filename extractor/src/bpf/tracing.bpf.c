@@ -197,7 +197,6 @@ struct Connection
     char    addr[MAX_PEER_ADDR_LENGTH];
     char    type[MAX_PEER_CONN_TYPE_LENGTH];
     u32     network;
-    u64     net_group;
 };
 
 struct ClosedConnection
@@ -228,10 +227,9 @@ struct MisbehavingConnection
 };
 
 // Helper function to set some of the tracepoint arguments to Connection.
-void set_conn_data1(struct Connection *conn, u64 id, u64 network, u64 net_group) {
+void set_conn_data1(struct Connection *conn, u64 id, u64 network) {
   conn->id = id;
   conn->network = network;
-  conn->net_group = net_group;
 }
 
 // Helper function to set some of the tracepoint arguments to Connection.
@@ -241,36 +239,36 @@ void set_conn_data2(struct Connection *conn, void *addr, void *type) {
 }
 
 SEC("usdt")
-int BPF_USDT(handle_net_conn_inbound, u64 id, void *addr, void *type, u64 network, u64 net_group, u64 existing_connections) {
+int BPF_USDT(handle_net_conn_inbound, u64 id, void *addr, void *type, u64 network, u64 existing_connections) {
     struct InboundConnection inbound = {};
-    set_conn_data1(&inbound.conn, id, network, net_group);
+    set_conn_data1(&inbound.conn, id, network);
     set_conn_data2(&inbound.conn, addr, type);
     inbound.existing_connections = existing_connections;
     return bpf_ringbuf_output(&net_conn_inbound, &inbound, sizeof(inbound), 0);
 };
 
 SEC("usdt")
-int BPF_USDT(handle_net_conn_outbound, u64 id, void *addr, void *type, u64 network, u64 net_group, u64 existing_connections) {
+int BPF_USDT(handle_net_conn_outbound, u64 id, void *addr, void *type, u64 network, u64 existing_connections) {
     struct OutboundConnection outbound = {};
-    set_conn_data1(&outbound.conn, id, network, net_group);
+    set_conn_data1(&outbound.conn, id, network);
     set_conn_data2(&outbound.conn, addr, type);
     outbound.existing_connections = existing_connections;
     return bpf_ringbuf_output(&net_conn_outbound, &outbound, sizeof(outbound), 0);
 };
 
 SEC("usdt")
-int BPF_USDT(handle_net_conn_closed, u64 id, void *addr, void *type, u64 network, u64 net_group, u64 time_established) {
+int BPF_USDT(handle_net_conn_closed, u64 id, void *addr, void *type, u64 network, u64 time_established) {
     struct ClosedConnection closed = {};
-    set_conn_data1(&closed.conn, id, network, net_group);
+    set_conn_data1(&closed.conn, id, network);
     set_conn_data2(&closed.conn, addr, type);
     closed.time_established = time_established;
     return bpf_ringbuf_output(&net_conn_closed, &closed, sizeof(closed), 0);
 };
 
 SEC("usdt")
-int BPF_USDT(handle_net_conn_evicted, u64 id, void *addr, void *type, u64 network, u64 net_group, u64 time_established) {
+int BPF_USDT(handle_net_conn_evicted, u64 id, void *addr, void *type, u64 network, u64 time_established) {
     struct ClosedConnection evicted = {};
-    set_conn_data1(&evicted.conn, id, network, net_group);
+    set_conn_data1(&evicted.conn, id, network);
     set_conn_data2(&evicted.conn, addr, type);
     evicted.time_established = time_established;
     return bpf_ringbuf_output(&net_conn_evicted, &evicted, sizeof(evicted), 0);

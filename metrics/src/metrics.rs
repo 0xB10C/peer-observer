@@ -29,7 +29,6 @@ pub const LABEL_P2P_REJECT_COMMAND: &str = "rejectcommand";
 pub const LABEL_P2P_REJECT_MESSAGE: &str = "rejectmessage";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
-pub const LABEL_CONN_NETGROUP: &str = "netgroup";
 pub const LABEL_CONN_ADDR: &str = "addr";
 pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
 pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "missbehavingmessage";
@@ -274,15 +273,6 @@ lazy_static! {
         &[LABEL_CONN_NETWORK]
     ).unwrap();
 
-    /// Number of inbound connections by netgroup.
-    pub static ref CONN_INBOUND_NETGROUP: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inbound_netgroup", "Number of inbound connections by netgroup.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_NETGROUP]
-    ).unwrap();
-
     /// Number of inbound connections from Tor exit nodes.
     pub static ref CONN_INBOUND_TOR_EXIT: IntCounter =
     register_int_counter!(
@@ -342,13 +332,12 @@ lazy_static! {
         &[LABEL_CONN_NETWORK]
     ).unwrap();
 
-    /// Number of outbound connections by netgroup.
-    pub static ref CONN_OUTBOUND_NETGROUP: IntCounterVec =
+    pub static ref CONN_OUTBOUND_SUBNET: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("outbound_netgroup", "Number of opened outbound connections by netgroup.")
+        Opts::new("outbound_subnet", "Number of opened outbound connections by subnet.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_NETGROUP]
+        &[LABEL_P2P_SUBNET]
     ).unwrap();
 
     /// Number of closed connections.
@@ -377,13 +366,13 @@ lazy_static! {
         &[LABEL_CONN_NETWORK]
     ).unwrap();
 
-    /// Number of closed connections by netgroup.
-    pub static ref CONN_CLOSED_NETGROUP: IntCounterVec =
+    /// Number of closed connections by subnet.
+    pub static ref CONN_CLOSED_SUBNET: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("closed_netgroup", "Number of closed connections by netgroup.")
+        Opts::new("closed_subnet", "Number of closed connections by subnet.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_NETGROUP]
+        &[LABEL_P2P_SUBNET]
     ).unwrap();
 
     /// Number of evicted connections.

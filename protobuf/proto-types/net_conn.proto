@@ -20,7 +20,6 @@ message Connection {
   required string  addr                    = 2;  // Address of the peer
   required primitive.ConnType conn_type    = 3;  // Connection type
   required uint32  network                 = 4;  // The network this connection is on
-  required uint64  net_group               = 5;  // The net_group assigend by Bitcoin Core
 }
 
 // A connection where the underlying socket has been closed.

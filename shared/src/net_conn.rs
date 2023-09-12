@@ -14,7 +14,6 @@ impl From<ctypes::Connection> for Connection {
             addr: conn.addr(),
             conn_type: conn_type as i32,
             network: conn.network,
-            net_group: conn.net_group,
         }
     }
 }
@@ -23,8 +22,8 @@ impl fmt::Display for Connection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Connection(id={}, addr={}, conn_type={}, network={}, net_group={})",
-            self.peer_id, self.addr, self.conn_type, self.network, self.net_group
+            "Connection(id={}, addr={}, conn_type={}, network={})",
+            self.peer_id, self.addr, self.conn_type, self.network,
         )
     }
 }
