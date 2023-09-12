@@ -74,8 +74,8 @@ fn attach_usdt_tracepoints(
         links.push(hook_usdt(fns.handle_net_conn_evicted(),     pid, path, "net", "evicted_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_misbehaving(), pid, path, "net", "misbehaving_connection")?);
         // addrman
-        links.push(hook_usdt(fns.handle_addrman_new(),          pid, path, "addrman", "attempt_add")?);
-        links.push(hook_usdt(fns.handle_addrman_tried(),        pid, path, "addrman", "move_to_good")?);
+        // links.push(hook_usdt(fns.handle_addrman_new(),          pid, path, "addrman", "attempt_add")?);
+        // links.push(hook_usdt(fns.handle_addrman_tried(),        pid, path, "addrman", "move_to_good")?);
     }
     Ok(links)
 }
