@@ -13,15 +13,16 @@ _sym_db = _symbol_database.Default()
 
 import net_msg_pb2 as net__msg__pb2
 import net_conn_pb2 as net__conn__pb2
+import addrman_pb2 as addrman__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rwrapper.proto\x12\x07wrapper\x1a\rnet_msg.proto\x1a\x0enet_conn.proto\"\x91\x01\n\x07Wrapper\x12\x11\n\ttimestamp\x18\n \x02(\x04\x12\x1f\n\x17timestamp_subsec_micros\x18\x0b \x02(\r\x12\x1f\n\x03msg\x18\x01 \x01(\x0b\x32\x10.net_msg.MessageH\x00\x12)\n\x04\x63onn\x18\x02 \x01(\x0b\x32\x19.net_conn.ConnectionEventH\x00\x42\x06\n\x04wrap')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rwrapper.proto\x12\x07wrapper\x1a\rnet_msg.proto\x1a\x0enet_conn.proto\x1a\raddrman.proto\"\xbb\x01\n\x07Wrapper\x12\x11\n\ttimestamp\x18\n \x02(\x04\x12\x1f\n\x17timestamp_subsec_micros\x18\x0b \x02(\r\x12\x1f\n\x03msg\x18\x01 \x01(\x0b\x32\x10.net_msg.MessageH\x00\x12)\n\x04\x63onn\x18\x02 \x01(\x0b\x32\x19.net_conn.ConnectionEventH\x00\x12(\n\x07\x61\x64\x64rman\x18\x03 \x01(\x0b\x32\x15.addrman.AddrmanEventH\x00\x42\x06\n\x04wrap')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'wrapper_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _WRAPPER._serialized_start=58
-  _WRAPPER._serialized_end=203
+  _WRAPPER._serialized_start=73
+  _WRAPPER._serialized_end=260
 # @@protoc_insertion_point(module_scope)
