@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 use std::env;
+use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -56,6 +58,9 @@ async fn main() {
     pretty_env_logger::init();
 
     let index_path = env::args().nth(1).expect("No path to index.html provided.");
+    let address = env::args()
+        .nth(2)
+        .expect("No web server address to bind on provided (e.g. 'localhost:3030')");
 
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
@@ -160,7 +165,9 @@ async fn main() {
 
     let routes = index.or(addrman);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes)
+        .run(SocketAddr::from_str(&address).unwrap())
+        .await;
 }
 
 async fn client_connected(ws: WebSocket, clients: Clients, new_table: Table, tried_table: Table) {
