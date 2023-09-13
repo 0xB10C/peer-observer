@@ -37,7 +37,7 @@
         </div>
         <div id="tooltip"></div>
         <script>
-        const uri = 'ws://' + location.host + "/" + location.pathname + '/addrman';
+        const uri = 'wss://' + location.host + "/" + location.pathname + '/addrman';
         const ws = new WebSocket(uri);
 
         const NUM_NEW_BUCKETS = 1024
