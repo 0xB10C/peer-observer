@@ -7,5 +7,5 @@ members = [
   "metrics",
   "archiver",
   "tools/addr-connectivity-rs",
-  "tools/addrman-websocket-rs"
+  "tools/addrman-observer"
 ]

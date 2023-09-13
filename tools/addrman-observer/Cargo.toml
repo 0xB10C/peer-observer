@@ -1,5 +1,5 @@
 [package]
-name = "addrman-websocket-rs"
+name = "addrman-observer"
 version = "0.1.0"
 edition = "2021"
 
