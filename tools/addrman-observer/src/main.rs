@@ -1,14 +1,15 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 use std::collections::HashMap;
+use std::env;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 
+use shared::util;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
-use shared::util;
 
 use futures_util::{SinkExt, StreamExt, TryFutureExt};
 use nng::options::protocol::pubsub::Subscribe;
@@ -53,6 +54,8 @@ const INIT: Option<AddrInfo> = None;
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
+
+    let index_path = env::args().nth(1).expect("No path to index.html provided.");
 
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
@@ -153,7 +156,7 @@ async fn main() {
 
     let index = warp::get()
         .and(warp::path::end())
-        .and(warp::fs::file("index.html"));
+        .and(warp::fs::file(index_path));
 
     let routes = index.or(addrman);
 
