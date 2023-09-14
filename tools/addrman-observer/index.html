@@ -193,13 +193,37 @@
                         .delay(100)
                         .duration(10)
                         .style("opacity", 1);
-                    draw_background(addrinfo, state)
+                    draw_background(false, state, addrinfo)
                 } else {
                     tooltip.style('opacity', 0);
                 }
             });
 
             return state;
+        }
+
+        function draw_background(is_zoom, tableState, highlight) {
+            transform = tableState.currentZoom;
+            tableState.contextHighlight.save();
+            tableState.contextHighlight.clearRect(0, 0, tableState.height, tableState.height);
+            tableState.contextHighlight.translate(transform.x, transform.y);
+            tableState.contextHighlight.scale(transform.k, transform.k);
+            tableState.contextHighlight.beginPath();
+            for(position = 0; position < tableState.num_buckets; position++) {
+                let [x, y] = tableState.tableAddrPos[position*NUM_ADDR_PER_BUCKET]
+                tableState.contextHighlight.fillStyle = "#eee"
+                tableState.contextHighlight.fillRect(x-0.5, y-0.5, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING);
+                if (is_zoom && transform.k > 4) {
+                    tableState.contextHighlight.fillStyle = "black"
+                    tableState.contextHighlight.font = "2px sans-serif";
+                    tableState.contextHighlight.fillText("bucket " + position, x, y+1.5);
+                }
+            }
+            if (highlight) {
+                draw_highlight(highlight, tableState);
+            }
+            tableState.contextHighlight.fill();
+            tableState.contextHighlight.restore();
         }
 
         function draw_highlight(addrInfo, tableState) {
@@ -233,30 +257,6 @@
             }
         }
 
-        function draw_background(is_zoom, tableState) {
-            transform = tableState.currentZoom;
-            tableState.contextHighlight.save();
-            tableState.contextHighlight.clearRect(0, 0, tableState.height, tableState.height);
-            tableState.contextHighlight.translate(transform.x, transform.y);
-            tableState.contextHighlight.scale(transform.k, transform.k);
-            tableState.contextHighlight.beginPath();
-            for(position = 0; position < tableState.num_buckets; position++) {
-                let [x, y] = tableState.tableAddrPos[position*NUM_ADDR_PER_BUCKET]
-                tableState.contextHighlight.fillStyle = "#eee"
-                tableState.contextHighlight.fillRect(x-0.5, y-0.5, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING);
-                if (is_zoom && transform.k > 4) {
-                    tableState.contextHighlight.fillStyle = "black"
-                    tableState.contextHighlight.font = "2px sans-serif";
-                    tableState.contextHighlight.fillText("bucket " + position, x, y+1.5);
-                }
-            }
-            if (highlight) {
-                draw_highlight(highlight, tableState);
-            }
-            tableState.contextHighlight.fill();
-            tableState.contextHighlight.restore();
-        }
-
         function draw(is_zoom, tableState) {
             d3.select('#tooltip').style('opacity', 0);
             d3.select("#debug").text(tableState.table.filter(Boolean).length + " addresses drawn");
@@ -280,13 +280,6 @@
                             tableState.context.strokeRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE);
                         }
                     } else {
-                        /*
-                        if (port(addrInfo) == 8333) {
-                            tableState.context.fillStyle = "red"
-                        } else {
-                            tableState.context.fillStyle = "blue"
-                        }
-                        */
                         tableState.context.fillStyle = network_to_color[address_network_type(addrInfo)]
                         tableState.context.fillRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE); // x, y, width and height
                     }
