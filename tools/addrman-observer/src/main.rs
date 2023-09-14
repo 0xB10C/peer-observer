@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
+use env_logger::Env;
 use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
@@ -55,7 +56,7 @@ const INIT: Option<AddrInfo> = None;
 
 #[tokio::main]
 async fn main() {
-    pretty_env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let index_path = env::args().nth(1).expect("No path to index.html provided.");
     let address = env::args()

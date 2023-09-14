@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 futures-util = "0.3.28"
 log = "0.4.17"
-pretty_env_logger = "0.4.0"
+env_logger = "0.10.0"
 tokio = { version = "1.27.0", features = ["rt", "rt-multi-thread", "macros"] }
 tokio-stream = "0.1.12"
 tokio-tungstenite = "0.18.0"
