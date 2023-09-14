@@ -1,7 +1,7 @@
 <html lang="en">
 
     <head>
-        <title>Addrman</title>
+        <title>addrman-observer</title>
         <script src="https://d3js.org/d3.v7.min.js"></script>
         <style type="text/css">
             div#tooltip {
@@ -16,10 +16,9 @@
         </style>
     </head>
     <body>
-        <h1>Addrman</h1>
-        <div id="debug">
-            <p><em>Connecting...</em></p>
-        </div>
+        <h1>addrman-observer</h1>
+        <label>Websocket: </label><span id="websocket-status">closed</span>
+        <br>
         <label>
             mouse-over highlight
             <select name="highlight" id="highlight">
@@ -31,9 +30,15 @@
                 <option value="same-port">same port</option>
             </select>
         </label>
-        <div style="position: relative;">
-            <canvas id="canvas-highlight"></canvas>
-            <canvas id="canvas"></canvas>
+        <div style="display: flex;">
+            <div style="position: relative; display:inline-block;">
+                <canvas id="newCanvasHighlight"></canvas>
+                <canvas id="newCanvas"></canvas>
+            </div>
+            <div style="position: relative; display:inline-block;">
+                <canvas id="triedCanvasHighlight"></canvas>
+                <canvas id="triedCanvas"></canvas>
+            </div>
         </div>
         <div id="tooltip"></div>
         <script>
@@ -58,8 +63,8 @@
         const NEW_BUCKETS_PER_BUCKET_COLUMN = 32
         const TRIED_BUCKETS_PER_BUCKET_COLUMN = 16
 
-        height = BUCKET_PIXEL_SIZE * NEW_BUCKETS_PER_BUCKET_COLUMN;
-        width = height;
+        const NEW_HEIGHT = BUCKET_PIXEL_SIZE * NEW_BUCKETS_PER_BUCKET_COLUMN;
+        const TRIED_HEIGHT = BUCKET_PIXEL_SIZE * TRIED_BUCKETS_PER_BUCKET_COLUMN;
 
         function address_network_type(addrinfo) {
             if (addrinfo.addr.includes("onion")) {
@@ -74,6 +79,10 @@
                 return "ipv4"
             }
             return "unknown"
+        }
+
+        function setWebsocketStatus(status) {
+            document.getElementById("websocket-status").innerText = status;
         }
 
         function port(addrinfo) {
@@ -95,201 +104,197 @@
             "unknown": d3.schemeDark2[5],
         }
 
-        function calc_addr_x_y(bucket, bucket_pos) {
-            let bucket_x = (bucket % NEW_BUCKETS_PER_BUCKET_COLUMN) * BUCKET_PIXEL_SIZE
+        function calc_addr_x_y(bucket, bucket_pos, buckets_per_bucket_column) {
+            let bucket_x = (bucket % buckets_per_bucket_column) * BUCKET_PIXEL_SIZE
             let bucket_pos_x = ADDR_PIXEL_SIZE_AND_PADDING * (bucket_pos % NUM_ADDR_PER_ADDR_COLUMN)
             let x = bucket_x + bucket_pos_x;
-            let bucket_y = Math.floor(bucket / NEW_BUCKETS_PER_BUCKET_COLUMN) * BUCKET_PIXEL_SIZE
+            let bucket_y = Math.floor(bucket / buckets_per_bucket_column) * BUCKET_PIXEL_SIZE
             let y = bucket_y + ADDR_PIXEL_SIZE_AND_PADDING * Math.floor(bucket_pos / NUM_ADDR_PER_ADDR_COLUMN);
             return [x, y];
         }
 
-        let redrawTimeout;
-        let newTable = new Array(1024*64);
-        let newTableAddrPositions = new Array(1024*64);
-
-        for (const i of newTable.keys()) {
-            let bucket = Math.floor(i / NUM_ADDR_PER_BUCKET);
-            let bucket_pos = i % NUM_ADDR_PER_BUCKET
-            let [x, y] = calc_addr_x_y(bucket, bucket_pos)
-            newTableAddrPositions[i] = [x, y];
-        }
-
-        let tree = d3.quadtree()
-            .x(d => newTableAddrPositions[d.bucket * NUM_ADDR_PER_BUCKET + d.bucket_pos][0])
-            .y(d => newTableAddrPositions[d.bucket * NUM_ADDR_PER_BUCKET + d.bucket_pos][1])
-            .extent([[0,0], [width*1.1, height*1.1]])
-
-        ws.onopen = function() {
-            debug.innerHTML = '<p><em>Connected!</em></p>';
-        };
-        ws.onmessage = function(msg) {
-            let addrInfo = JSON.parse(msg.data);
-            newTable[addrInfo.bucket * 64 + addrInfo.bucket_pos] = addrInfo;
-            tree.add(preprocess(addrInfo))
-            // we wait 20ms before drawing incase we receive another msg
-            // this avoids redrawing too frequently
-            clearTimeout(redrawTimeout);
-            redrawTimeout = setTimeout(draw, 20);
-        };
-        ws.onclose = function() {
-            debug.getElementsByTagName('em')[0].innerText = 'Disconnected!';
-        };
-
-        // The main canvas for drawing buckets and addresses
-        var canvas = d3.select('#canvas')
-        canvas
-            .attr('width', width)
-            .attr('height', height)
-            .style("position", "absolute")
-            .style("left", "0")
-            .style("top", "0")
-            .style('z-layer:', '99')
-            .style('border', 'solid 1px gray');
-        var context = canvas.node().getContext('2d');
-
-        // A highlight canvas for drawing mouse-over highlights
-        var canvasHighlight = d3.select('#canvas-highlight')
-        canvasHighlight
-            .attr('width', width)
-            .attr('height', height)
-            .style("left", "0")
-            .style("top", "0")
-            .style("position", "absolute")
-            .style('border', 'solid 1px red');
-        var contextHighlight = canvasHighlight.node().getContext('2d');
-
-        // Zoom and pan state
-        var currentZoom = d3.zoomIdentity;
-
+        let newRedrawTimeout;
+        let triedRedrawTimeout;
         const highlightSelect = d3.select("#highlight")
         const tooltip = d3.select('#tooltip')
-        const zoomContext = d3.zoom()
-            .scaleExtent([1, 16])
-            .translateExtent([[0, 0], [width, height]])
-            .on("zoom", ({transform}) => {
-                currentZoom = transform;
-                draw(true);
-            })
-            .on("end", ({transform}) => {draw()})
 
-        // zooming on the highlight canvas as it sits above the main canvas
-        d3.select(context.canvas).call(zoomContext);
+        function init_table(size, height, canvasName, canvasHighlightName, buckets_per_bucket_column) {
+            let table = new Array(size*64);
+            let tableAddrPos = new Array(size*64);
 
-        // mouse over on the highlight canvas as it sits above the main canvas
-        d3.select(context.canvas).on('mousemove', e => {
-            x = (e.clientX - e.target.getBoundingClientRect().left - currentZoom.x) / currentZoom.k
-            y = (e.clientY - e.target.getBoundingClientRect().top - currentZoom.y) / currentZoom.k
-
-            addrinfo = tree.find(x-(ADDR_PIXEL_SIZE/2), y-(ADDR_PIXEL_SIZE/2), 2)
-            if (addrinfo){
-                tooltip
-                    .style('top', e.clientY + 5 + 'px')
-                    .style('left', e.clientX + 5 + 'px')
-                    .html(formatTooltip(addrinfo));
-                tooltip.transition()
-                    .delay(100)
-                    .duration(10)
-                    .style("opacity", 1);
-                draw_background(addrinfo)
-            } else {
-                tooltip.style('opacity', 0);
+            for (const i of table.keys()) {
+                let bucket = Math.floor(i / NUM_ADDR_PER_BUCKET);
+                let bucket_pos = i % NUM_ADDR_PER_BUCKET
+                let [x, y] = calc_addr_x_y(bucket, bucket_pos, buckets_per_bucket_column);
+                tableAddrPos[i] = [x, y];
             }
-        });
 
-        function draw_highlight(addrInfo) {
+            let tree = d3.quadtree()
+                .x(d => tableAddrPos[d.bucket * NUM_ADDR_PER_BUCKET + d.bucket_pos][0])
+                .y(d => tableAddrPos[d.bucket * NUM_ADDR_PER_BUCKET + d.bucket_pos][1])
+                .extent([[0,0], [height*1.1, height*1.1]])
+
+
+            // The main canvas for drawing buckets and addresses
+            var canvas = d3.select(canvasName)
+            canvas
+                .attr('width', height)
+                .attr('height', height)
+                .style("position", "absolute")
+                .style("left", "0")
+                .style("top", "0")
+                .style('z-layer:', '99')
+                .style('border', 'solid 1px gray');
+            var context = canvas.node().getContext('2d');
+
+            // A highlight canvas for drawing mouse-over highlights
+            var canvasHighlight = d3.select(canvasHighlightName)
+            canvasHighlight
+                .attr('width', height)
+                .attr('height', height)
+                .style('border', 'solid 1px red');
+            var contextHighlight = canvasHighlight.node().getContext('2d');
+
+            let state = {
+                table: table,
+                tableAddrPos: tableAddrPos,
+                context: context,
+                contextHighlight: contextHighlight,
+                tree: tree,
+                currentZoom: d3.zoomIdentity,
+                height: height,
+                num_buckets: size,
+            };
+
+            const zoomContext = d3.zoom()
+                .scaleExtent([1, 16])
+                .translateExtent([[0, 0], [height, height]])
+                .on("zoom", ({transform}) => {
+                    state.currentZoom = transform;
+                    draw(true, state);
+                })
+                .on("end", ({transform}) => {draw(false, state)})
+
+            // zooming on the highlight canvas as it sits above the main canvas
+            d3.select(state.context.canvas).call(zoomContext);
+
+            // mouse over on the highlight canvas as it sits above the main canvas
+            d3.select(state.context.canvas).on('mousemove', e => {
+                x = (e.clientX - e.target.getBoundingClientRect().left - state.currentZoom.x) / state.currentZoom.k
+                y = (e.clientY - e.target.getBoundingClientRect().top - state.currentZoom.y) / state.currentZoom.k
+
+                addrinfo = tree.find(x-(ADDR_PIXEL_SIZE/2), y-(ADDR_PIXEL_SIZE/2), 2)
+                if (addrinfo){
+                    tooltip
+                        .style('top', e.clientY + 5 + 'px')
+                        .style('left', e.clientX + 5 + 'px')
+                        .html(formatTooltip(addrinfo));
+                    tooltip.transition()
+                        .delay(100)
+                        .duration(10)
+                        .style("opacity", 1);
+                    draw_background(addrinfo, state)
+                } else {
+                    tooltip.style('opacity', 0);
+                }
+            });
+
+            return state;
+        }
+
+        function draw_highlight(addrInfo, tableState) {
             let addrToHighlight = []
             switch (highlightSelect.node().value) {
                 case "same-source":
-                    addrToHighlight = newTable.filter(Boolean).filter(a => a.source == addrInfo.source)
+                    addrToHighlight = tableState.table.filter(Boolean).filter(a => a.source == addrInfo.source)
                     break;
                 case "same-addr-subnet":
-                    addrToHighlight = newTable.filter(Boolean).filter(a => a.addr_subnet == addrInfo.addr_subnet)
+                    addrToHighlight = tableState.table.filter(Boolean).filter(a => a.addr_subnet == addrInfo.addr_subnet)
                     break;
                 case "same-src-subnet":
-                    addrToHighlight = newTable.filter(Boolean).filter(a => a.source_subnet == addrInfo.source_subnet)
+                    addrToHighlight = tableState.table.filter(Boolean).filter(a => a.source_subnet == addrInfo.source_subnet)
                     break;
                 case "same-port":
-                    addrToHighlight = newTable.filter(Boolean).filter(a => a.port == addrInfo.port)
+                    addrToHighlight = tableState.table.filter(Boolean).filter(a => a.port == addrInfo.port)
                     break;
                 case "same-address":
-                    addrToHighlight = newTable.filter(Boolean).filter(a => a.addr == addrInfo.addr)
+                    addrToHighlight = tableState.table.filter(Boolean).filter(a => a.addr == addrInfo.addr)
                     break;
                 default:
             }
 
             if (addrToHighlight.length > 0) {
                 for (const addrInfo of addrToHighlight) {
-                    let [x, y] = newTableAddrPositions[addrInfo.bucket * NUM_ADDR_PER_BUCKET + addrInfo.bucket_pos ]
-                    contextHighlight.strokeStyle = "black"
-                    contextHighlight.lineWidth = 1;
-                    contextHighlight.strokeRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE);
+                    let [x, y] = tableState.tableAddrPos[addrInfo.bucket * NUM_ADDR_PER_BUCKET + addrInfo.bucket_pos ]
+                    tableState.contextHighlight.strokeStyle = "black"
+                    tableState.contextHighlight.lineWidth = 1;
+                    tableState.contextHighlight.strokeRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE);
                 }
             }
         }
 
-        function draw_background(highlight, zoom) {
-            transform = currentZoom;
-            contextHighlight.save();
-            contextHighlight.clearRect(0, 0, width, height);
-            contextHighlight.translate(transform.x, transform.y);
-            contextHighlight.scale(transform.k, transform.k);
-            contextHighlight.beginPath();
-            for(position = 0; position < NUM_NEW_BUCKETS; position++) {
-                let [x, y] = newTableAddrPositions[position*NUM_ADDR_PER_BUCKET]
-                contextHighlight.fillStyle = "#eee"
-                contextHighlight.fillRect(x-0.5, y-0.5, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING);
-                if (zoom && transform.k > 4) {
-                    contextHighlight.fillStyle = "black"
-                    contextHighlight.font = "2px sans-serif";
-                    contextHighlight.fillText("bucket " + position, x, y+1.5);
+        function draw_background(is_zoom, tableState) {
+            transform = tableState.currentZoom;
+            tableState.contextHighlight.save();
+            tableState.contextHighlight.clearRect(0, 0, tableState.height, tableState.height);
+            tableState.contextHighlight.translate(transform.x, transform.y);
+            tableState.contextHighlight.scale(transform.k, transform.k);
+            tableState.contextHighlight.beginPath();
+            for(position = 0; position < tableState.num_buckets; position++) {
+                let [x, y] = tableState.tableAddrPos[position*NUM_ADDR_PER_BUCKET]
+                tableState.contextHighlight.fillStyle = "#eee"
+                tableState.contextHighlight.fillRect(x-0.5, y-0.5, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING, BUCKET_PIXEL_SIZE-BUCKET_PIXEL_PADDING);
+                if (is_zoom && transform.k > 4) {
+                    tableState.contextHighlight.fillStyle = "black"
+                    tableState.contextHighlight.font = "2px sans-serif";
+                    tableState.contextHighlight.fillText("bucket " + position, x, y+1.5);
                 }
             }
             if (highlight) {
-                draw_highlight(highlight);
+                draw_highlight(highlight, tableState);
             }
-            contextHighlight.fill();
-            contextHighlight.restore();
+            tableState.contextHighlight.fill();
+            tableState.contextHighlight.restore();
         }
 
-        function draw(zoom) {
+        function draw(is_zoom, tableState) {
             d3.select('#tooltip').style('opacity', 0);
-            d3.select("#debug").text(newTable.filter(Boolean).length + " addresses drawn");
-            transform = currentZoom;
-            context.save();
-            context.clearRect(0, 0, width, height);
-            context.translate(transform.x, transform.y);
-            context.scale(transform.k, transform.k);
-            context.beginPath();
+            d3.select("#debug").text(tableState.table.filter(Boolean).length + " addresses drawn");
+            transform = tableState.currentZoom;
+            tableState.context.save();
+            tableState.context.clearRect(0, 0, tableState.height, tableState.height);
+            tableState.context.translate(transform.x, transform.y);
+            tableState.context.scale(transform.k, transform.k);
+            tableState.context.beginPath();
 
-            draw_background(undefined, zoom);
+            draw_background(is_zoom, tableState);
 
-            if (!zoom) {
+            if (!is_zoom) {
                 position = 0
-                for (const addrInfo of newTable) {
-                    let [x, y] = newTableAddrPositions[position]
+                for (const addrInfo of tableState.table) {
+                    let [x, y] = tableState.tableAddrPos[position]
                     if (addrInfo === undefined) {
                         if (transform.k > 3) {
-                            context.strokeStyle = "gray"
-                            context.lineWidth = 0.1;
-                            context.strokeRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE);
+                            tableState.context.strokeStyle = "gray"
+                            tableState.context.lineWidth = 0.1;
+                            tableState.context.strokeRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE);
                         }
                     } else {
                         /*
                         if (port(addrInfo) == 8333) {
-                            context.fillStyle = "red"
+                            tableState.context.fillStyle = "red"
                         } else {
-                            context.fillStyle = "blue"
+                            tableState.context.fillStyle = "blue"
                         }
                         */
-                        context.fillStyle = network_to_color[address_network_type(addrInfo)]
-                        context.fillRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE); // x, y, width and height
+                        tableState.context.fillStyle = network_to_color[address_network_type(addrInfo)]
+                        tableState.context.fillRect(x, y, ADDR_PIXEL_SIZE, ADDR_PIXEL_SIZE); // x, y, width and height
                     }
                     position++;
                 }
             }
-            context.fill();
-            context.restore();
+            tableState.context.fill();
+            tableState.context.restore();
         }
 
         function formatTooltip(addrinfo) {
@@ -305,7 +310,44 @@
             </table>`
         }
 
-        draw();
+        let newTableState = init_table(NUM_NEW_BUCKETS, NEW_HEIGHT, "#newCanvas", "#newCanvasHighlight", NEW_BUCKETS_PER_BUCKET_COLUMN);
+        let triedTableState = init_table(NUM_TRIED_BUCKETS, TRIED_HEIGHT, "#triedCanvas", "#triedCanvasHighlight", TRIED_BUCKETS_PER_BUCKET_COLUMN);
+
+        ws.onmessage = function(msg) {
+            let addrInfo = JSON.parse(msg.data);
+            if (addrInfo.new_table) {
+                newTableState.table[addrInfo.bucket * 64 + addrInfo.bucket_pos] = addrInfo;
+                newTableState.tree.add(preprocess(addrInfo))
+                // we wait 20ms before drawing incase we receive another msg
+                // this avoids redrawing too frequently
+                clearTimeout(newRedrawTimeout);
+                redrawTimeout = setTimeout(draw(false, newTableState), 20);
+            } else {
+                triedTableState.table[addrInfo.bucket * 64 + addrInfo.bucket_pos] = addrInfo;
+                triedTableState.tree.add(preprocess(addrInfo))
+                // we wait 20ms before drawing incase we receive another msg
+                // this avoids redrawing too frequently
+                clearTimeout(triedRedrawTimeout);
+                redrawTimeout = setTimeout(draw(false, triedTableState), 20);
+            }
+        };
+
+        ws.onopen = (event) => {
+            setWebsocketStatus("connected")
+        };
+
+        ws.onerror = (event) => {
+            setWebsocketStatus("error: " + JSON.stringify(event))
+            console.log(event)
+        };
+
+        ws.onclose = (event) => {
+            setWebsocketStatus("closed:" + JSON.stringify(event))
+            console.log(event)
+        };
+
+        draw(false, newTableState);
+        draw(false, triedTableState);
         </script>
     </body>
 </html>
