@@ -110,7 +110,7 @@ async fn main() {
                             new_table_clone.write().await[new.bucket as usize
                                 * ADDRMAN_BUCKET_ENTRIES
                                 + new.bucket_pos as usize] = Some(info.clone());
-                            let msg_content = serde_json::to_string(&info).unwrap();
+                            let msg_content = serde_json::to_string(&vec![info]).unwrap();
                             let msg = WSMessage::text(msg_content);
                             for (&uid, tx) in clients_clone.read().await.iter() {
                                 if let Err(_disconnected) = tx.send(msg.clone()) {
@@ -132,7 +132,7 @@ async fn main() {
                             tried_table_clone.write().await[tried.bucket as usize
                                 * ADDRMAN_BUCKET_ENTRIES
                                 + tried.bucket_pos as usize] = Some(info.clone());
-                            let msg_content = serde_json::to_string(&info).unwrap();
+                            let msg_content = serde_json::to_string(&vec![info]).unwrap();
                             let msg = WSMessage::text(msg_content);
                             for (&uid, tx) in clients_clone.read().await.iter() {
                                 if let Err(_disconnected) = tx.send(msg.clone()) {
@@ -195,19 +195,20 @@ async fn client_connected(ws: WebSocket, clients: Clients, new_table: Table, tri
     // Save the sender in our list of connected clients
     clients.write().await.insert(id, tx.clone());
 
-    for info_option in new_table
+    // Send the current table contents as one message to the client.
+    let contents: Vec<Option<AddrInfo>> = new_table
         .read()
         .await
         .iter()
         .chain(tried_table.read().await.iter())
-    {
-        if let Some(info) = info_option {
-            let msg_content = serde_json::to_string(&info).unwrap();
-            let msg = WSMessage::text(msg_content);
-            if let Err(_disconnected) = tx.send(msg.clone()) {
-                log::warn!("client {} disconnected", id);
-            }
-        }
+        .filter(|info_option| info_option.is_some())
+        .map(|info| info.clone())
+        .collect();
+
+    let msg_content = serde_json::to_string(&contents).unwrap();
+    let msg = WSMessage::text(msg_content);
+    if let Err(_disconnected) = tx.send(msg.clone()) {
+        log::warn!("client {} disconnected", id);
     }
 
     while let Some(result) = ws_rx.next().await {

@@ -307,21 +307,23 @@
         let triedTableState = init_table(NUM_TRIED_BUCKETS, TRIED_HEIGHT, "#triedCanvas", "#triedCanvasHighlight", TRIED_BUCKETS_PER_BUCKET_COLUMN);
 
         ws.onmessage = function(msg) {
-            let addrInfo = JSON.parse(msg.data);
-            if (addrInfo.new_table) {
-                newTableState.table[addrInfo.bucket * 64 + addrInfo.bucket_pos] = addrInfo;
-                newTableState.tree.add(preprocess(addrInfo))
-                // we wait 20ms before drawing incase we receive another msg
-                // this avoids redrawing too frequently
-                clearTimeout(newRedrawTimeout);
-                redrawTimeout = setTimeout(draw(false, newTableState), 20);
-            } else {
-                triedTableState.table[addrInfo.bucket * 64 + addrInfo.bucket_pos] = addrInfo;
-                triedTableState.tree.add(preprocess(addrInfo))
-                // we wait 20ms before drawing incase we receive another msg
-                // this avoids redrawing too frequently
-                clearTimeout(triedRedrawTimeout);
-                redrawTimeout = setTimeout(draw(false, triedTableState), 20);
+            let addrInfos = JSON.parse(msg.data);
+            for (const addrInfo of addrInfos) {
+              if (addrInfo.new_table) {
+                  newTableState.table[addrInfo.bucket * 64 + addrInfo.bucket_pos] = addrInfo;
+                  newTableState.tree.add(preprocess(addrInfo))
+                  // we wait 20ms before drawing incase we receive another msg
+                  // this avoids redrawing too frequently
+                  clearTimeout(newRedrawTimeout);
+                  redrawTimeout = setTimeout(draw(false, newTableState), 20);
+              } else {
+                  triedTableState.table[addrInfo.bucket * 64 + addrInfo.bucket_pos] = addrInfo;
+                  triedTableState.tree.add(preprocess(addrInfo))
+                  // we wait 20ms before drawing incase we receive another msg
+                  // this avoids redrawing too frequently
+                  clearTimeout(triedRedrawTimeout);
+                  redrawTimeout = setTimeout(draw(false, triedTableState), 20);
+              }
             }
         };
 
