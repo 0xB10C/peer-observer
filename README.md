@@ -1,2 +1,2 @@
-# network-observer-dev
+# peer-observer
 
