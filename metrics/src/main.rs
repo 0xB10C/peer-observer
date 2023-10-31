@@ -75,6 +75,16 @@ fn main() {
                 if util::is_tor_exit_node(&ip) {
                     metrics::CONN_INBOUND_TOR_EXIT.inc();
                 }
+                if util::is_on_gmax_banlist(&ip) {
+                    metrics::CONN_INBOUND_BANLIST_GMAX
+                        .with_label_values(&[&ip])
+                        .inc();
+                }
+                if util::is_on_monero_banlist(&ip) {
+                    metrics::CONN_INBOUND_BANLIST_MONERO
+                        .with_label_values(&[&ip])
+                        .inc();
+                }
                 metrics::CONN_INBOUND_ADDRESS
                     .with_label_values(&[&ip])
                     .inc();
