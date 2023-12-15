@@ -13,6 +13,7 @@ const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_P2P: &str = "p2p";
 const SUBSYSTEM_CONN: &str = "conn";
 const SUBSYSTEM_ADDRMAN: &str = "addrman";
+const SUBSYSTEM_MEMPOOL: &str = "mempool";
 
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
@@ -34,6 +35,7 @@ pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
 pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "missbehavingmessage";
 pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
 pub const LABEL_ADDRMAN_NEW_INSERT_SUCCESS: &str = "inserted";
+pub const LABEL_MEMPOOL_REASON: &str = "reason";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
@@ -547,6 +549,58 @@ lazy_static! {
         Opts::new("tried_insert", "Number of inserts into the addrman tried table")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_ADDRMAN),
+    ).unwrap();
+
+    // -------------------- Addrman
+
+    /// Number of transactions added to the mempool.
+    pub static ref MEMPOOL_ADDED: IntCounter =
+    register_int_counter!(
+        Opts::new("added", "Number of transactions added to the mempool.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_MEMPOOL)
+    ).unwrap();
+
+    /// Number of vBytes added to the mempool.
+    pub static ref MEMPOOL_ADDED_VBYTES: IntCounter =
+    register_int_counter!(
+        Opts::new("added_vbytes", "Number of vbytes added to the mempool.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_MEMPOOL)
+    ).unwrap();
+
+    /// Number of transactions replaced from the mempool.
+    pub static ref MEMPOOL_REPLACED: IntCounter =
+    register_int_counter!(
+        Opts::new("replaced", "Number of vbytes added to the mempool.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_MEMPOOL)
+    ).unwrap();
+
+    /// Number of vBytes replaced in the mempool.
+    pub static ref MEMPOOL_REPLACED_VBYTES: IntCounter =
+    register_int_counter!(
+        Opts::new("replaced_vbytes", "Number of vbytes replaced in the mempool.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_MEMPOOL)
+    ).unwrap();
+
+    /// Number of rejected transactions with their rejection reason.
+    pub static ref MEMPOOL_REJECTED: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("rejected", "Number of rejected transactions with their rejection reason.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_MEMPOOL),
+        &[LABEL_MEMPOOL_REASON]
+    ).unwrap();
+
+    /// Number of removed transactions with their removal reason.
+    pub static ref MEMPOOL_REMOVED: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("removed", "Number of removed transactions with their removal reason.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_MEMPOOL),
+        &[LABEL_MEMPOOL_REASON]
     ).unwrap();
 
 }
