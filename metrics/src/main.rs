@@ -7,6 +7,7 @@ use nng::{Protocol, Socket};
 use prost::Message;
 
 use shared::addrman::addrman_event;
+use shared::mempool::mempool_event;
 use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
@@ -64,8 +65,31 @@ fn main() {
                     handle_addrman_event(&a.event.unwrap());
                 }
                 Wrap::Mempool(m) => {
-                    //handle_mempool_event(&m.event.unwrap());
+                    handle_mempool_event(&m.event.unwrap());
                 }
+            }
+        }
+    }
+
+    fn handle_mempool_event(e: &mempool_event::Event) {
+        match e {
+            mempool_event::Event::Added(a) => {
+                metrics::MEMPOOL_ADDED.inc();
+                metrics::MEMPOOL_ADDED_VBYTES.inc_by(a.vsize as u64);
+            }
+            mempool_event::Event::Removed(r) => {
+                metrics::MEMPOOL_REMOVED
+                    .with_label_values(&[&r.reason])
+                    .inc();
+            }
+            mempool_event::Event::Replaced(r) => {
+                metrics::MEMPOOL_REPLACED.inc();
+                metrics::MEMPOOL_REPLACED_VBYTES.inc_by(r.replaced_vsize as u64);
+            }
+            mempool_event::Event::Rejected(r) => {
+                metrics::MEMPOOL_REJECTED
+                    .with_label_values(&[&r.reason])
+                    .inc();
             }
         }
     }
