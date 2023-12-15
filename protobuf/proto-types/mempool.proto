@@ -1,0 +1,45 @@
+syntax = "proto2";
+
+package mempool;
+
+message MempoolEvent {
+  oneof event {
+    Added added = 1;
+    Replaced replaced = 2;
+    Removed removed = 3;
+    Rejected rejected = 4;
+  }
+}
+
+// A transaction added to the mempool.
+message Added {
+  required bytes    txid                  = 1;  // The txid of the added transaction.
+  required int32    vsize                 = 2;  // The vsize of the added transaction.
+  required int64    fee                   = 3;  // The fee of the added transaction.
+}
+
+// A transaction removed from the mempool.
+message Removed {
+  required bytes    txid                  = 1;  // The txid of the removed transaction.
+  required string   reason                = 2;  // The reason why the transaction was removed.
+  required int32    vsize                 = 3;  // The vsize of the removed transaction.
+  required int64    fee                   = 4;  // The fee of the removed transaction.
+  required uint64   entry_time            = 5;  // The mempool entry time of the removed transaction.
+}
+
+// A transaction rejected from the mempool.
+message Rejected {
+  required bytes     txid                 = 1;  // The txid of the rejected transaction.
+  required string    reason               = 2;  // The reason why the transaction was rejected.
+}
+
+// A transaction replaced from the mempool.
+message Replaced {
+  required bytes    replaced_txid         = 1;  // The txid of the replaced transaction.
+  required int32    replaced_vsize        = 2;  // The vsize of the replaced transaction.
+  required int64    replaced_fee          = 3;  // The fee of the replaced transaction.
+  required uint64   replaced_entry_time   = 4;  // The entry_time of the replaced transaction.
+  required bytes    replacement_txid      = 5;  // The txid of the replacement transaction.
+  required int32    replacement_vsize     = 6;  // The vsize of the replacement transaction.
+  required int64    replacement_fee       = 7;  // The fee of the replacement transaction.
+}

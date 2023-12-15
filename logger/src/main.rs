@@ -43,6 +43,11 @@ fn main() {
                         "@Addrman {}", a.event.unwrap()
                     };
                 }
+                Wrap::Mempool(m) => {
+                    println! {
+                        "$Mempool {}", m.event.unwrap()
+                    };
+                }
             }
         }
     }

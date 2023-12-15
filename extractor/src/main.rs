@@ -13,12 +13,13 @@ use nng::{Protocol, Socket};
 use prost::Message;
 
 use shared::ctypes::{
-    AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection,
-    MisbehavingConnection, OutboundConnection, P2PMessage, P2PMessageSize,
+    AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
+    MempoolRejected, MempoolRemoved, MempoolReplaced, MisbehavingConnection, OutboundConnection,
+    P2PMessage, P2PMessageSize,
 };
 use shared::wrapper::wrapper::Wrap;
 use shared::wrapper::Wrapper;
-use shared::{addrman, net_conn, net_msg};
+use shared::{addrman, mempool, net_conn, net_msg};
 
 fn bump_memlock_rlimit() {
     let rlimit = libc::rlimit {
@@ -74,8 +75,13 @@ fn attach_usdt_tracepoints(
         links.push(hook_usdt(fns.handle_net_conn_inbound_evicted(),     pid, path, "net", "evicted_inbound_connection")?);
         links.push(hook_usdt(fns.handle_net_conn_misbehaving(), pid, path, "net", "misbehaving_connection")?);
         // addrman
-        links.push(hook_usdt(fns.handle_addrman_new(),          pid, path, "addrman", "attempt_add")?);
-        links.push(hook_usdt(fns.handle_addrman_tried(),        pid, path, "addrman", "move_to_good")?);
+        //links.push(hook_usdt(fns.handle_addrman_new(),          pid, path, "addrman", "attempt_add")?);
+        //links.push(hook_usdt(fns.handle_addrman_tried(),        pid, path, "addrman", "move_to_good")?);
+        // mempool
+        links.push(hook_usdt(fns.handle_mempool_added(),        pid, path, "mempool", "added")?);
+        links.push(hook_usdt(fns.handle_mempool_removed(),      pid, path, "mempool", "removed")?);
+        links.push(hook_usdt(fns.handle_mempool_replaced(),     pid, path, "mempool", "replaced")?);
+        links.push(hook_usdt(fns.handle_mempool_rejected(),     pid, path, "mempool", "rejected")?);
     }
     Ok(links)
 }
@@ -118,7 +124,11 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .add(maps.net_conn_inbound_evicted(), |data| { handle_net_conn_inbound_evicted(data, socket.clone()) })?
         .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?
         .add(maps.addrman_insert_new(), |data| { handle_addrman_new(data, socket.clone()) })?
-        .add(maps.addrman_insert_tried(), |data| { handle_addrman_tried(data, socket.clone()) })?;
+        .add(maps.addrman_insert_tried(), |data| { handle_addrman_tried(data, socket.clone()) })?
+        .add(maps.mempool_added(), |data| { handle_mempool_added(data, socket.clone()) })?
+        .add(maps.mempool_removed(), |data| { handle_mempool_removed(data, socket.clone()) })?
+        .add(maps.mempool_rejected(), |data| { handle_mempool_rejected(data, socket.clone()) })?
+        .add(maps.mempool_replaced(), |data| { handle_mempool_replaced(data, socket.clone()) })?;
     let ring_buffers = ringbuff_builder.build()?;
 
     loop {
@@ -280,6 +290,78 @@ fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
         timestamp_subsec_micros: timestamp_subsec_millis,
         wrap: Some(Wrap::Addrman(addrman::AddrmanEvent {
             event: Some(addrman::addrman_event::Event::Tried(tried.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
+    let added = MempoolAdded::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+            event: Some(mempool::mempool_event::Event::Added(added.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
+    let removed = MempoolRemoved::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+            event: Some(mempool::mempool_event::Event::Removed(removed.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
+    let replaced = MempoolReplaced::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+            event: Some(mempool::mempool_event::Event::Replaced(replaced.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
+    let rejected = MempoolRejected::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+            event: Some(mempool::mempool_event::Event::Rejected(rejected.into())),
         })),
     };
     s.send(&proto.encode_to_vec()).unwrap();

@@ -63,6 +63,9 @@ fn main() {
                 Wrap::Addrman(a) => {
                     handle_addrman_event(&a.event.unwrap());
                 }
+                Wrap::Mempool(m) => {
+                    //handle_mempool_event(&m.event.unwrap());
+                }
             }
         }
     }

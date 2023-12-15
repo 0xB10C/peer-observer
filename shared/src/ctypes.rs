@@ -19,6 +19,10 @@ const MAX_MEDIUM_MSG_LENGTH: usize = 4096;
 const MAX_LARGE_MSG_LENGTH: usize = 65536;
 const MAX_HUGE_MSG_LENGTH: usize = 4194304;
 
+const TXID_LENGTH: usize = 32;
+const REMOVAL_REASON_LENGTH: usize = 9;
+const REJECTION_REASON_LENGTH: usize = 118;
+
 #[repr(usize)]
 pub enum P2PMessageSize {
     Small = MAX_SMALL_MSG_LENGTH,
@@ -252,6 +256,143 @@ impl fmt::Display for MisbehavingConnection {
             self.message(),
             self.threshold_exceeded,
         )
+    }
+}
+
+#[repr(C)]
+pub struct MempoolAdded {
+    /// Txid of the added transaction
+    pub txid: [u8; TXID_LENGTH],
+    /// Vsize of the added transaction
+    pub vsize: i32,
+    /// Fee of the added transaction
+    pub fee: i64,
+}
+
+impl fmt::Display for MempoolAdded {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MempoolAdded(txid={}, vsize={}, fee={})",
+            bitcoin::Txid::from_slice(&self.txid).unwrap(),
+            self.vsize,
+            self.fee,
+        )
+    }
+}
+
+impl MempoolAdded {
+    pub fn from_bytes(x: &[u8]) -> MempoolAdded {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const MempoolAdded) }
+    }
+}
+
+#[repr(C)]
+pub struct MempoolRemoved {
+    /// Txid of the removed transaction
+    pub txid: [u8; TXID_LENGTH],
+    /// Removal reason of the transaction
+    pub reason: [u8; REMOVAL_REASON_LENGTH],
+    /// Virtual size of the removed transaction
+    pub vsize: i32,
+    /// Fee of the removed transaction
+    pub fee: i64,
+    /// Mempool entry time of the removed transaction.
+    pub entry_time: u64,
+}
+
+impl fmt::Display for MempoolRemoved {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MempoolRemoved(txid={}, reason={}, vsize={}, fee={}, entry_time={})",
+            bitcoin::Txid::from_slice(&self.txid).unwrap(),
+            self.reason(),
+            self.vsize,
+            self.fee,
+            self.entry_time,
+        )
+    }
+}
+
+impl MempoolRemoved {
+    /// Returns the removal reason as String
+    pub fn reason(&self) -> String {
+        String::from_utf8_lossy(&self.reason.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+    }
+
+    pub fn from_bytes(x: &[u8]) -> MempoolRemoved {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const MempoolRemoved) }
+    }
+}
+
+#[repr(C)]
+pub struct MempoolReplaced {
+    /// Txid of the replaced transaction
+    pub replaced_txid: [u8; TXID_LENGTH],
+    /// Virtual size of the replaced transaction
+    pub replaced_vsize: i32,
+    /// Fee of the replaced transaction
+    pub replaced_fee: i64,
+    /// Mempool entry time of the replaced transaction.
+    pub replaced_entry_time: u64,
+    /// Txid of the replacement transaction
+    pub replacement_txid: [u8; TXID_LENGTH],
+    /// Virtual size of the replacement transaction
+    pub replacement_vsize: i32,
+    /// Fee of the replaced transaction
+    pub replacement_fee: i64,
+}
+
+impl MempoolReplaced {
+    pub fn from_bytes(x: &[u8]) -> MempoolReplaced {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const MempoolReplaced) }
+    }
+}
+
+impl fmt::Display for MempoolReplaced {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MempoolReplaced(old(txid={}, vsize={}, fee={}, entry_time={}), new(txid={}, vsize={}, fee={}))",
+            bitcoin::Txid::from_slice(&self.replaced_txid).unwrap(),
+            self.replaced_vsize,
+            self.replaced_fee,
+            self.replaced_entry_time,
+            bitcoin::Txid::from_slice(&self.replacement_txid).unwrap(),
+            self.replacement_vsize,
+            self.replacement_fee,
+        )
+    }
+}
+
+#[repr(C)]
+pub struct MempoolRejected {
+    /// Txid of the added transaction
+    pub txid: [u8; TXID_LENGTH],
+    /// Reason why the transaction was rejected
+    pub reason: [u8; REJECTION_REASON_LENGTH],
+}
+
+impl fmt::Display for MempoolRejected {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MempoolRejected(txid={}, reason={})",
+            bitcoin::Txid::from_slice(&self.txid).unwrap(),
+            self.reason(),
+        )
+    }
+}
+
+impl MempoolRejected {
+    /// Returns the rejection reason as String
+    pub fn reason(&self) -> String {
+        String::from_utf8_lossy(&self.reason.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+    }
+
+    pub fn from_bytes(x: &[u8]) -> MempoolRejected {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const MempoolRejected) }
     }
 }
 
