@@ -289,8 +289,8 @@ int BPF_USDT(handle_net_conn_misbehaving, u64 id, s32 score_before, s32 howmuch,
 
 #define ADDRMAN_PAGES 64
 
-RINGBUFFER(addrman_insert_new, NET_CONN_PAGES)
-RINGBUFFER(addrman_insert_tried, NET_CONN_PAGES)
+RINGBUFFER(addrman_insert_new, ADDRMAN_PAGES)
+RINGBUFFER(addrman_insert_tried, ADDRMAN_PAGES)
 
 struct AddrmanNew {
     bool    inserted;
@@ -334,6 +334,92 @@ int BPF_USDT(handle_addrman_tried, s32 bucket, s32 bucket_pos, void *addr, u32 a
     bpf_probe_read_str(&tried.source, sizeof(tried.source), source);
     tried.source_AS = source_AS;
     return bpf_ringbuf_output(&addrman_insert_tried, &tried, sizeof(tried), 0);
+};
+
+// MEMPOOL
+
+#define MEMPOOL_PAGES 64
+
+RINGBUFFER(mempool_added, ADDRMAN_PAGES)
+RINGBUFFER(mempool_removed, ADDRMAN_PAGES)
+RINGBUFFER(mempool_replaced, ADDRMAN_PAGES)
+RINGBUFFER(mempool_rejected, ADDRMAN_PAGES)
+
+#define TXID_LENGHT 32
+#define REMOVAL_REASON_LENGTH 9
+#define REJECTION_REASON_LENGTH 113
+
+struct MempoolAdded {
+    u8      txid[TXID_LENGHT];
+    s32     vsize;
+    s64     fee;
+};
+
+struct MempoolRemoved {
+    u8      txid[TXID_LENGHT];
+    char    reason[REMOVAL_REASON_LENGTH];
+    s32     vsize;
+    s64     fee;
+    u64     entry_time;
+};
+
+struct MempoolReplaced {
+    u8      replaced_txid[TXID_LENGHT];
+    s32     replaced_vsize;
+    s64     replaced_fee;
+    u64     replaced_entry_time;
+    u8      replacement_txid[TXID_LENGHT];
+    s32     replacement_vsize;
+    s64     replacement_fee;
+};
+
+struct MempoolRejected {
+    u8      txid[TXID_LENGHT];
+    char    reason[REJECTION_REASON_LENGTH];
+};
+
+SEC("usdt")
+int BPF_USDT(handle_mempool_added, void *txid, s32 vsize, s64 fee) {
+    struct MempoolAdded added = {};
+    bpf_probe_read(&added.txid, sizeof(added.txid), txid);
+    added.vsize = vsize;
+    added.fee = fee;
+    return bpf_ringbuf_output(&mempool_added, &added, sizeof(added), 0);
+};
+
+SEC("usdt")
+int BPF_USDT(handle_mempool_removed, void *txid, void *reason, s32 vsize, s64 fee, u64 entry_time) {
+    struct MempoolRemoved removed = {};
+    bpf_probe_read(&removed.txid, sizeof(removed.txid), txid);
+    bpf_probe_read_str(&removed.reason, sizeof(removed.reason), reason);
+    removed.vsize = vsize;
+    removed.fee = fee;
+    removed.entry_time = entry_time;
+    return bpf_ringbuf_output(&mempool_removed, &removed, sizeof(removed), 0);
+};
+
+SEC("usdt")
+int BPF_USDT(handle_mempool_replaced,
+    void *replaced_txid, s32 replaced_vsize, s64 replaced_fee, u64 replaced_entry_time,
+    void *replacement_txid, s32 replacement_vsize, s64 replacement_fee
+) {
+    struct MempoolReplaced replaced = {};
+    bpf_probe_read(&replaced.replaced_txid, sizeof(replaced.replaced_txid), replaced_txid);
+    replaced.replaced_vsize = replaced_vsize;
+    replaced.replaced_fee = replaced_fee;
+    replaced.replaced_entry_time = replaced_entry_time;
+    bpf_probe_read(&replaced.replacement_txid, sizeof(replaced.replacement_txid), replacement_txid);
+    replaced.replacement_vsize = replacement_vsize;
+    replaced.replacement_fee = replacement_fee;
+    return bpf_ringbuf_output(&mempool_replaced, &replaced, sizeof(replaced), 0);
+};
+
+SEC("usdt")
+int BPF_USDT(handle_mempool_rejected, void *txid, void *reason) {
+    struct MempoolRejected rejected = {};
+    bpf_probe_read(&rejected.txid, sizeof(rejected.txid), txid);
+    bpf_probe_read_str(&rejected.reason, sizeof(rejected.reason), reason);
+    return bpf_ringbuf_output(&mempool_rejected, &rejected, sizeof(rejected), 0);
 };
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
