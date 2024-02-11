@@ -162,6 +162,9 @@ fn main() {
                         &m.xmessage,
                     ])
                     .inc();
+                metrics::CONN_MISBEHAVING_REASON
+                    .with_label_values(&[&m.xmessage])
+                    .inc();
                 metrics::CONN_MISBEHAVING_SCORE_INC
                     .with_label_values(&[&m.id.to_string(), &m.xmessage])
                     .inc_by(m.score_increase as u64);

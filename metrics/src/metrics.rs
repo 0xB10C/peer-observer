@@ -412,6 +412,15 @@ lazy_static! {
         &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_MESSAGE]
     ).unwrap();
 
+    // Occurences of misbehavior by reasons.
+    pub static ref CONN_MISBEHAVING_REASON: IntCounterVec =
+    register_int_counter_vec!(
+        Opts::new("misbehaving_reason", "Occurences of misbehavior by reasons")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+        &[LABEL_CONN_MISBEHAVING_MESSAGE]
+    ).unwrap();
+
     // -------------------- INVs
 
     /// Number of INV entries send and received with INV type.
