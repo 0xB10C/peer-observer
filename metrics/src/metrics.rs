@@ -7,7 +7,7 @@ use prometheus::{
 
 // Prometheus Metrics
 
-const NAMESPACE: &str = "networkobserver";
+const NAMESPACE: &str = "peerobserver";
 
 const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_P2P: &str = "p2p";
@@ -32,7 +32,7 @@ pub const LABEL_P2P_REJECT_MESSAGE: &str = "rejectmessage";
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_ADDR: &str = "addr";
 pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
-pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "missbehavingmessage";
+pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "misbehavingmessage";
 pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
 pub const LABEL_ADDRMAN_NEW_INSERT_SUCCESS: &str = "inserted";
 pub const LABEL_MEMPOOL_REASON: &str = "reason";
