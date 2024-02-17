@@ -1,6 +1,7 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 use std::collections::HashMap;
+use std::env;
 use std::fmt;
 use std::fs::OpenOptions;
 use std::io::{BufReader, Write};
@@ -30,11 +31,10 @@ mod metrics;
 mod metricserver;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
-const METRICS_ADDRESS: &'static str = "127.0.0.1:36437";
 const WORKERS: usize = 50;
 
 const NETWORK: constants::Network = constants::Network::Bitcoin;
-const USER_AGENT: &str = "/bitnodes.oi:0.2/";
+const USER_AGENT: &str = "/bitnodes.io:0.3/";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
@@ -233,13 +233,11 @@ fn build_raw_network_message(payload: message::NetworkMessage) -> message::RawNe
 }
 
 fn build_version_message() -> message::NetworkMessage {
-    // "standard UNIX timestamp in seconds"
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time error")
         .as_secs();
 
-    // Construct the message
     message::NetworkMessage::Version(message_network::VersionMessage::new(
         constants::ServiceFlags::NONE,
         timestamp as i64,
@@ -276,7 +274,16 @@ fn try_connect(address: SocketAddr) -> bool {
     return false;
 }
 
+// TODO:
+// - change println to proper logging
+// - general clean up
+// - error handling
+
 fn main() {
+    let metricserver_address = env::args()
+        .nth(1)
+        .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
+
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
 
@@ -286,7 +293,8 @@ fn main() {
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
 
-    metricserver::start(&METRICS_ADDRESS).unwrap();
+    metricserver::start(&metricserver_address).unwrap();
+    println!("metrics-server started on {}", &metricserver_address);
 
     crossbeam::scope(|s| {
         s.spawn(|_| loop {

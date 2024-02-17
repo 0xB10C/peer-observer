@@ -30,7 +30,7 @@ fn main() {
         .nth(1)
         .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
 
-    log::info!(target: LOG_TARGET, "Starting metrics-server using...",);
+    log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
     metrics::RUNTIME_START_TIMESTAMP.set(
         time::SystemTime::now()
@@ -46,8 +46,7 @@ fn main() {
     sub.set_opt::<Subscribe>(all_topics).unwrap();
 
     metricserver::start(&metricserver_address).unwrap();
-
-    log::info!(target: LOG_TARGET, "Started metrics-server.");
+    log::info!(target: LOG_TARGET, "metrics-server listening on: {}", metricserver_address);
 
     loop {
         let msg = sub.recv().unwrap();
