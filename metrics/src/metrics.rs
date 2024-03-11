@@ -397,7 +397,7 @@ lazy_static! {
     /// Number of misbehaving connections.
     pub static ref CONN_MISBEHAVING: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("misbehaving", "Number of evicted connections.")
+        Opts::new("misbehaving", "Number of misbehaving connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_SCORE_INC, LABEL_CONN_MISBEHAVING_MESSAGE]
