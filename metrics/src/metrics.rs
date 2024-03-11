@@ -248,15 +248,6 @@ lazy_static! {
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
-    /// Number of inbound connections by address.
-    pub static ref CONN_INBOUND_ADDRESS: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inbound_address", "Number of inbound connections by address.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR]
-    ).unwrap();
-
     /// Number of inbound connections by subnet (where applicable).
     pub static ref CONN_INBOUND_SUBNET: IntCounterVec =
     register_int_counter_vec!(
@@ -348,15 +339,6 @@ lazy_static! {
         Opts::new("closed", "Number of closed connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Number of closed connections by address.
-    pub static ref CONN_CLOSED_ADDRESS: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("closed_address", "Number of closed connections by address.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR]
     ).unwrap();
 
     /// Number of closed connections by network.

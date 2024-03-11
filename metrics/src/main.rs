@@ -111,9 +111,6 @@ fn main() {
                         .with_label_values(&[&ip])
                         .inc();
                 }
-                metrics::CONN_INBOUND_ADDRESS
-                    .with_label_values(&[&ip])
-                    .inc();
                 metrics::CONN_INBOUND_SUBNET
                     .with_label_values(&[&util::subnet(ip)])
                     .inc();
@@ -136,7 +133,6 @@ fn main() {
             connection_event::Event::Closed(c) => {
                 let ip = util::ip_from_ipport(c.conn.addr);
                 metrics::CONN_CLOSED.inc();
-                metrics::CONN_CLOSED_ADDRESS.with_label_values(&[&ip]).inc();
                 metrics::CONN_CLOSED_NETWORK
                     .with_label_values(&[&c.conn.network.to_string()])
                     .inc();
