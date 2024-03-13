@@ -478,9 +478,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libbpf-cargo"
-version = "0.21.2"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81d351d68854bfb21aeb9afe715e1da8bc2ee45d645fb9b69c6387593635790c"
+checksum = "9a58dfb8194a9b8ff960890a8d71e905b4635aa89c3dad4ce6c1a99c2eec759f"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -496,20 +496,19 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "thiserror",
 ]
 
 [[package]]
 name = "libbpf-rs"
-version = "0.21.2"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d70f003d6e48e60a7ed55d4fb5b2419b91a962c903fa0b00e8db95a3b6651abc"
+checksum = "98e789d5b4dab748a2b8415974bf5b0fc2e9e782d0b118166222195acb4ac3b6"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.4.0",
  "lazy_static",
  "libbpf-sys",
  "libc",
- "nix",
+ "nix 0.27.1",
  "num_enum",
  "strum_macros",
  "thiserror",
@@ -523,7 +522,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75adb4021282a72ca63ebbc0e4247750ad74ede68ff062d247691072d709ad8b"
 dependencies = [
  "cc",
- "nix",
+ "nix 0.26.4",
  "num_cpus",
  "pkg-config",
 ]
@@ -628,6 +627,18 @@ dependencies = [
  "libc",
  "memoffset 0.7.1",
  "pin-utils",
+]
+
+[[package]]
+name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.4.0",
+ "cfg-if",
+ "libc",
+ "memoffset 0.9.0",
 ]
 
 [[package]]
