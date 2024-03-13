@@ -10,11 +10,11 @@ shared = { path = "../shared" }
 
 prost = "0.10"
 nng = "1.0.1"
-libbpf-rs = "0.20.1"
+libbpf-rs = "0.21"
 libc = "0.2"
 
 [build-dependencies]
-libbpf-cargo = "0.20.1"
+libbpf-cargo = "0.21"
 
 [features]
 # Treat warnings as a build error.

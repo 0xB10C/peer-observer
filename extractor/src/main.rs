@@ -6,6 +6,7 @@ use std::time::SystemTime;
 
 use libc;
 
+use libbpf_rs::skel::SkelBuilder;
 use libbpf_rs::RingBufferBuilder;
 
 use nng::{Protocol, Socket};
@@ -20,6 +21,41 @@ use shared::ctypes::{
 use shared::wrapper::wrapper::Wrap;
 use shared::wrapper::Wrapper;
 use shared::{addrman, mempool, net_conn, net_msg};
+
+use crate::tracing::OpenTracingSkel;
+
+const TRACEPOINTS_NET_MESSAGE: [(&str, &str, &str); 2] = [
+    ("net", "inbound_message", "handle_net_msg_inbound"),
+    ("net", "outbound_message", "handle_net_msg_outbound"),
+];
+
+const TRACEPOINTS_NET_CONN: [(&str, &str, &str); 5] = [
+    ("net", "inbound_connection", "handle_net_msg_inbound"),
+    ("net", "outbound_connection", "handle_net_msg_outbound"),
+    ("net", "closed_connection", "handle_net_conn_closed"),
+    (
+        "net",
+        "evicted_inbound_connection",
+        "handle_net_conn_inbound_evicted",
+    ),
+    (
+        "net",
+        "misbehaving_connection",
+        "handle_net_conn_misbehaving",
+    ),
+];
+
+const TRACEPOINTS_MEMPOOL: [(&str, &str, &str); 4] = [
+    ("mempool", "added", "handle_mempool_added"),
+    ("mempool", "removed", "handle_mempool_removed"),
+    ("mempool", "replaced", "handle_mempool_replaced"),
+    ("mempool", "rejected", "handle_mempool_rejected"),
+];
+
+const _TRACEPOINTS_ADDRMAN: [(&str, &str, &str); 2] = [
+    ("addrman", "attempt_add", "handle_addrman_new"),
+    ("addrman", "move_to_good", "handle_addrman_tried"),
+];
 
 fn bump_memlock_rlimit() {
     let rlimit = libc::rlimit {
@@ -56,36 +92,6 @@ fn hook_usdt(
     }
 }
 
-fn attach_usdt_tracepoints(
-    fns: &mut tracing::TracingProgsMut,
-    pid: i32,
-    path: &str,
-) -> Result<Vec<libbpf_rs::Link>, libbpf_rs::Error> {
-    let mut links = Vec::new();
-    // for readability of fn to -> context:name mappings, don't rustfmt this
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    {
-        // net msg
-        links.push(hook_usdt(fns.handle_net_msg_inbound(),      pid, path, "net", "inbound_message")?);
-        links.push(hook_usdt(fns.handle_net_msg_outbound(),     pid, path, "net", "outbound_message")?);
-        // net conn
-        links.push(hook_usdt(fns.handle_net_conn_inbound(),     pid, path, "net", "inbound_connection")?);
-        links.push(hook_usdt(fns.handle_net_conn_outbound(),    pid, path, "net", "outbound_connection")?);
-        links.push(hook_usdt(fns.handle_net_conn_closed(),      pid, path, "net", "closed_connection")?);
-        links.push(hook_usdt(fns.handle_net_conn_inbound_evicted(),     pid, path, "net", "evicted_inbound_connection")?);
-        links.push(hook_usdt(fns.handle_net_conn_misbehaving(), pid, path, "net", "misbehaving_connection")?);
-        // addrman
-        //links.push(hook_usdt(fns.handle_addrman_new(),          pid, path, "addrman", "attempt_add")?);
-        //links.push(hook_usdt(fns.handle_addrman_tried(),        pid, path, "addrman", "move_to_good")?);
-        // mempool
-        links.push(hook_usdt(fns.handle_mempool_added(),        pid, path, "mempool", "added")?);
-        links.push(hook_usdt(fns.handle_mempool_removed(),      pid, path, "mempool", "removed")?);
-        links.push(hook_usdt(fns.handle_mempool_replaced(),     pid, path, "mempool", "replaced")?);
-        links.push(hook_usdt(fns.handle_mempool_rejected(),     pid, path, "mempool", "rejected")?);
-    }
-    Ok(links)
-}
-
 fn main() -> Result<(), libbpf_rs::Error> {
     let bitcoind_path = env::args().nth(1).expect("No bitcoind path provided.");
 
@@ -94,41 +100,53 @@ fn main() -> Result<(), libbpf_rs::Error> {
 
     bump_memlock_rlimit();
 
-    let open_skel = skel_builder.open().unwrap();
-    let mut skel = match open_skel.load() {
+    let open_skel: OpenTracingSkel = skel_builder.open().unwrap();
+    let mut obj: libbpf_rs::Object = match open_skel.obj.load() {
         Ok(skel) => skel,
         Err(e) => {
             panic!("Could not load skeleton file: {}", e);
         }
     };
 
-    let _links = attach_usdt_tracepoints(&mut skel.progs_mut(), -1, &bitcoind_path)
-        .expect("Could not attach to USDT tracepoints");
+    let active_tracepoints = TRACEPOINTS_NET_MESSAGE
+        .iter()
+        .chain(TRACEPOINTS_NET_CONN.iter())
+        .chain(TRACEPOINTS_MEMPOOL.iter());
+    let mut links = Vec::new();
+    for tracepoint in active_tracepoints {
+        links.push(hook_usdt(
+            obj.prog_mut(tracepoint.2).unwrap(),
+            -1,
+            &bitcoind_path,
+            tracepoint.0,
+            tracepoint.1,
+        )?);
+    }
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
     socket.listen(ADDRESS).unwrap();
     println!("listening on {}", ADDRESS);
 
-    let maps = skel.maps();
+    //let maps = skel.map();
     let mut ringbuff_builder = RingBufferBuilder::new();
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     ringbuff_builder
-        .add(maps.net_msg_small(), |data| { handle_net_message::<{ P2PMessageSize::Small as usize }>(data, socket.clone()) })?
-        .add(maps.net_msg_medium(), |data| { handle_net_message::<{ P2PMessageSize::Medium as usize }>(data, socket.clone()) })?
-        .add(maps.net_msg_large(), |data| { handle_net_message::<{ P2PMessageSize::Large as usize }>(data, socket.clone()) })?
-        .add(maps.net_msg_huge(), |data| { handle_net_message::<{ P2PMessageSize::Huge as usize }>(data, socket.clone()) })?
-        .add(maps.net_conn_inbound(), |data| { handle_net_conn_inbound(data, socket.clone()) })?
-        .add(maps.net_conn_outbound(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
-        .add(maps.net_conn_closed(), |data| { handle_net_conn_closed(data, socket.clone()) })?
-        .add(maps.net_conn_inbound_evicted(), |data| { handle_net_conn_inbound_evicted(data, socket.clone()) })?
-        .add(maps.net_conn_misbehaving(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?
-        .add(maps.addrman_insert_new(), |data| { handle_addrman_new(data, socket.clone()) })?
-        .add(maps.addrman_insert_tried(), |data| { handle_addrman_tried(data, socket.clone()) })?
-        .add(maps.mempool_added(), |data| { handle_mempool_added(data, socket.clone()) })?
-        .add(maps.mempool_removed(), |data| { handle_mempool_removed(data, socket.clone()) })?
-        .add(maps.mempool_rejected(), |data| { handle_mempool_rejected(data, socket.clone()) })?
-        .add(maps.mempool_replaced(), |data| { handle_mempool_replaced(data, socket.clone()) })?;
+        .add(obj.map("net_msg_small").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Small as usize }>(data, socket.clone()) })?
+        .add(obj.map("net_msg_medium").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Medium as usize }>(data, socket.clone()) })?
+        .add(obj.map("net_msg_large").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Large as usize }>(data, socket.clone()) })?
+        .add(obj.map("net_msg_huge").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Huge as usize }>(data, socket.clone()) })?
+        .add(obj.map("net_conn_inbound").unwrap(), |data| { handle_net_conn_inbound(data, socket.clone()) })?
+        .add(obj.map("net_conn_outbound").unwrap(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
+        .add(obj.map("net_conn_closed").unwrap(), |data| { handle_net_conn_closed(data, socket.clone()) })?
+        .add(obj.map("net_conn_inbound_evicted").unwrap(), |data| { handle_net_conn_inbound_evicted(data, socket.clone()) })?
+        .add(obj.map("net_conn_misbehaving").unwrap(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?
+        .add(obj.map("addrman_insert_new").unwrap(), |data| { handle_addrman_new(data, socket.clone()) })?
+        .add(obj.map("addrman_insert_tried").unwrap(), |data| { handle_addrman_tried(data, socket.clone()) })?
+        .add(obj.map("mempool_added").unwrap(), |data| { handle_mempool_added(data, socket.clone()) })?
+        .add(obj.map("mempool_removed").unwrap(), |data| { handle_mempool_removed(data, socket.clone()) })?
+        .add(obj.map("mempool_rejected").unwrap(), |data| { handle_mempool_rejected(data, socket.clone()) })?
+        .add(obj.map("mempool_replaced").unwrap(), |data| { handle_mempool_replaced(data, socket.clone()) })?;
     let ring_buffers = ringbuff_builder.build()?;
 
     loop {
