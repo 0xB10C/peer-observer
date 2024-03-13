@@ -73,24 +73,6 @@ mod tracing;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 
-fn hook_usdt(
-    tracing_fn: &mut libbpf_rs::Program,
-    pid: i32,
-    path: &str,
-    context: &str,
-    name: &str,
-) -> Result<libbpf_rs::Link, libbpf_rs::Error> {
-    match tracing_fn.attach_usdt(pid, &path, context, name) {
-        Ok(link) => Ok(link),
-        Err(e) => {
-            println!(
-                "Could not attach to USDT tracepoint {}:{} in '{}'",
-                context, name, path
-            );
-            Err(e)
-        }
-    }
-}
 
 fn main() -> Result<(), libbpf_rs::Error> {
     let bitcoind_path = env::args().nth(1).expect("No bitcoind path provided.");
@@ -114,13 +96,9 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .chain(TRACEPOINTS_MEMPOOL.iter());
     let mut links = Vec::new();
     for tracepoint in active_tracepoints {
-        links.push(hook_usdt(
-            obj.prog_mut(tracepoint.2).unwrap(),
-            -1,
-            &bitcoind_path,
-            tracepoint.0,
-            tracepoint.1,
-        )?);
+        links.push(
+            obj.prog_mut(tracepoint.2).unwrap().attach_usdt(-1, &bitcoind_path, tracepoint.0, tracepoint.1)?
+        )
     }
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
