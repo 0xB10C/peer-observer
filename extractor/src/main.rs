@@ -24,37 +24,87 @@ use shared::{addrman, mempool, net_conn, net_msg};
 
 use crate::tracing::OpenTracingSkel;
 
-const TRACEPOINTS_NET_MESSAGE: [(&str, &str, &str); 2] = [
-    ("net", "inbound_message", "handle_net_msg_inbound"),
-    ("net", "outbound_message", "handle_net_msg_outbound"),
+struct Tracepoint<'a> {
+    pub context: &'a str,
+    pub name: &'a str,
+    pub function: &'a str,
+}
+
+const TRACEPOINTS_NET_MESSAGE: [Tracepoint; 2] = [
+    Tracepoint {
+        context: "net",
+        name: "inbound_message",
+        function: "handle_net_msg_inbound",
+    },
+    Tracepoint {
+        context: "net",
+        name: "outbound_message",
+        function: "handle_net_msg_outbound",
+    },
 ];
 
-const TRACEPOINTS_NET_CONN: [(&str, &str, &str); 5] = [
-    ("net", "inbound_connection", "handle_net_msg_inbound"),
-    ("net", "outbound_connection", "handle_net_msg_outbound"),
-    ("net", "closed_connection", "handle_net_conn_closed"),
-    (
-        "net",
-        "evicted_inbound_connection",
-        "handle_net_conn_inbound_evicted",
-    ),
-    (
-        "net",
-        "misbehaving_connection",
-        "handle_net_conn_misbehaving",
-    ),
+const TRACEPOINTS_NET_CONN: [Tracepoint; 5] = [
+    Tracepoint {
+        context: "net",
+        name: "inbound_connection",
+        function: "handle_net_conn_inbound",
+    },
+    Tracepoint {
+        context: "net",
+        name: "outbound_connection",
+        function: "handle_net_conn_outbound",
+    },
+    Tracepoint {
+        context: "net",
+        name: "closed_connection",
+        function: "handle_net_conn_closed",
+    },
+    Tracepoint {
+        context: "net",
+        name: "evicted_inbound_connection",
+        function: "handle_net_conn_inbound_evicted",
+    },
+    Tracepoint {
+        context: "net",
+        name: "misbehaving_connection",
+        function: "handle_net_conn_misbehaving",
+    },
 ];
 
-const TRACEPOINTS_MEMPOOL: [(&str, &str, &str); 4] = [
-    ("mempool", "added", "handle_mempool_added"),
-    ("mempool", "removed", "handle_mempool_removed"),
-    ("mempool", "replaced", "handle_mempool_replaced"),
-    ("mempool", "rejected", "handle_mempool_rejected"),
+const TRACEPOINTS_MEMPOOL: [Tracepoint; 4] = [
+    Tracepoint {
+        context: "mempool",
+        name: "added",
+        function: "handle_mempool_added",
+    },
+    Tracepoint {
+        context: "mempool",
+        name: "removed",
+        function: "handle_mempool_removed",
+    },
+    Tracepoint {
+        context: "mempool",
+        name: "replaced",
+        function: "handle_mempool_replaced",
+    },
+    Tracepoint {
+        context: "mempool",
+        name: "rejected",
+        function: "handle_mempool_rejected",
+    },
 ];
 
-const _TRACEPOINTS_ADDRMAN: [(&str, &str, &str); 2] = [
-    ("addrman", "attempt_add", "handle_addrman_new"),
-    ("addrman", "move_to_good", "handle_addrman_tried"),
+const _TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
+    Tracepoint {
+        context: "addrman",
+        name: "attempt_add",
+        function: "handle_addrman_new",
+    },
+    Tracepoint {
+        context: "addrman",
+        name: "move_to_good",
+        function: "handle_addrman_tried",
+    },
 ];
 
 fn bump_memlock_rlimit() {
@@ -72,7 +122,6 @@ fn bump_memlock_rlimit() {
 mod tracing;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
-
 
 fn main() -> Result<(), libbpf_rs::Error> {
     let bitcoind_path = env::args().nth(1).expect("No bitcoind path provided.");
@@ -96,9 +145,12 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .chain(TRACEPOINTS_MEMPOOL.iter());
     let mut links = Vec::new();
     for tracepoint in active_tracepoints {
-        links.push(
-            obj.prog_mut(tracepoint.2).unwrap().attach_usdt(-1, &bitcoind_path, tracepoint.0, tracepoint.1)?
-        )
+        links.push(obj.prog_mut(tracepoint.function).unwrap().attach_usdt(
+            -1,
+            &bitcoind_path,
+            tracepoint.context,
+            tracepoint.name,
+        )?)
     }
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
