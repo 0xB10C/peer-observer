@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-shared = { path = "../shared" }
+shared = { path = "../../shared" }
 
 prost = "0.10"
 nng = "1.0.1"
