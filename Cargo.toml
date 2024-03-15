@@ -4,8 +4,8 @@ resolver = "2"
 members = [
   "shared",
   "extractor",
-  "tools/logger",
-  "metrics",
   "archiver",
+  "tools/logger",
+  "tools/metrics",
   "tools/addr-connectivity-rs",
 ]
