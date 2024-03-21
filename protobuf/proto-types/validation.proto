@@ -1,0 +1,20 @@
+syntax = "proto2";
+
+package validation;
+
+message ValidationEvent {
+  oneof event {
+    BlockConnected block_connected = 1;
+  }
+}
+
+// A block connected to the chain.
+message BlockConnected {
+  required bytes    hash                    = 1;  // Hash of the connected block.
+  required int32    height                  = 2;  // Height of the connected block.
+  required int64    transactions            = 3;  // Number of transactions in the connected block.
+  required int32    inputs                  = 4;  // Number of inputs in the connected block.
+  required int64    sigops                  = 5;  // Number of sigops in the connected block.
+  required int64    connection_time         = 6;  // Time it took to connect the block in microseconds (µs).
+}
+
