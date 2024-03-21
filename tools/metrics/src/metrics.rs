@@ -14,6 +14,7 @@ const SUBSYSTEM_P2P: &str = "p2p";
 const SUBSYSTEM_CONN: &str = "conn";
 const SUBSYSTEM_ADDRMAN: &str = "addrman";
 const SUBSYSTEM_MEMPOOL: &str = "mempool";
+const SUBSYSTEM_VALIDATION: &str = "validation";
 
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
@@ -542,7 +543,7 @@ lazy_static! {
             .subsystem(SUBSYSTEM_ADDRMAN),
     ).unwrap();
 
-    // -------------------- Addrman
+    // -------------------- Mempool
 
     /// Number of transactions added to the mempool.
     pub static ref MEMPOOL_ADDED: IntCounter =
@@ -594,4 +595,53 @@ lazy_static! {
         &[LABEL_MEMPOOL_REASON]
     ).unwrap();
 
+    // -------------------- Validation
+
+    /// Last connected block height.
+    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_HEIGHT: IntGauge =
+    register_int_gauge!(
+        Opts::new("block_connected_latest_height", "Last connected block height.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_VALIDATION)
+    ).unwrap();
+
+    /// Last connected block connection time in µs.
+    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_TIME: IntGauge =
+    register_int_gauge!(
+        Opts::new("block_connected_latest_connection_time", "Last connected block connection time in µs")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_VALIDATION)
+    ).unwrap();
+
+    /// Total connected block connection time in µs.
+    pub static ref VALIDATION_BLOCK_CONNECTED_DURATION: IntCounter =
+    register_int_counter!(
+        Opts::new("block_connected_connection_time", "Last connected block connection time in µs")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_VALIDATION)
+    ).unwrap();
+
+    /// Last connected block sigops.
+    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_SIGOPS: IntGauge =
+    register_int_gauge!(
+        Opts::new("block_connected_latest_sigops", "Last connected block sigops.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_VALIDATION)
+    ).unwrap();
+
+    /// Last connected block inputs.
+    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_INPUTS: IntGauge =
+    register_int_gauge!(
+        Opts::new("block_connected_latest_inputs", "Last connected block inputs.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_VALIDATION)
+    ).unwrap();
+
+    /// Last connected block transactions.
+    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_TRANSACTIONS: IntGauge =
+    register_int_gauge!(
+        Opts::new("block_connected_latest_transactions", "Last connected block transactions.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_VALIDATION)
+    ).unwrap();
 }
