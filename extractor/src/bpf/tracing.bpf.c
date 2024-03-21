@@ -340,10 +340,10 @@ int BPF_USDT(handle_addrman_tried, s32 bucket, s32 bucket_pos, void *addr, u32 a
 
 #define MEMPOOL_PAGES 64
 
-RINGBUFFER(mempool_added, ADDRMAN_PAGES)
-RINGBUFFER(mempool_removed, ADDRMAN_PAGES)
-RINGBUFFER(mempool_replaced, ADDRMAN_PAGES)
-RINGBUFFER(mempool_rejected, ADDRMAN_PAGES)
+RINGBUFFER(mempool_added, MEMPOOL_PAGES)
+RINGBUFFER(mempool_removed, MEMPOOL_PAGES)
+RINGBUFFER(mempool_replaced, MEMPOOL_PAGES)
+RINGBUFFER(mempool_rejected, MEMPOOL_PAGES)
 
 #define TXID_LENGHT 32
 #define REMOVAL_REASON_LENGTH 9
