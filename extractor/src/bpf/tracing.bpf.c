@@ -422,4 +422,33 @@ int BPF_USDT(handle_mempool_rejected, void *txid, void *reason) {
     return bpf_ringbuf_output(&mempool_rejected, &rejected, sizeof(rejected), 0);
 };
 
+// VALIDATION
+
+#define VALIDATION_BLOCK_CONNECTED_PAGES 64
+
+RINGBUFFER(validation_block_connected, VALIDATION_BLOCK_CONNECTED_PAGES)
+
+#define HASH_LENGHT 32
+
+struct BlockConnected {
+  u8     hash[HASH_LENGHT];
+  s32    height;
+  u64    transactions;
+  s32    inputs;
+  u64    sigops;
+  u64    connection_time;  
+};
+
+SEC("usdt")
+int BPF_USDT(handle_validation_block_connected, void *hash, s32 height, u64 transactions, s32 inputs, u64 sigops, u64 connection_time) {
+    struct BlockConnected connected = {};
+    bpf_probe_read(&connected.hash, sizeof(connected.hash), hash);
+    connected.height = height;
+    connected.transactions = transactions;
+    connected.inputs = inputs; 
+    connected.sigops = sigops; 
+    connected.connection_time = connection_time;
+    return bpf_ringbuf_output(&validation_block_connected, &connected, sizeof(connected), 0);
+};
+
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
