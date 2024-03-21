@@ -6,6 +6,7 @@ import "net_msg.proto";
 import "net_conn.proto";
 import "addrman.proto";
 import "mempool.proto";
+import "validation.proto";
 
 message Wrapper {
   required uint64  timestamp = 10;  // Timestamp (seconds since UNIX epoch) when the message was received.
@@ -15,6 +16,7 @@ message Wrapper {
     net_conn.ConnectionEvent conn = 2;
     addrman.AddrmanEvent addrman = 3;
     mempool.MempoolEvent mempool = 4;
+    validation.ValidationEvent validation = 5;
   }
 }
 

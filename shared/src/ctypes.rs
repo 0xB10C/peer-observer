@@ -23,6 +23,8 @@ const TXID_LENGTH: usize = 32;
 const REMOVAL_REASON_LENGTH: usize = 9;
 const REJECTION_REASON_LENGTH: usize = 118;
 
+const HASH_LENGTH: usize = 32;
+
 #[repr(usize)]
 pub enum P2PMessageSize {
     Small = MAX_SMALL_MSG_LENGTH,
@@ -393,6 +395,39 @@ impl MempoolRejected {
 
     pub fn from_bytes(x: &[u8]) -> MempoolRejected {
         unsafe { ptr::read_unaligned(x.as_ptr() as *const MempoolRejected) }
+    }
+}
+
+#[repr(C)]
+pub struct ValidationBlockConnected {
+    /// Hash of the connected block
+    pub hash: [u8; HASH_LENGTH],
+    /// Height of the connected block
+    pub height: i32,
+    /// Number of transactions in the connected block
+    pub transactions: u64,
+    /// Number of inputs in the connected block
+    pub inputs: i32,
+    /// Number of sigops in the connected block
+    pub sigops: u64,
+    /// Time it took to connect the block in microseconds (µs)
+    pub connection_time: u64,
+}
+
+impl fmt::Display for ValidationBlockConnected {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ValidationBlockConnected(hash={}, height={}, transactions={}, inputs={}, sigops={}, time={}µs)",
+            bitcoin::BlockHash::from_slice(&self.hash).unwrap(),
+            self.height, self.transactions, self.inputs, self.sigops, self.connection_time,
+        )
+    }
+}
+
+impl ValidationBlockConnected {
+    pub fn from_bytes(x: &[u8]) -> Self {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const Self) }
     }
 }
 

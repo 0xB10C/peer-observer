@@ -16,11 +16,11 @@ use prost::Message;
 use shared::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
     MempoolRejected, MempoolRemoved, MempoolReplaced, MisbehavingConnection, OutboundConnection,
-    P2PMessage, P2PMessageSize,
+    P2PMessage, P2PMessageSize, ValidationBlockConnected,
 };
 use shared::wrapper::wrapper::Wrap;
 use shared::wrapper::Wrapper;
-use shared::{addrman, mempool, net_conn, net_msg};
+use shared::{addrman, mempool, net_conn, net_msg, validation};
 
 use crate::tracing::OpenTracingSkel;
 
@@ -107,6 +107,12 @@ const _TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
     },
 ];
 
+const TRACEPOINTS_VALIDATION: [Tracepoint; 1] = [Tracepoint {
+    context: "validation",
+    name: "block_connected",
+    function: "handle_validation_block_connected",
+}];
+
 fn bump_memlock_rlimit() {
     let rlimit = libc::rlimit {
         rlim_cur: 128 << 20,
@@ -142,6 +148,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     let active_tracepoints = TRACEPOINTS_NET_MESSAGE
         .iter()
         .chain(TRACEPOINTS_NET_CONN.iter())
+        .chain(TRACEPOINTS_VALIDATION.iter())
         .chain(TRACEPOINTS_MEMPOOL.iter());
     let mut links = Vec::new();
     for tracepoint in active_tracepoints {
@@ -176,7 +183,8 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .add(obj.map("mempool_added").unwrap(), |data| { handle_mempool_added(data, socket.clone()) })?
         .add(obj.map("mempool_removed").unwrap(), |data| { handle_mempool_removed(data, socket.clone()) })?
         .add(obj.map("mempool_rejected").unwrap(), |data| { handle_mempool_rejected(data, socket.clone()) })?
-        .add(obj.map("mempool_replaced").unwrap(), |data| { handle_mempool_replaced(data, socket.clone()) })?;
+        .add(obj.map("mempool_replaced").unwrap(), |data| { handle_mempool_replaced(data, socket.clone()) })?
+        .add(obj.map("validation_block_connected").unwrap(), |data| { handle_validation_block_connected(data, socket.clone()) })?;
     let ring_buffers = ringbuff_builder.build()?;
 
     loop {
@@ -410,6 +418,26 @@ fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
         timestamp_subsec_micros: timestamp_subsec_millis,
         wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
             event: Some(mempool::mempool_event::Event::Rejected(rejected.into())),
+        })),
+    };
+    s.send(&proto.encode_to_vec()).unwrap();
+    0
+}
+
+fn handle_validation_block_connected(data: &[u8], s: Socket) -> i32 {
+    let connected = ValidationBlockConnected::from_bytes(data);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap();
+    let timestamp = now.as_secs();
+    let timestamp_subsec_millis = now.subsec_micros();
+    let proto = Wrapper {
+        timestamp: timestamp,
+        timestamp_subsec_micros: timestamp_subsec_millis,
+        wrap: Some(Wrap::Validation(validation::ValidationEvent {
+            event: Some(validation::validation_event::Event::BlockConnected(
+                connected.into(),
+            )),
         })),
     };
     s.send(&proto.encode_to_vec()).unwrap();
