@@ -12,6 +12,7 @@ use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::util;
+use shared::validation::validation_event;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 
@@ -66,6 +67,7 @@ fn main() {
                 Wrap::Mempool(m) => {
                     handle_mempool_event(&m.event.unwrap());
                 }
+                Wrap::Validation(v) => handle_validation_event(&v.event.unwrap()),
             }
         }
     }
@@ -89,6 +91,25 @@ fn main() {
                 metrics::MEMPOOL_REJECTED
                     .with_label_values(&[&r.reason])
                     .inc();
+            }
+        }
+    }
+
+    fn handle_validation_event(e: &validation_event::Event) {
+        match e {
+            validation_event::Event::BlockConnected(v) => {
+                // Due to an undetected API break, 23.x and 24.x used microseconds, while
+                // 25.x, 26.x, and 27.x use nanoseconds.
+                // See https://github.com/bitcoin/bitcoin/pull/29877
+                // Assume the tracepoint passed nanoseconds here, but we don't need the
+                // nanosecond precision and already have metrics recorded as microseconds.
+                let duration_microseconds = (v.connection_time / 1000) as u64;
+                metrics::VALIDATION_BLOCK_CONNECTED_LATEST_HEIGHT.set(v.height as i64);
+                metrics::VALIDATION_BLOCK_CONNECTED_LATEST_TIME.set(duration_microseconds as i64);
+                metrics::VALIDATION_BLOCK_CONNECTED_DURATION.inc_by(duration_microseconds);
+                metrics::VALIDATION_BLOCK_CONNECTED_LATEST_SIGOPS.set(v.sigops);
+                metrics::VALIDATION_BLOCK_CONNECTED_LATEST_INPUTS.set(v.inputs.into());
+                metrics::VALIDATION_BLOCK_CONNECTED_LATEST_TRANSACTIONS.set(v.transactions);
             }
         }
     }
