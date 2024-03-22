@@ -48,6 +48,11 @@ fn main() {
                         "$Mempool {}", m.event.unwrap()
                     };
                 }
+                Wrap::Validation(v) => {
+                    println! {
+                        "+Validation {}", v.event.unwrap()
+                    };
+                }
             }
         }
     }

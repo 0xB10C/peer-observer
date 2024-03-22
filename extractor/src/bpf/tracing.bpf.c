@@ -340,10 +340,10 @@ int BPF_USDT(handle_addrman_tried, s32 bucket, s32 bucket_pos, void *addr, u32 a
 
 #define MEMPOOL_PAGES 64
 
-RINGBUFFER(mempool_added, ADDRMAN_PAGES)
-RINGBUFFER(mempool_removed, ADDRMAN_PAGES)
-RINGBUFFER(mempool_replaced, ADDRMAN_PAGES)
-RINGBUFFER(mempool_rejected, ADDRMAN_PAGES)
+RINGBUFFER(mempool_added, MEMPOOL_PAGES)
+RINGBUFFER(mempool_removed, MEMPOOL_PAGES)
+RINGBUFFER(mempool_replaced, MEMPOOL_PAGES)
+RINGBUFFER(mempool_rejected, MEMPOOL_PAGES)
 
 #define TXID_LENGHT 32
 #define REMOVAL_REASON_LENGTH 9
@@ -420,6 +420,35 @@ int BPF_USDT(handle_mempool_rejected, void *txid, void *reason) {
     bpf_probe_read(&rejected.txid, sizeof(rejected.txid), txid);
     bpf_probe_read_str(&rejected.reason, sizeof(rejected.reason), reason);
     return bpf_ringbuf_output(&mempool_rejected, &rejected, sizeof(rejected), 0);
+};
+
+// VALIDATION
+
+#define VALIDATION_BLOCK_CONNECTED_PAGES 64
+
+RINGBUFFER(validation_block_connected, VALIDATION_BLOCK_CONNECTED_PAGES)
+
+#define HASH_LENGHT 32
+
+struct BlockConnected {
+  u8     hash[HASH_LENGHT];
+  s32    height;
+  u64    transactions;
+  s32    inputs;
+  u64    sigops;
+  u64    connection_time;  
+};
+
+SEC("usdt")
+int BPF_USDT(handle_validation_block_connected, void *hash, s32 height, u64 transactions, s32 inputs, u64 sigops, u64 connection_time) {
+    struct BlockConnected connected = {};
+    bpf_probe_read(&connected.hash, sizeof(connected.hash), hash);
+    connected.height = height;
+    connected.transactions = transactions;
+    connected.inputs = inputs; 
+    connected.sigops = sigops; 
+    connected.connection_time = connection_time;
+    return bpf_ringbuf_output(&validation_block_connected, &connected, sizeof(connected), 0);
 };
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";

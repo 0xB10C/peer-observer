@@ -17,7 +17,7 @@ fn main() {
     {
         Ok(_) => (),
         Err(e) => {
-            println!("{}", e);
+            println!("Error: {}", e);
             panic!("could not compile {}", SOURCE);
         }
     }

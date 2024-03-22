@@ -8,6 +8,7 @@ pub mod mempool;
 pub mod net_conn;
 pub mod net_msg;
 pub mod primitive;
+pub mod validation;
 pub mod wrapper;
 
 /// Utillity functions shared among peer-observer tools
