@@ -1,5 +1,6 @@
 use libbpf_cargo::SkeletonBuilder;
 use std::env;
+use std::ffi::OsStr;
 use std::path::Path;
 
 const SOURCE: &str = "./src/bpf/tracing.bpf.c";
@@ -12,7 +13,8 @@ fn main() {
     println!("using vmlinux path: {}", vmlinux_path.display());
     match SkeletonBuilder::new()
         .source(SOURCE)
-        .clang_args(format!("-I {}", vmlinux_path.display()))
+        .clang_args([OsStr::new("-I"), vmlinux_path.as_os_str()])
+        //.clang_args(format!("-I {}", vmlinux_path.display()))
         .build_and_generate(DEST)
     {
         Ok(_) => (),
