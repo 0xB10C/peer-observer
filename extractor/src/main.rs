@@ -152,12 +152,15 @@ fn main() -> Result<(), libbpf_rs::Error> {
         .chain(TRACEPOINTS_MEMPOOL.iter());
     let mut links = Vec::new();
     for tracepoint in active_tracepoints {
-        links.push(obj.prog_mut(tracepoint.function).unwrap().attach_usdt(
+        let result = obj.prog_mut(tracepoint.function).unwrap().attach_usdt(
             -1,
             &bitcoind_path,
             tracepoint.context,
             tracepoint.name,
-        )?)
+        );
+        if let Ok(link) = result {
+            links.push(link);
+        }
     }
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
