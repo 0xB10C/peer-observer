@@ -30,12 +30,12 @@ struct Tracepoint<'a> {
     pub function: &'a str,
 }
 
-const TRACEPOINTS_NET_MESSAGE: [Tracepoint; 2] = [
-    Tracepoint {
-        context: "net",
-        name: "inbound_message",
-        function: "handle_net_msg_inbound",
-    },
+const TRACEPOINTS_NET_MESSAGE: [Tracepoint; 1] = [
+    // Tracepoint {
+    //     context: "net",
+    //     name: "inbound_message",
+    //     function: "handle_net_msg_inbound",
+    // },
     Tracepoint {
         context: "net",
         name: "outbound_message",
