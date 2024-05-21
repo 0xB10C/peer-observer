@@ -351,18 +351,10 @@ fn main() {
             }
             Msg::Reject(r) => {
                 if msg.meta.inbound {
-                    metrics::P2P_REJECT_ADDR
-                        .with_label_values(&[
-                            &ip,
-                            &r.rejected_command,
-                            &RejectReason::from_i32(r.reason).unwrap().to_string(),
-                        ])
-                        .inc();
                     metrics::P2P_REJECT_MESSAGE
                         .with_label_values(&[
                             &r.rejected_command,
                             &RejectReason::from_i32(r.reason).unwrap().to_string(),
-                            &r.reason_details,
                         ])
                         .inc();
                 }

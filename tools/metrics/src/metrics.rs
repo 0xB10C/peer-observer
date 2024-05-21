@@ -28,7 +28,6 @@ pub const LABEL_P2P_VERSION_USERAGENT: &str = "useragent";
 pub const LABEL_P2P_FEEFILTER_FEERATE: &str = "feerate";
 pub const LABEL_P2P_REJECT_REASON: &str = "rejectreason";
 pub const LABEL_P2P_REJECT_COMMAND: &str = "rejectcommand";
-pub const LABEL_P2P_REJECT_MESSAGE: &str = "rejectmessage";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_ADDR: &str = "addr";
@@ -496,23 +495,14 @@ lazy_static! {
 
     // -------------------- Reject
 
-    /// Number of reject messages received by addr, command and rejected command
-    pub static ref P2P_REJECT_ADDR: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("reject_addr", "Number of reject messages received by addr, command and reason.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_CONN_ADDR, LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON]
-    ).unwrap();
 
-
-    /// Number of reject messages received by command, reason and message
+    /// Number of reject messages received by command and reason
     pub static ref P2P_REJECT_MESSAGE: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("reject_message", "Number of reject messages received by command, reason and message.")
+        Opts::new("reject_message", "Number of reject messages received by command and reason")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON, LABEL_P2P_REJECT_MESSAGE]
+        &[LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON]
     ).unwrap();
 
     // -------------------- Addrman
