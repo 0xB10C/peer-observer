@@ -445,15 +445,6 @@ lazy_static! {
 
     // -------------------- Pings
 
-    /// Number of Pings received by address
-    pub static ref P2P_PING_ADDRESS: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("ping_address", "Number of Pings received by address.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_CONN_ADDR]
-    ).unwrap();
-
     /// Number of Pings received by subnet (where applicable)
     pub static ref P2P_PING_SUBNET: IntCounterVec =
     register_int_counter_vec!(
@@ -464,12 +455,12 @@ lazy_static! {
     ).unwrap();
 
     /// Number of "old" pings (without a value) received by address
-    pub static ref P2P_OLDPING_ADDRESS: IntCounterVec =
+    pub static ref P2P_OLDPING_SUBNET: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("oldping_address", "Number of 'old' Pings (without a value) received by address.")
+        Opts::new("oldping_subnet", "Number of 'old' Pings (without a value) received by subnet.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_CONN_ADDR]
+        &[LABEL_P2P_SUBNET]
     ).unwrap();
 
     // -------------------- Version
