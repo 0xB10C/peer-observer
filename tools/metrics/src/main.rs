@@ -324,17 +324,14 @@ fn main() {
             }
             Msg::Ping(_) => {
                 if msg.meta.inbound {
-                    metrics::P2P_PING_ADDRESS.with_label_values(&[&ip]).inc();
-                    metrics::P2P_PING_SUBNET
-                        .with_label_values(&[&util::subnet(ip)])
-                        .inc();
+                    metrics::P2P_PING_SUBNET.with_label_values(&[&subnet]).inc();
                 }
             }
             Msg::Oldping(_) => {
-                println!("old ping");
                 if msg.meta.inbound {
-                    println!("inbound old ping");
-                    metrics::P2P_OLDPING_ADDRESS.with_label_values(&[&ip]).inc();
+                    metrics::P2P_OLDPING_SUBNET
+                        .with_label_values(&[&subnet])
+                        .inc();
                 }
             }
             Msg::Version(v) => {
