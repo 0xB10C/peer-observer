@@ -339,7 +339,9 @@ fn main() {
             }
             Msg::Version(v) => {
                 if msg.meta.inbound {
-                    metrics::P2P_VERSION_ADDRESS.with_label_values(&[&ip]).inc();
+                    metrics::P2P_VERSION_SUBNET
+                        .with_label_values(&[&subnet])
+                        .inc();
                     metrics::P2P_VERSION_USERAGENT
                         .with_label_values(&[&v.user_agent])
                         .inc();

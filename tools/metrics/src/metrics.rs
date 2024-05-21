@@ -474,19 +474,19 @@ lazy_static! {
 
     // -------------------- Version
 
-    /// Number of version messages received by address
-    pub static ref P2P_VERSION_ADDRESS: IntCounterVec =
+    /// Number of version messages received by subnet
+    pub static ref P2P_VERSION_SUBNET: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("version_address", "Number of version messags received by address.")
+        Opts::new("version_subnet", "Number of version messages received by subnet.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_CONN_ADDR]
+        &[LABEL_P2P_SUBNET]
     ).unwrap();
 
     /// Number of version messages received by user_agent
     pub static ref P2P_VERSION_USERAGENT: IntCounterVec =
     register_int_counter_vec!(
-        Opts::new("version_useragent", "Number of version messags received by useragent.")
+        Opts::new("version_useragent", "Number of version messages received by useragent.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_P2P),
         &[LABEL_P2P_VERSION_USERAGENT]
