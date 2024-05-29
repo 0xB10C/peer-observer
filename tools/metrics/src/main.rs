@@ -4,13 +4,12 @@ use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
 
-use prost::Message;
-
 use shared::addrman::addrman_event;
 use shared::mempool::mempool_event;
 use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
+use shared::prost::Message;
 use shared::util;
 use shared::validation::validation_event;
 use shared::wrapper;

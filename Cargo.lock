@@ -260,7 +260,6 @@ dependencies = [
  "log",
  "nng",
  "prometheus",
- "prost",
  "rand",
  "serde",
  "shared",
@@ -601,7 +600,6 @@ name = "logger"
 version = "0.1.0"
 dependencies = [
  "nng",
- "prost",
  "shared",
 ]
 
@@ -637,7 +635,6 @@ dependencies = [
  "log",
  "nng",
  "prometheus",
- "prost",
  "shared",
  "simple_logger 1.16.0",
 ]
