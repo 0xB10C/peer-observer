@@ -15,6 +15,7 @@ use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
 use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
+use shared::prost::Message as ProstMessage;
 use shared::util;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
@@ -24,7 +25,6 @@ use crossbeam::channel::{unbounded, Receiver, Sender};
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
-use prost::Message as ProstMessage;
 use rand::Rng;
 
 mod metrics;

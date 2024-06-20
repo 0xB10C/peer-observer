@@ -5,6 +5,7 @@ members = [
   "shared",
   "extractor",
   "tools/logger",
+  "tools/websocket",
   "tools/metrics",
   "tools/addr-connectivity-rs",
 ]

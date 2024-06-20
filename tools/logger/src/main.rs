@@ -4,7 +4,7 @@ use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
 
-use prost::Message;
+use shared::prost::Message;
 use shared::wrapper;
 use shared::wrapper::wrapper::Wrap;
 

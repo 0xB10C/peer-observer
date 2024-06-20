@@ -6,10 +6,14 @@ use prost_build;
 
 fn main() {
     // Generate Rust types for the protobuf's
-    if let Err(e) = prost_build::compile_protos(
-        &["../protobuf/proto-types/wrapper.proto"],
-        &["../protobuf/proto-types/"],
-    ) {
+    if let Err(e) = prost_build::Config::new()
+        .compile_well_known_types()
+        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
+        .compile_protos(
+            &["../protobuf/proto-types/wrapper.proto"],
+            &["../protobuf/proto-types/"],
+        )
+    {
         println!("Error while compiling protos: {}", e);
         panic!("Failed to code-gen the Rust structs from the Protobuf definitions");
     }
