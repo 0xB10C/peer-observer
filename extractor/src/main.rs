@@ -16,7 +16,7 @@ use prost::Message;
 use shared::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
     MempoolRejected, MempoolRemoved, MempoolReplaced, MisbehavingConnection, OutboundConnection,
-    P2PMessage, P2PMessageSize, ValidationBlockConnected,
+    P2PMessage, ValidationBlockConnected,
 };
 use shared::wrapper::wrapper::Wrap;
 use shared::wrapper::Wrapper;
@@ -169,10 +169,10 @@ fn main() -> Result<(), libbpf_rs::Error> {
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     ringbuff_builder
-        .add(obj.map("net_msg_small").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Small as usize }>(data, socket.clone()) })?
-        .add(obj.map("net_msg_medium").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Medium as usize }>(data, socket.clone()) })?
-        .add(obj.map("net_msg_large").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Large as usize }>(data, socket.clone()) })?
-        .add(obj.map("net_msg_huge").unwrap(), |data| { handle_net_message::<{ P2PMessageSize::Huge as usize }>(data, socket.clone()) })?
+        .add(obj.map("net_msg_small").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
+        .add(obj.map("net_msg_medium").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
+        .add(obj.map("net_msg_large").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
+        .add(obj.map("net_msg_huge").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
         .add(obj.map("net_conn_inbound").unwrap(), |data| { handle_net_conn_inbound(data, socket.clone()) })?
         .add(obj.map("net_conn_outbound").unwrap(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
         .add(obj.map("net_conn_closed").unwrap(), |data| { handle_net_conn_closed(data, socket.clone()) })?
@@ -289,18 +289,18 @@ fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
     0
 }
 
-fn handle_net_message<const SIZE: usize>(data: &[u8], s: Socket) -> i32 {
+fn handle_net_message(data: &[u8], s: Socket) -> i32 {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let message = P2PMessage::<SIZE>::from_bytes(data);
+    let message = P2PMessage::from_bytes(data);
     let protobuf_message = match message.decode_to_protobuf_network_message() {
         Ok(msg) => msg.into(),
         Err(e) => {
             // TODO: warn
-            println!("could not handle msg with size={}: {}", SIZE, e);
+            println!("could not handle msg with size={}: {}", data.len(), e);
             return -1;
         }
     };
