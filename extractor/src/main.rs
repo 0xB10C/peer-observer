@@ -18,8 +18,8 @@ use shared::ctypes::{
     MempoolRejected, MempoolRemoved, MempoolReplaced, MisbehavingConnection, OutboundConnection,
     P2PMessage, ValidationBlockConnected,
 };
-use shared::wrapper::wrapper::Wrap;
-use shared::wrapper::Wrapper;
+use shared::event_msg::event_msg::Event;
+use shared::event_msg::EventMsg;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
 
 use crate::tracing::OpenTracingSkel;
@@ -202,10 +202,10 @@ fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+        event: Some(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Closed(closed.into())),
         })),
     };
@@ -220,10 +220,10 @@ fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+        event: Some(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Outbound(outbound.into())),
         })),
     };
@@ -238,10 +238,10 @@ fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+        event: Some(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Inbound(inbound.into())),
         })),
     };
@@ -256,10 +256,10 @@ fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+        event: Some(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::InboundEvicted(
                 evicted.into(),
             )),
@@ -276,10 +276,10 @@ fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Conn(net_conn::ConnectionEvent {
+        event: Some(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Misbehaving(
                 misbehaving.into(),
             )),
@@ -304,10 +304,10 @@ fn handle_net_message(data: &[u8], s: Socket) -> i32 {
             return -1;
         }
     };
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Msg(net_msg::Message {
+        event: Some(Event::Msg(net_msg::Message {
             meta: message.meta.create_protobuf_metadata(),
             msg: Some(protobuf_message),
         })),
@@ -323,10 +323,10 @@ fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Addrman(addrman::AddrmanEvent {
+        event: Some(Event::Addrman(addrman::AddrmanEvent {
             event: Some(addrman::addrman_event::Event::New(new.into())),
         })),
     };
@@ -341,10 +341,10 @@ fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Addrman(addrman::AddrmanEvent {
+        event: Some(Event::Addrman(addrman::AddrmanEvent {
             event: Some(addrman::addrman_event::Event::Tried(tried.into())),
         })),
     };
@@ -359,10 +359,10 @@ fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+        event: Some(Event::Mempool(mempool::MempoolEvent {
             event: Some(mempool::mempool_event::Event::Added(added.into())),
         })),
     };
@@ -377,10 +377,10 @@ fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+        event: Some(Event::Mempool(mempool::MempoolEvent {
             event: Some(mempool::mempool_event::Event::Removed(removed.into())),
         })),
     };
@@ -395,10 +395,10 @@ fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+        event: Some(Event::Mempool(mempool::MempoolEvent {
             event: Some(mempool::mempool_event::Event::Replaced(replaced.into())),
         })),
     };
@@ -413,10 +413,10 @@ fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Mempool(mempool::MempoolEvent {
+        event: Some(Event::Mempool(mempool::MempoolEvent {
             event: Some(mempool::mempool_event::Event::Rejected(rejected.into())),
         })),
     };
@@ -431,10 +431,10 @@ fn handle_validation_block_connected(data: &[u8], s: Socket) -> i32 {
         .unwrap();
     let timestamp = now.as_secs();
     let timestamp_subsec_millis = now.subsec_micros();
-    let proto = Wrapper {
+    let proto = EventMsg {
         timestamp: timestamp,
         timestamp_subsec_micros: timestamp_subsec_millis,
-        wrap: Some(Wrap::Validation(validation::ValidationEvent {
+        event: Some(Event::Validation(validation::ValidationEvent {
             event: Some(validation::validation_event::Event::BlockConnected(
                 connected.into(),
             )),
