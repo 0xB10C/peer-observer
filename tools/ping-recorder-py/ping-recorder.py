@@ -4,7 +4,7 @@ import csv
 import json
 
 sys.path.insert(1, os.path.join(sys.path[0], '../../protobuf/python-types'))
-import wrapper_pb2
+import event_msg_pb2
 
 from nanomsg import Socket, SUB, SUB_SUBSCRIBE
 
@@ -18,7 +18,7 @@ with Socket(SUB) as sub:
         wp = csv.writer(pingpongs)
         wv = csv.writer(versions)
         while True:
-            wrapped = wrapper_pb2.Wrapper()
+            wrapped = event_msg_pb2.Wrapper()
             wrapped.ParseFromString(sub.recv())
             # check if it's a P2P message
             if wrapped.HasField("msg"):

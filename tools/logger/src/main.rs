@@ -4,9 +4,9 @@ use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
 
+use shared::event_msg;
+use shared::event_msg::event_msg::Event;
 use shared::prost::Message;
-use shared::wrapper;
-use shared::wrapper::wrapper::Wrap;
 
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 
@@ -19,11 +19,11 @@ fn main() {
 
     loop {
         let msg = sub.recv().unwrap();
-        let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
+        let unwrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap().event;
 
         if let Some(event) = unwrapped {
             match event {
-                Wrap::Msg(msg) => {
+                Event::Msg(msg) => {
                     println! {
                         "{} {} id={} (conn_type={:?}): {}",
                         if msg.meta.inbound { "<--"} else { "-->" },
@@ -33,22 +33,22 @@ fn main() {
                         msg.msg.unwrap(),
                     };
                 }
-                Wrap::Conn(c) => {
+                Event::Conn(c) => {
                     println! {
                         "# CONN {}", c.event.unwrap()
                     };
                 }
-                Wrap::Addrman(a) => {
+                Event::Addrman(a) => {
                     println! {
                         "@Addrman {}", a.event.unwrap()
                     };
                 }
-                Wrap::Mempool(m) => {
+                Event::Mempool(m) => {
                     println! {
                         "$Mempool {}", m.event.unwrap()
                     };
                 }
-                Wrap::Validation(v) => {
+                Event::Validation(v) => {
                     println! {
                         "+Validation {}", v.event.unwrap()
                     };

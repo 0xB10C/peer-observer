@@ -11,14 +11,14 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use shared::bitcoin::consensus::{encode, Decodable};
 use shared::bitcoin::network::{address, constants, message, message_network};
+use shared::event_msg;
+use shared::event_msg::event_msg::Event;
 use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
 use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
 use shared::prost::Message as ProstMessage;
 use shared::util;
-use shared::wrapper;
-use shared::wrapper::wrapper::Wrap;
 
 use crossbeam;
 use crossbeam::channel::{unbounded, Receiver, Sender};
@@ -172,9 +172,9 @@ fn worker(
     }
 }
 
-fn handle_event(event: Wrap, timestamp: u64, input_sender: Sender<Input>) {
+fn handle_event(event: Event, timestamp: u64, input_sender: Sender<Input>) {
     match event {
-        Wrap::Msg(msg) => {
+        Event::Msg(msg) => {
             if msg.meta.inbound {
                 handle_inbound_message(msg, timestamp, input_sender);
             }
@@ -299,8 +299,8 @@ fn main() {
     crossbeam::scope(|s| {
         s.spawn(|_| loop {
             let msg = sub.recv().unwrap();
-            let wrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap();
-            let unwrapped = wrapped.wrap;
+            let wrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap();
+            let unwrapped = wrapped.event;
             if let Some(event) = unwrapped {
                 handle_event(event, wrapped.timestamp, input_sender.clone());
             }

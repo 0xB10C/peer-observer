@@ -5,9 +5,9 @@ use async_std::task;
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
+use shared::event_msg;
+use shared::event_msg::event_msg::Event;
 use shared::prost::Message;
-use shared::wrapper;
-use shared::wrapper::wrapper::Wrap;
 use std::net::TcpListener;
 use tungstenite::accept;
 
@@ -29,7 +29,7 @@ async fn main() {
         sub.set_opt::<Subscribe>(all_topics).unwrap();
         loop {
             let msg = sub.recv().unwrap();
-            let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap().wrap;
+            let unwrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap().event;
             if let Some(event) = unwrapped {
                 if let Err(e) = sender.broadcast(event).await {
                     println!("Could not send msg event into broadcast channel: {}", e);
@@ -62,7 +62,7 @@ async fn main() {
                             loop {
                                 match r.recv().await {
                                     Ok(msg) => {
-                                        match serde_json::to_string::<Wrap>(&msg.clone().into()) {
+                                        match serde_json::to_string::<Event>(&msg.clone().into()) {
                                             Ok(msg) => {
                                                 if let Err(e) =
                                                     websocket.send(tungstenite::Message::Text(msg))

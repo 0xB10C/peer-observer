@@ -5,6 +5,8 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 
 use shared::addrman::addrman_event;
+use shared::event_msg;
+use shared::event_msg::event_msg::Event;
 use shared::mempool::mempool_event;
 use shared::net_conn::connection_event;
 use shared::net_msg;
@@ -12,8 +14,6 @@ use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::util;
 use shared::validation::validation_event;
-use shared::wrapper;
-use shared::wrapper::wrapper::Wrap;
 
 use std::collections::HashMap;
 use std::env;
@@ -50,23 +50,23 @@ fn main() {
 
     loop {
         let msg = sub.recv().unwrap();
-        let unwrapped = wrapper::Wrapper::decode(msg.as_slice()).unwrap();
+        let unwrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap();
 
-        if let Some(event) = unwrapped.wrap {
+        if let Some(event) = unwrapped.event {
             match event {
-                Wrap::Msg(msg) => {
+                Event::Msg(msg) => {
                     handle_p2p_message(&msg, unwrapped.timestamp);
                 }
-                Wrap::Conn(c) => {
+                Event::Conn(c) => {
                     handle_connection_event(c.event.unwrap());
                 }
-                Wrap::Addrman(a) => {
+                Event::Addrman(a) => {
                     handle_addrman_event(&a.event.unwrap());
                 }
-                Wrap::Mempool(m) => {
+                Event::Mempool(m) => {
                     handle_mempool_event(&m.event.unwrap());
                 }
-                Wrap::Validation(v) => handle_validation_event(&v.event.unwrap()),
+                Event::Validation(v) => handle_validation_event(&v.event.unwrap()),
             }
         }
     }
