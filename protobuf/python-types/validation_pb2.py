@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10validation.proto\x12\nvalidation\"Q\n\x0fValidationEvent\x12\x35\n\x0f\x62lock_connected\x18\x01 \x01(\x0b\x32\x1a.validation.BlockConnectedH\x00\x42\x07\n\x05\x65vent\"o\n\x0e\x42lockConnected\x12\x0e\n\x06height\x18\x01 \x02(\x05\x12\x14\n\x0ctransactions\x18\x02 \x02(\x03\x12\x0e\n\x06inputs\x18\x03 \x02(\x05\x12\x0e\n\x06sigops\x18\x04 \x02(\x03\x12\x17\n\x0f\x63onnection_time\x18\x05 \x02(\x03')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10validation.proto\x12\nvalidation\"Q\n\x0fValidationEvent\x12\x35\n\x0f\x62lock_connected\x18\x01 \x01(\x0b\x32\x1a.validation.BlockConnectedH\x00\x42\x07\n\x05\x65vent\"}\n\x0e\x42lockConnected\x12\x0c\n\x04hash\x18\x01 \x02(\x0c\x12\x0e\n\x06height\x18\x02 \x02(\x05\x12\x14\n\x0ctransactions\x18\x03 \x02(\x03\x12\x0e\n\x06inputs\x18\x04 \x02(\x05\x12\x0e\n\x06sigops\x18\x05 \x02(\x03\x12\x17\n\x0f\x63onnection_time\x18\x06 \x02(\x03')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -23,5 +23,5 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_VALIDATIONEVENT']._serialized_start=32
   _globals['_VALIDATIONEVENT']._serialized_end=113
   _globals['_BLOCKCONNECTED']._serialized_start=115
-  _globals['_BLOCKCONNECTED']._serialized_end=226
+  _globals['_BLOCKCONNECTED']._serialized_end=240
 # @@protoc_insertion_point(module_scope)
