@@ -90,7 +90,7 @@ const TRACEPOINTS_MEMPOOL: [Tracepoint; 4] = [
     },
 ];
 
-const _TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
+const TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
     Tracepoint {
         context: "addrman",
         name: "attempt_add",
@@ -122,6 +122,26 @@ struct Args {
     /// Path to the Bitcoin Core (bitcoind) binary that should be hooked into.
     #[arg(short, long)]
     bitcoind_path: String,
+
+    // Default tracepoints
+    /// Controls if the p2p message tracepoints should be hooked into.
+    #[arg(long)]
+    no_p2pmsg_tracepoints: bool,
+    /// Controls if the connection tracepoints should be hooked into.
+    #[arg(long)]
+    no_connection_tracepoints: bool,
+    /// Controls if the mempool tracepoints should be hooked into.
+    #[arg(long)]
+    no_mempool_tracepoints: bool,
+    /// Controls if the validation tracepoints should be hooked into.
+    #[arg(long)]
+    no_validation_tracepoints: bool,
+
+    // Custom tracepoints
+    /// Controls if the addrman tracepoints should be hooked into.
+    /// These may not have been PRed to Bitcoin Core yet.
+    #[arg(long)]
+    addrman_tracepoints: bool,
 }
 
 fn main() -> Result<(), libbpf_rs::Error> {
@@ -138,11 +158,28 @@ fn main() -> Result<(), libbpf_rs::Error> {
         }
     };
 
-    let active_tracepoints = TRACEPOINTS_NET_MESSAGE
-        .iter()
-        .chain(TRACEPOINTS_NET_CONN.iter())
-        .chain(TRACEPOINTS_VALIDATION.iter())
-        .chain(TRACEPOINTS_MEMPOOL.iter());
+    let mut active_tracepoints = vec![];
+    if !args.no_p2pmsg_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_NET_MESSAGE);
+    }
+    if !args.no_connection_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_NET_CONN);
+    }
+    if !args.no_validation_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_VALIDATION);
+    }
+    if !args.no_mempool_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_MEMPOOL);
+    }
+
+    if args.addrman_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_ADDRMAN);
+    }
+
+    if active_tracepoints.is_empty() {
+        println!("No tracepoints enabled.");
+        return Ok(());
+    }
     let mut links = Vec::new();
     for tracepoint in active_tracepoints {
         links.push(obj.prog_mut(tracepoint.function).unwrap().attach_usdt(
