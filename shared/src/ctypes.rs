@@ -1,9 +1,9 @@
 use std::{cmp, fmt, mem, ptr};
 
-use bitcoin::consensus;
-use bitcoin::consensus::encode::Decodable;
-use bitcoin::hashes::{hex::ToHex, sha256d, Hash};
-use bitcoin::network::message::{NetworkMessage, RawNetworkMessage};
+use bitcoin::consensus::{self, Decodable};
+use bitcoin::hashes::{sha256d, Hash};
+use bitcoin::hex::*;
+use bitcoin::p2p::message::{NetworkMessage, RawNetworkMessage};
 
 use crate::net_msg;
 use crate::primitive::ConnType;
@@ -451,7 +451,7 @@ fn decode_rust_bitcoin_network_message(
     raw_message.append(&mut payload.to_vec());
 
     match RawNetworkMessage::consensus_decode(&mut raw_message.as_slice()) {
-        Ok(rnm) => Ok(rnm.payload),
+        Ok(rnm) => Ok(rnm.payload().clone()),
         Err(e) => Err(P2PMessageDecodeError::new(meta.clone(), e)),
     }
 }
@@ -483,7 +483,7 @@ fn decode_weird_network_message(
             println!(
                 "invalid (?) tx with {} byte: {}",
                 meta.msg_size,
-                payload.to_hex()
+                payload.to_lower_hex_string(),
             );
         }
         _ => (),

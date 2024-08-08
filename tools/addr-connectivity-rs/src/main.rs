@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use shared::bitcoin::consensus::{encode, Decodable};
-use shared::bitcoin::network::{address, constants, message, message_network};
+use shared::bitcoin::p2p::{address, message, message_network, ServiceFlags};
+use shared::bitcoin::Network;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::net_msg::message::Msg;
@@ -33,7 +34,7 @@ mod metricserver;
 const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 const WORKERS: usize = 50;
 
-const NETWORK: constants::Network = constants::Network::Bitcoin;
+const NETWORK: Network = Network::Bitcoin;
 const USER_AGENT: &str = "/bitnodes.io:0.3/";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
@@ -226,10 +227,7 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
 }
 
 fn build_raw_network_message(payload: message::NetworkMessage) -> message::RawNetworkMessage {
-    message::RawNetworkMessage {
-        magic: NETWORK.magic(),
-        payload: payload,
-    }
+    message::RawNetworkMessage::new(NETWORK.magic(), payload)
 }
 
 fn build_version_message() -> message::NetworkMessage {
@@ -239,15 +237,15 @@ fn build_version_message() -> message::NetworkMessage {
         .as_secs();
 
     message::NetworkMessage::Version(message_network::VersionMessage::new(
-        constants::ServiceFlags::NONE,
+        ServiceFlags::NONE,
         timestamp as i64,
         address::Address::new(
             &SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            constants::ServiceFlags::NONE,
+            ServiceFlags::NONE,
         ), // addr from
         address::Address::new(
             &SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
-            constants::ServiceFlags::NONE,
+            ServiceFlags::NONE,
         ), // addr from
         rand::thread_rng().gen(), // nonce
         String::from(USER_AGENT), // user-agent

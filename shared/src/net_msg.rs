@@ -1,7 +1,7 @@
-use bitcoin::hashes::hex::ToHex;
+use bitcoin::bip152;
 use bitcoin::hashes::Hash;
-use bitcoin::network;
-use bitcoin::util::bip152;
+use bitcoin::hex::*;
+use bitcoin::p2p;
 
 use std::fmt;
 
@@ -38,8 +38,8 @@ impl From<bitcoin::Block> for Block {
     }
 }
 
-impl From<network::message_compact_blocks::SendCmpct> for SendCompact {
-    fn from(send_cmpct: network::message_compact_blocks::SendCmpct) -> Self {
+impl From<p2p::message_compact_blocks::SendCmpct> for SendCompact {
+    fn from(send_cmpct: p2p::message_compact_blocks::SendCmpct) -> Self {
         SendCompact {
             send_compact: send_cmpct.send_compact,
             version: send_cmpct.version,
@@ -47,72 +47,76 @@ impl From<network::message_compact_blocks::SendCmpct> for SendCompact {
     }
 }
 
-impl From<network::message_filter::GetCFCheckpt> for GetCfCheckpt {
-    fn from(getcfcheckpt: network::message_filter::GetCFCheckpt) -> Self {
+impl From<p2p::message_filter::GetCFCheckpt> for GetCfCheckpt {
+    fn from(getcfcheckpt: p2p::message_filter::GetCFCheckpt) -> Self {
         GetCfCheckpt {
             filter_type: getcfcheckpt.filter_type as u32,
-            stop_hash: getcfcheckpt.stop_hash.to_vec(),
+            stop_hash: getcfcheckpt.stop_hash.as_byte_array().to_vec(),
         }
     }
 }
 
-impl From<network::message_filter::CFCheckpt> for CfCheckpt {
-    fn from(cfcheckpt: network::message_filter::CFCheckpt) -> Self {
+impl From<p2p::message_filter::CFCheckpt> for CfCheckpt {
+    fn from(cfcheckpt: p2p::message_filter::CFCheckpt) -> Self {
         CfCheckpt {
             filter_type: cfcheckpt.filter_type as u32,
-            stop_hash: cfcheckpt.stop_hash.to_vec(),
+            stop_hash: cfcheckpt.stop_hash.as_byte_array().to_vec(),
             filter_headers: cfcheckpt
                 .filter_headers
                 .iter()
-                .map(|h| h.to_vec())
+                .map(|h| h.as_byte_array().to_vec())
                 .collect(),
         }
     }
 }
 
-impl From<network::message_filter::CFHeaders> for CfHeaders {
-    fn from(cfheaders: network::message_filter::CFHeaders) -> Self {
+impl From<p2p::message_filter::CFHeaders> for CfHeaders {
+    fn from(cfheaders: p2p::message_filter::CFHeaders) -> Self {
         CfHeaders {
             filter_type: cfheaders.filter_type as u32,
-            stop_hash: cfheaders.stop_hash.to_vec(),
-            previous_filter_header: cfheaders.previous_filter_header.to_vec(),
-            filter_hashes: cfheaders.filter_hashes.iter().map(|h| h.to_vec()).collect(),
+            stop_hash: cfheaders.stop_hash.as_byte_array().to_vec(),
+            previous_filter_header: cfheaders.previous_filter_header.as_byte_array().to_vec(),
+            filter_hashes: cfheaders
+                .filter_hashes
+                .iter()
+                .map(|h| h.as_byte_array().to_vec())
+                .collect(),
         }
     }
 }
 
-impl From<network::message_filter::GetCFilters> for GetCFilter {
-    fn from(getcfilter: network::message_filter::GetCFilters) -> Self {
+impl From<p2p::message_filter::GetCFilters> for GetCFilter {
+    fn from(getcfilter: p2p::message_filter::GetCFilters) -> Self {
         GetCFilter {
             filter_type: getcfilter.filter_type as u32,
             start_height: getcfilter.start_height,
-            stop_hash: getcfilter.stop_hash.to_vec(),
+            stop_hash: getcfilter.stop_hash.as_byte_array().to_vec(),
         }
     }
 }
 
-impl From<network::message_filter::GetCFHeaders> for GetCfHeaders {
-    fn from(getcfheaders: network::message_filter::GetCFHeaders) -> Self {
+impl From<p2p::message_filter::GetCFHeaders> for GetCfHeaders {
+    fn from(getcfheaders: p2p::message_filter::GetCFHeaders) -> Self {
         GetCfHeaders {
             filter_type: getcfheaders.filter_type as u32,
             start_height: getcfheaders.start_height as u32,
-            stop_hash: getcfheaders.stop_hash.to_vec(),
+            stop_hash: getcfheaders.stop_hash.as_byte_array().to_vec(),
         }
     }
 }
 
-impl From<network::message_filter::CFilter> for CFilter {
-    fn from(cfilter: network::message_filter::CFilter) -> Self {
+impl From<p2p::message_filter::CFilter> for CFilter {
+    fn from(cfilter: p2p::message_filter::CFilter) -> Self {
         CFilter {
             filter_type: cfilter.filter_type as u32,
-            block_hash: cfilter.block_hash.to_vec(),
+            block_hash: cfilter.block_hash.as_byte_array().to_vec(),
             filter: cfilter.filter.to_vec(),
         }
     }
 }
 
-impl From<bitcoin::util::merkleblock::MerkleBlock> for MerkleBlock {
-    fn from(merkle_block: bitcoin::util::merkleblock::MerkleBlock) -> Self {
+impl From<bitcoin::MerkleBlock> for MerkleBlock {
+    fn from(merkle_block: bitcoin::MerkleBlock) -> Self {
         MerkleBlock {
             header: merkle_block.header.into(),
             num_transactions: merkle_block.txn.num_transactions(),
@@ -121,7 +125,7 @@ impl From<bitcoin::util::merkleblock::MerkleBlock> for MerkleBlock {
                 .txn
                 .hashes()
                 .iter()
-                .map(|h| h.to_vec())
+                .map(|h| h.as_byte_array().to_vec())
                 .collect(),
         }
     }
@@ -136,7 +140,7 @@ impl From<bitcoin::Transaction> for Tx {
 impl From<bip152::BlockTransactionsRequest> for GetBlockTxn {
     fn from(request: bip152::BlockTransactionsRequest) -> Self {
         GetBlockTxn {
-            block_hash: request.block_hash.to_vec(),
+            block_hash: request.block_hash.as_byte_array().to_vec(),
             tx_indexes: request.indexes,
         }
     }
@@ -145,7 +149,7 @@ impl From<bip152::BlockTransactionsRequest> for GetBlockTxn {
 impl From<bip152::BlockTransactions> for BlockTxn {
     fn from(blocktxn: bip152::BlockTransactions) -> Self {
         BlockTxn {
-            block_hash: blocktxn.block_hash.to_vec(),
+            block_hash: blocktxn.block_hash.as_byte_array().to_vec(),
             transactions: blocktxn
                 .transactions
                 .iter()
@@ -155,16 +159,16 @@ impl From<bip152::BlockTransactions> for BlockTxn {
     }
 }
 
-impl From<network::message_bloom::FilterLoad> for FilterLoad {
-    fn from(filterload: network::message_bloom::FilterLoad) -> Self {
+impl From<p2p::message_bloom::FilterLoad> for FilterLoad {
+    fn from(filterload: p2p::message_bloom::FilterLoad) -> Self {
         FilterLoad {
             filter: filterload.filter.to_vec(),
             hash_funcs: filterload.hash_funcs,
             tweak: filterload.tweak,
             flags: match filterload.flags {
-                network::message_bloom::BloomFlags::None => filter_load::BloomFlags::None as i32,
-                network::message_bloom::BloomFlags::All => filter_load::BloomFlags::All as i32,
-                network::message_bloom::BloomFlags::PubkeyOnly => {
+                p2p::message_bloom::BloomFlags::None => filter_load::BloomFlags::None as i32,
+                p2p::message_bloom::BloomFlags::All => filter_load::BloomFlags::All as i32,
+                p2p::message_bloom::BloomFlags::PubkeyOnly => {
                     filter_load::BloomFlags::PubkeyOnly as i32
                 }
             },
@@ -172,40 +176,38 @@ impl From<network::message_bloom::FilterLoad> for FilterLoad {
     }
 }
 
-impl From<network::message_network::Reject> for Reject {
-    fn from(reject: network::message_network::Reject) -> Self {
+impl From<p2p::message_network::Reject> for Reject {
+    fn from(reject: p2p::message_network::Reject) -> Self {
         Reject {
             rejected_command: reject.message.to_string(),
             reason: match reject.ccode {
-                network::message_network::RejectReason::Malformed => {
+                p2p::message_network::RejectReason::Malformed => {
                     reject::RejectReason::Malformed as i32
                 }
-                network::message_network::RejectReason::Invalid => {
-                    reject::RejectReason::Invalid as i32
-                }
-                network::message_network::RejectReason::Obsolete => {
+                p2p::message_network::RejectReason::Invalid => reject::RejectReason::Invalid as i32,
+                p2p::message_network::RejectReason::Obsolete => {
                     reject::RejectReason::Obsolete as i32
                 }
-                network::message_network::RejectReason::Duplicate => {
+                p2p::message_network::RejectReason::Duplicate => {
                     reject::RejectReason::Duplicate as i32
                 }
-                network::message_network::RejectReason::NonStandard => {
+                p2p::message_network::RejectReason::NonStandard => {
                     reject::RejectReason::Nonstandard as i32
                 }
-                network::message_network::RejectReason::Dust => reject::RejectReason::Dust as i32,
-                network::message_network::RejectReason::Fee => reject::RejectReason::Fee as i32,
-                network::message_network::RejectReason::Checkpoint => {
+                p2p::message_network::RejectReason::Dust => reject::RejectReason::Dust as i32,
+                p2p::message_network::RejectReason::Fee => reject::RejectReason::Fee as i32,
+                p2p::message_network::RejectReason::Checkpoint => {
                     reject::RejectReason::Checkpoint as i32
                 }
             },
             reason_details: reject.reason.clone().into(),
-            hash: reject.hash.to_vec(),
+            hash: reject.hash.as_byte_array().to_vec(),
         }
     }
 }
 
-impl From<network::message_network::VersionMessage> for Version {
-    fn from(version_msg: network::message_network::VersionMessage) -> Self {
+impl From<p2p::message_network::VersionMessage> for Version {
+    fn from(version_msg: p2p::message_network::VersionMessage) -> Self {
         Version {
             version: version_msg.version,
             services: version_msg.services.to_u64(),
@@ -372,7 +374,11 @@ impl fmt::Display for SendCompact {
 
 impl fmt::Display for CompactBlock {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let short_id_strs: Vec<String> = self.short_ids.iter().map(|id| id.to_hex()).collect();
+        let short_id_strs: Vec<String> = self
+            .short_ids
+            .iter()
+            .map(|id| id.to_lower_hex_string())
+            .collect();
         let ptx_strs: Vec<String> = self.transactions.iter().map(|pt| pt.to_string()).collect();
         write!(
             f,
@@ -429,13 +435,13 @@ impl fmt::Display for BlockTxn {
 
 impl fmt::Display for Alert {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Alert(alert={})", self.alert.to_hex(),)
+        write!(f, "Alert(alert={})", self.alert.to_lower_hex_string(),)
     }
 }
 
 impl fmt::Display for FilterAdd {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FilterAdd(filter={})", self.filter.to_hex(),)
+        write!(f, "FilterAdd(filter={})", self.filter.to_lower_hex_string(),)
     }
 }
 
@@ -491,7 +497,7 @@ impl fmt::Display for CFilter {
             "CFilter(filter_type={}, block_hash={}, filter={})",
             self.filter_type,
             bitcoin::BlockHash::from_slice(&self.block_hash).unwrap(),
-            self.filter.to_hex(),
+            self.filter.to_lower_hex_string(),
         )
     }
 }
@@ -544,7 +550,7 @@ impl fmt::Display for FilterLoad {
         write!(
             f,
             "FilterLoad(filter={}, hash_funcs={}, tweak={}, flags={})",
-            self.filter.to_hex(),
+            self.filter.to_lower_hex_string(),
             self.hash_funcs,
             self.tweak,
             self.flags
@@ -558,7 +564,7 @@ impl fmt::Display for Unknown {
             f,
             "FilterLoad(command={}, payload={})",
             self.command,
-            self.payload.to_hex(),
+            self.payload.to_lower_hex_string(),
         )
     }
 }
@@ -632,9 +638,9 @@ impl fmt::Display for message::Msg {
     }
 }
 
-impl From<&network::message::NetworkMessage> for message::Msg {
-    fn from(msg: &network::message::NetworkMessage) -> Self {
-        use bitcoin::network::message::NetworkMessage;
+impl From<&p2p::message::NetworkMessage> for message::Msg {
+    fn from(msg: &p2p::message::NetworkMessage) -> Self {
+        use bitcoin::p2p::message::NetworkMessage;
         use message::Msg;
 
         match msg {
@@ -668,18 +674,18 @@ impl From<&network::message::NetworkMessage> for message::Msg {
                 locator_hashes: get_headers_msg
                     .locator_hashes
                     .iter()
-                    .map(|h| h.to_vec())
+                    .map(|h| h.as_byte_array().to_vec())
                     .collect(),
-                stop_hash: get_headers_msg.stop_hash.to_vec(),
+                stop_hash: get_headers_msg.stop_hash.as_byte_array().to_vec(),
             }),
             NetworkMessage::GetBlocks(get_blocks_msg) => Msg::Getblocks(GetBlocks {
                 version: get_blocks_msg.version,
                 locator_hashes: get_blocks_msg
                     .locator_hashes
                     .iter()
-                    .map(|h| h.to_vec())
+                    .map(|h| h.as_byte_array().to_vec())
                     .collect(),
-                stop_hash: get_blocks_msg.stop_hash.to_vec(),
+                stop_hash: get_blocks_msg.stop_hash.as_byte_array().to_vec(),
             }),
             NetworkMessage::WtxidRelay => Msg::Wtxidrelay(true),
             NetworkMessage::SendAddrV2 => Msg::Sendaddrv2(true),
