@@ -1,19 +1,18 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use std::collections::HashMap;
-use std::env;
-use std::fmt;
-use std::fs::OpenOptions;
-use std::io::{BufReader, Write};
-use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-
+use crossbeam;
+use crossbeam::channel::{unbounded, Receiver, Sender};
+use nng::options::protocol::pubsub::Subscribe;
+use nng::options::Options;
+use nng::{Protocol, Socket};
+use rand::Rng;
 use shared::bitcoin::consensus::{encode, Decodable};
 use shared::bitcoin::p2p::message::NetworkMessage;
 use shared::bitcoin::p2p::message_network::VersionMessage;
 use shared::bitcoin::p2p::{address, message, message_network, ServiceFlags};
 use shared::bitcoin::Network;
+use shared::clap;
+use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::net_msg::message::Msg;
@@ -22,18 +21,17 @@ use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
 use shared::prost::Message as ProstMessage;
 use shared::util;
-
-use crossbeam;
-use crossbeam::channel::{unbounded, Receiver, Sender};
-use nng::options::protocol::pubsub::Subscribe;
-use nng::options::Options;
-use nng::{Protocol, Socket};
-use rand::Rng;
+use std::collections::HashMap;
+use std::fmt;
+use std::fs::OpenOptions;
+use std::io::{BufReader, Write};
+use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 mod metrics;
 mod metricserver;
 
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 const WORKERS: usize = 50;
 
 const NETWORK: Network = Network::Bitcoin;
@@ -41,6 +39,19 @@ const USER_AGENT: &str = "/bitnodes.io:0.3/";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
+
+/// Simple peer-observer tool that checks the connectivity of received addr message entries
+/// and offers stats as prometheus metrics
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    // The extractor address the tool should connect to.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
+    // The metrics server address the tool should listen on.
+    #[arg(short, long, default_value = "127.0.0.1:18282")]
+    metrics_address: String,
+}
 
 #[derive(Clone, Debug)]
 enum AddrMessageVersion {
@@ -299,12 +310,9 @@ fn try_connect(address: SocketAddr) -> Option<VersionMessage> {
 // - error handling
 
 fn main() {
-    let metricserver_address = env::args()
-        .nth(1)
-        .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
-
+    let args = Args::parse();
     let sub = Socket::new(Protocol::Sub0).unwrap();
-    sub.dial(ADDRESS).unwrap();
+    sub.dial(&args.address).unwrap();
 
     let all_topics = vec![];
     sub.set_opt::<Subscribe>(all_topics).unwrap();
@@ -312,8 +320,8 @@ fn main() {
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
 
-    metricserver::start(&metricserver_address).unwrap();
-    println!("metrics-server started on {}", &metricserver_address);
+    metricserver::start(&args.metrics_address).unwrap();
+    println!("metrics-server started on {}", &args.metrics_address);
 
     crossbeam::scope(|s| {
         s.spawn(|_| loop {
