@@ -3,8 +3,9 @@
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
-
 use shared::addrman::addrman_event;
+use shared::clap;
+use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::mempool::mempool_event;
@@ -14,21 +15,28 @@ use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::util;
 use shared::validation::validation_event;
-
 use std::collections::HashMap;
-use std::env;
 use std::time;
 
 mod metrics;
 mod metricserver;
 
 const LOG_TARGET: &str = "main";
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
+
+/// Simple peer-observer tool that produces Prometheus metrics for received event messages
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    // The extractor address the tool should connect to.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
+    // The metrics server address the tool should listen on.
+    #[arg(short, long, default_value = "127.0.0.1:8282")]
+    metrics_address: String,
+}
 
 fn main() {
-    let metricserver_address = env::args()
-        .nth(1)
-        .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
+    let args = Args::parse();
 
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
@@ -40,13 +48,13 @@ fn main() {
     );
 
     let sub = Socket::new(Protocol::Sub0).unwrap();
-    sub.dial(ADDRESS).unwrap();
+    sub.dial(&args.address).unwrap();
 
     let all_topics = vec![];
     sub.set_opt::<Subscribe>(all_topics).unwrap();
 
-    metricserver::start(&metricserver_address).unwrap();
-    log::info!(target: LOG_TARGET, "metrics-server listening on: {}", metricserver_address);
+    metricserver::start(&args.metrics_address).unwrap();
+    log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
 
     loop {
         let msg = sub.recv().unwrap();
