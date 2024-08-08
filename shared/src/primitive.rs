@@ -1,9 +1,9 @@
 use base32;
 
-use bitcoin::hashes::hex::ToHex;
+use bitcoin::bip152;
 use bitcoin::hashes::Hash;
-use bitcoin::network;
-use bitcoin::util::bip152;
+use bitcoin::hex::DisplayHex;
+use bitcoin::p2p;
 
 use std::fmt;
 use std::net::SocketAddr;
@@ -11,15 +11,15 @@ use std::net::SocketAddr;
 // structs are generated via the p2p.proto file
 include!(concat!(env!("OUT_DIR"), "/primitive.rs"));
 
-impl From<bitcoin::BlockHeader> for BlockHeader {
-    fn from(header: bitcoin::BlockHeader) -> Self {
+impl From<bitcoin::block::Header> for BlockHeader {
+    fn from(header: bitcoin::block::Header) -> Self {
         BlockHeader {
-            hash: header.block_hash().to_vec(),
-            version: header.version,
-            prev_blockhash: header.prev_blockhash.to_vec(),
-            merkle_root: header.merkle_root.to_vec(),
+            hash: header.block_hash().as_byte_array().to_vec(),
+            version: header.version.to_consensus(),
+            prev_blockhash: header.prev_blockhash.as_byte_array().to_vec(),
+            merkle_root: header.merkle_root.as_byte_array().to_vec(),
             time: header.time,
-            bits: header.bits,
+            bits: header.bits.to_consensus(),
             nonce: header.nonce,
         }
     }
@@ -34,8 +34,8 @@ impl From<bip152::PrefilledTransaction> for PrefilledTransaction {
     }
 }
 
-impl From<network::address::Address> for address::Address {
-    fn from(addr: network::address::Address) -> Self {
+impl From<p2p::address::Address> for address::Address {
+    fn from(addr: p2p::address::Address) -> Self {
         match addr.socket_addr() {
             Ok(x) => {
                 // is either an IPv4 or IPv6 address
@@ -63,8 +63,8 @@ impl From<network::address::Address> for address::Address {
     }
 }
 
-impl From<(u32, network::address::Address)> for Address {
-    fn from(addr_entry: (u32, network::address::Address)) -> Self {
+impl From<(u32, p2p::address::Address)> for Address {
+    fn from(addr_entry: (u32, p2p::address::Address)) -> Self {
         Address {
             timestamp: addr_entry.0,
             services: addr_entry.1.services.to_u64(),
@@ -74,8 +74,8 @@ impl From<(u32, network::address::Address)> for Address {
     }
 }
 
-impl From<network::address::AddrV2Message> for Address {
-    fn from(addrv2: network::address::AddrV2Message) -> Self {
+impl From<p2p::address::AddrV2Message> for Address {
+    fn from(addrv2: p2p::address::AddrV2Message) -> Self {
         Address {
             timestamp: addrv2.time,
             services: addrv2.services.to_u64(),
@@ -85,25 +85,25 @@ impl From<network::address::AddrV2Message> for Address {
     }
 }
 
-impl From<network::address::AddrV2> for address::Address {
-    fn from(addr: network::address::AddrV2) -> Self {
+impl From<p2p::address::AddrV2> for address::Address {
+    fn from(addr: p2p::address::AddrV2) -> Self {
         match addr {
-            network::address::AddrV2::Ipv4(a) => address::Address::Ipv4(a.to_string()),
-            network::address::AddrV2::Ipv6(a) => address::Address::Ipv6(a.to_string()),
-            network::address::AddrV2::TorV2(a) => address::Address::Torv2(format!(
+            p2p::address::AddrV2::Ipv4(a) => address::Address::Ipv4(a.to_string()),
+            p2p::address::AddrV2::Ipv6(a) => address::Address::Ipv6(a.to_string()),
+            p2p::address::AddrV2::TorV2(a) => address::Address::Torv2(format!(
                 "{}.onion",
                 base32::encode(base32::Alphabet::RFC4648 { padding: false }, &a).to_lowercase()
             )),
-            network::address::AddrV2::TorV3(a) => address::Address::Torv3(format!(
+            p2p::address::AddrV2::TorV3(a) => address::Address::Torv3(format!(
                 "{}.onion",
                 base32::encode(base32::Alphabet::RFC4648 { padding: false }, &a).to_lowercase()
             )),
-            network::address::AddrV2::I2p(a) => address::Address::I2p(format!(
+            p2p::address::AddrV2::I2p(a) => address::Address::I2p(format!(
                 "{}.b32.i2p",
                 base32::encode(base32::Alphabet::RFC4648 { padding: false }, &a).to_lowercase()
             )),
-            network::address::AddrV2::Cjdns(a) => address::Address::Cjdns(a.to_string()),
-            network::address::AddrV2::Unknown(id, a) => address::Address::Unknown(UnknownAddress {
+            p2p::address::AddrV2::Cjdns(a) => address::Address::Cjdns(a.to_string()),
+            p2p::address::AddrV2::Unknown(id, a) => address::Address::Unknown(UnknownAddress {
                 id: id as u32,
                 address: a.to_vec(),
             }),
@@ -149,8 +149,8 @@ impl fmt::Display for BlockHeader {
 impl From<bitcoin::Transaction> for Transaction {
     fn from(tx: bitcoin::Transaction) -> Self {
         Transaction {
-            txid: tx.txid().to_vec(),
-            wtxid: tx.wtxid().to_vec(),
+            txid: tx.compute_txid().as_byte_array().to_vec(),
+            wtxid: tx.compute_wtxid().as_byte_array().to_vec(),
             raw: Some(bitcoin::consensus::serialize(&tx)),
         }
     }
@@ -168,30 +168,38 @@ impl From<String> for ConnType {
     }
 }
 
-impl From<network::message_blockdata::Inventory> for InventoryItem {
-    fn from(inv_item: network::message_blockdata::Inventory) -> Self {
-        use network::message_blockdata::Inventory;
+impl From<p2p::message_blockdata::Inventory> for InventoryItem {
+    fn from(inv_item: p2p::message_blockdata::Inventory) -> Self {
+        use p2p::message_blockdata::Inventory;
         match inv_item {
             Inventory::Error => InventoryItem {
                 item: Some(inventory_item::Item::Error(true)),
             },
             Inventory::Transaction(txid) => InventoryItem {
-                item: Some(inventory_item::Item::Transaction(txid.to_vec())),
+                item: Some(inventory_item::Item::Transaction(
+                    txid.as_byte_array().to_vec(),
+                )),
             },
             Inventory::Block(hash) => InventoryItem {
-                item: Some(inventory_item::Item::Block(hash.to_vec())),
+                item: Some(inventory_item::Item::Block(hash.as_byte_array().to_vec())),
             },
             Inventory::WTx(wtxid) => InventoryItem {
-                item: Some(inventory_item::Item::Wtx(wtxid.to_vec())),
+                item: Some(inventory_item::Item::Wtx(wtxid.as_byte_array().to_vec())),
             },
             Inventory::WitnessTransaction(txid) => InventoryItem {
-                item: Some(inventory_item::Item::WitnessTransaction(txid.to_vec())),
+                item: Some(inventory_item::Item::WitnessTransaction(
+                    txid.as_byte_array().to_vec(),
+                )),
             },
             Inventory::WitnessBlock(hash) => InventoryItem {
-                item: Some(inventory_item::Item::WitnessBlock(hash.to_vec())),
+                item: Some(inventory_item::Item::WitnessBlock(
+                    hash.as_byte_array().to_vec(),
+                )),
             },
             Inventory::CompactBlock(hash) => InventoryItem {
-                item: Some(inventory_item::Item::CompactBlock(hash.to_vec())),
+                item: Some(inventory_item::Item::CompactBlock(
+                    hash.as_byte_array().to_vec(),
+                )),
             },
             Inventory::Unknown { inv_type, hash } => InventoryItem {
                 item: Some(inventory_item::Item::Unknown(UnknownItem {
@@ -302,7 +310,12 @@ impl fmt::Display for address::Address {
 
 impl fmt::Display for UnknownAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "id={}, bytes={}", self.id, self.address.to_hex())
+        write!(
+            f,
+            "id={}, bytes={}",
+            self.id,
+            self.address.to_lower_hex_string()
+        )
     }
 }
 
@@ -311,8 +324,8 @@ mod tests {
     #[test]
     fn test_address_into_addrtype_onion() {
         use crate::primitive;
-        use bitcoin::network::address::Address;
-        use bitcoin::network::constants::ServiceFlags;
+        use bitcoin::p2p::address::Address;
+        use bitcoin::p2p::ServiceFlags;
 
         let a = Address {
             services: ServiceFlags::from(0),
