@@ -746,7 +746,6 @@ version = "0.1.0"
 dependencies = [
  "libbpf-cargo",
  "libbpf-rs",
- "libc",
  "nng",
  "prost",
  "shared",

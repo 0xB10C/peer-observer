@@ -4,8 +4,6 @@ use std::env;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use libc;
-
 use libbpf_rs::skel::SkelBuilder;
 use libbpf_rs::RingBufferBuilder;
 
@@ -113,17 +111,6 @@ const TRACEPOINTS_VALIDATION: [Tracepoint; 1] = [Tracepoint {
     function: "handle_validation_block_connected",
 }];
 
-fn bump_memlock_rlimit() {
-    let rlimit = libc::rlimit {
-        rlim_cur: 128 << 20,
-        rlim_max: 128 << 20,
-    };
-
-    if unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlimit) } != 0 {
-        panic!("Failed to increase rlimit");
-    }
-}
-
 #[path = "tracing.gen.rs"]
 mod tracing;
 
@@ -134,8 +121,6 @@ fn main() -> Result<(), libbpf_rs::Error> {
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(true);
-
-    bump_memlock_rlimit();
 
     let open_skel: OpenTracingSkel = skel_builder.open().unwrap();
     let mut obj: libbpf_rs::Object = match open_skel.obj.load() {
