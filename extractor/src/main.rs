@@ -1,18 +1,13 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use std::env;
-use std::time::Duration;
-use std::time::SystemTime;
-
-use libc;
-
+use crate::tracing::OpenTracingSkel;
 use libbpf_rs::skel::SkelBuilder;
 use libbpf_rs::RingBufferBuilder;
-
+use libc;
 use nng::{Protocol, Socket};
-
 use prost::Message;
-
+use shared::clap;
+use shared::clap::Parser;
 use shared::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
     MempoolRejected, MempoolRemoved, MempoolReplaced, MisbehavingConnection, OutboundConnection,
@@ -21,8 +16,11 @@ use shared::ctypes::{
 use shared::event_msg::event_msg::Event;
 use shared::event_msg::EventMsg;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
+use std::time::Duration;
+use std::time::SystemTime;
 
-use crate::tracing::OpenTracingSkel;
+#[path = "tracing.gen.rs"]
+mod tracing;
 
 struct Tracepoint<'a> {
     pub context: &'a str,
@@ -124,13 +122,23 @@ fn bump_memlock_rlimit() {
     }
 }
 
-#[path = "tracing.gen.rs"]
-mod tracing;
+/// The peer-observer extractor
+/// Hooks into a Bitcoin Core binary with tracepoints and extracts events
+/// from it into a nanomsg PUB-SUB queue.
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// TCP socket the nanomsg publisher binds on.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
 
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
+    /// Path to the Bitcoin Core (bitcoind) binary that should be hooked into.
+    #[arg(short, long)]
+    bitcoind_path: String,
+}
 
 fn main() -> Result<(), libbpf_rs::Error> {
-    let bitcoind_path = env::args().nth(1).expect("No bitcoind path provided.");
+    let args = Args::parse();
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(true);
@@ -154,17 +162,22 @@ fn main() -> Result<(), libbpf_rs::Error> {
     for tracepoint in active_tracepoints {
         links.push(obj.prog_mut(tracepoint.function).unwrap().attach_usdt(
             -1,
-            &bitcoind_path,
+            &args.bitcoind_path,
             tracepoint.context,
             tracepoint.name,
         )?)
     }
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
-    socket.listen(ADDRESS).unwrap();
-    println!("listening on {}", ADDRESS);
+    match socket.listen(&args.address) {
+        Ok(()) => {
+            println!("listening on {}", args.address);
+        }
+        Err(e) => {
+            panic!("Could not listen on {}: {}", args.address, e);
+        }
+    }
 
-    //let maps = skel.map();
     let mut ringbuff_builder = RingBufferBuilder::new();
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
