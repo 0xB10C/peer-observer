@@ -1,6 +1,7 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 pub extern crate bitcoin;
+pub extern crate clap;
 pub extern crate prost;
 
 pub mod addrman;
