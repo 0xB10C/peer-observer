@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use shared::bitcoin::consensus::{encode, Decodable};
+use shared::bitcoin::p2p::message::NetworkMessage;
+use shared::bitcoin::p2p::message_network::VersionMessage;
 use shared::bitcoin::p2p::{address, message, message_network, ServiceFlags};
 use shared::bitcoin::Network;
 use shared::event_msg;
@@ -85,6 +87,7 @@ struct Output {
     pub result: bool,
     pub cached: bool,
     pub network: NetworkType,
+    pub version: Option<VersionMessage>,
 }
 
 #[derive(serde::Serialize)]
@@ -101,6 +104,13 @@ struct Row {
     source_tor_exit_node: bool,
     result_success: bool,
     result_cached: bool,
+    version: bool,
+    version_useragent: String,
+    version_relay: bool,
+    version_version: u32,
+    version_services: u64,
+    version_start_height: i32,
+    version_nonce: u64,
 }
 
 fn worker(
@@ -145,10 +155,12 @@ fn worker(
             };
 
             if let Some(ip_addr) = ip_addr_opt {
+                let mut version: Option<VersionMessage> = None;
                 let result: bool = match recent_succesful_connection {
                     true => true,
                     false => {
-                        if try_connect(SocketAddr::new(ip_addr, input.address.port as u16)) {
+                        version = try_connect(SocketAddr::new(ip_addr, input.address.port as u16));
+                        if version.is_some() {
                             recent_succesful_connections_cache
                                 .lock()
                                 .expect("could not lock cache for insert")
@@ -166,6 +178,7 @@ fn worker(
                         result,
                         cached: recent_succesful_connection,
                         network: network_type,
+                        version,
                     })
                     .unwrap();
             }
@@ -253,7 +266,7 @@ fn build_version_message() -> message::NetworkMessage {
     ))
 }
 
-fn try_connect(address: SocketAddr) -> bool {
+fn try_connect(address: SocketAddr) -> Option<VersionMessage> {
     if let Ok(mut stream) = TcpStream::connect_timeout(&address, CONNECT_TIMEOUT) {
         let _ = stream.write_all(
             encode::serialize(&build_raw_network_message(build_version_message())).as_slice(),
@@ -263,13 +276,21 @@ fn try_connect(address: SocketAddr) -> bool {
 
         if let Ok(read_stream) = stream.try_clone() {
             let mut stream_reader = BufReader::new(read_stream);
-            if let Ok(_) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
-                let _ = stream.shutdown(Shutdown::Both);
-                return true;
+            if let Ok(msg) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
+                println!("msg: {:?}", msg);
+                match msg.payload() {
+                    NetworkMessage::Version(version) => {
+                        let _ = stream.shutdown(Shutdown::Both);
+                        return Some(version.clone());
+                    }
+                    _ => {
+                        let _ = stream.shutdown(Shutdown::Both);
+                    }
+                }
             }
         }
     }
-    return false;
+    return None;
 }
 
 // TODO:
@@ -375,6 +396,8 @@ fn main() {
                 .expect("Time error")
                 .as_secs();
 
+            let version_msg = output.version;
+
             wtr.serialize(Row {
                 result_timestamp: timestamp,
                 addr_address: output
@@ -393,6 +416,15 @@ fn main() {
                 source_tor_exit_node: util::is_tor_exit_node(&source_ip),
                 result_success: output.result,
                 result_cached: output.cached,
+                version: version_msg.is_some(),
+                version_useragent: version_msg
+                    .as_ref()
+                    .map_or(String::default(), |v| v.user_agent.clone()),
+                version_relay: version_msg.as_ref().map_or(false, |v| v.relay),
+                version_version: version_msg.as_ref().map_or(0, |v| v.version),
+                version_services: version_msg.as_ref().map_or(0, |v| v.services.to_u64()),
+                version_start_height: version_msg.as_ref().map_or(-1, |v| v.start_height),
+                version_nonce: version_msg.as_ref().map_or(0, |v| v.nonce),
             })
             .unwrap();
         }
