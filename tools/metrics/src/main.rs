@@ -66,7 +66,7 @@ fn main() {
                     handle_p2p_message(&msg, unwrapped.timestamp);
                 }
                 Event::Conn(c) => {
-                    handle_connection_event(c.event.unwrap());
+                    handle_connection_event(c.event.unwrap(), unwrapped.timestamp);
                 }
                 Event::Addrman(a) => {
                     handle_addrman_event(&a.event.unwrap());
@@ -121,7 +121,7 @@ fn main() {
         }
     }
 
-    fn handle_connection_event(cevent: connection_event::Event) {
+    fn handle_connection_event(cevent: connection_event::Event, timestamp: u64) {
         match cevent {
             connection_event::Event::Inbound(i) => {
                 let ip = util::ip_from_ipport(i.conn.addr);
@@ -161,6 +161,7 @@ fn main() {
             connection_event::Event::Closed(c) => {
                 let ip = util::ip_from_ipport(c.conn.addr);
                 metrics::CONN_CLOSED.inc();
+                metrics::CONN_CLOSED_AGE.inc_by(timestamp - c.time_established);
                 metrics::CONN_CLOSED_NETWORK
                     .with_label_values(&[&c.conn.network.to_string()])
                     .inc();
