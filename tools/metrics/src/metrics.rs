@@ -341,6 +341,14 @@ lazy_static! {
             .subsystem(SUBSYSTEM_CONN),
     ).unwrap();
 
+    /// Age (in seconds) of closed connections.
+    pub static ref CONN_CLOSED_AGE: IntCounter =
+    register_int_counter!(
+        Opts::new("closed_age_seconds", "Age (in seconds) of closed connections. The age of each closed connection is added to the metric.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_CONN),
+    ).unwrap();
+
     /// Number of closed connections by network.
     pub static ref CONN_CLOSED_NETWORK: IntCounterVec =
     register_int_counter_vec!(
