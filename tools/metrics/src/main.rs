@@ -145,7 +145,7 @@ fn main() {
                 metrics::CONN_INBOUND_NETWORK
                     .with_label_values(&[&i.conn.network.to_string()])
                     .inc();
-                metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64 + 1);
+                metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64);
             }
             connection_event::Event::Outbound(o) => {
                 let ip = util::ip_from_ipport(o.conn.addr);
@@ -156,7 +156,7 @@ fn main() {
                 metrics::CONN_OUTBOUND_SUBNET
                     .with_label_values(&[&util::subnet(ip)])
                     .inc();
-                metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64 + 1);
+                metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64);
             }
             connection_event::Event::Closed(c) => {
                 let ip = util::ip_from_ipport(c.conn.addr);
