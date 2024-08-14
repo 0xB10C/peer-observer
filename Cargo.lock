@@ -1838,12 +1838,16 @@ dependencies = [
 name = "spy-detector"
 version = "0.1.0"
 dependencies = [
+<<<<<<< HEAD
  "chrono",
  "crossterm",
  "dashmap",
  "nng",
  "shared",
  "tui",
+=======
+ "nng",
+>>>>>>> 269499f (add: spy-detector(main.rs))
 ]
 
 [[package]]

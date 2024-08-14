@@ -7,5 +7,10 @@ members = [
   "tools/logger",
   "tools/websocket",
   "tools/metrics",
+<<<<<<< HEAD
   "tools/connectivity-check", "tools/spy-detector",
+=======
+  "tools/connectivity-check", 
+  "tools/spy-detector",
+>>>>>>> 269499f (add: spy-detector(main.rs))
 ]
