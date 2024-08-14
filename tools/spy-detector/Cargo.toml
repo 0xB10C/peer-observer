@@ -1,0 +1,10 @@
+[package]
+name = "spy-detector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nng = "1.0.1"
+shared = { version = "0.1.0", path = "../../shared" }
+dashmap = "6.1.0"
+chrono = "0.4.38"
