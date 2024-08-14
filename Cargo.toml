@@ -7,5 +7,5 @@ members = [
   "tools/logger",
   "tools/websocket",
   "tools/metrics",
-  "tools/addr-connectivity-rs",
+  "tools/addr-connectivity-rs", "tools/spy-detector",
 ]
