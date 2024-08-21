@@ -15,6 +15,7 @@ use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::util;
 use shared::validation::validation_event;
+use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::time;
 
@@ -37,6 +38,10 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
+
+    SimpleLogger::new()
+        .init()
+        .expect("Could not setup logging.");
 
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
