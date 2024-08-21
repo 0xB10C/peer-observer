@@ -1,18 +1,11 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use std::env;
-use std::time::Duration;
-use std::time::SystemTime;
-
-use libc;
-
 use libbpf_rs::skel::SkelBuilder;
 use libbpf_rs::RingBufferBuilder;
-
 use nng::{Protocol, Socket};
-
 use prost::Message;
-
+use shared::clap;
+use shared::clap::Parser;
 use shared::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
     MempoolRejected, MempoolRemoved, MempoolReplaced, MisbehavingConnection, OutboundConnection,
@@ -21,8 +14,11 @@ use shared::ctypes::{
 use shared::event_msg::event_msg::Event;
 use shared::event_msg::EventMsg;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
+use std::time::Duration;
+use std::time::SystemTime;
 
-use crate::tracing::OpenTracingSkel;
+#[path = "tracing.gen.rs"]
+mod tracing;
 
 struct Tracepoint<'a> {
     pub context: &'a str,
@@ -94,7 +90,7 @@ const TRACEPOINTS_MEMPOOL: [Tracepoint; 4] = [
     },
 ];
 
-const _TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
+const TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
     Tracepoint {
         context: "addrman",
         name: "attempt_add",
@@ -113,31 +109,48 @@ const TRACEPOINTS_VALIDATION: [Tracepoint; 1] = [Tracepoint {
     function: "handle_validation_block_connected",
 }];
 
-fn bump_memlock_rlimit() {
-    let rlimit = libc::rlimit {
-        rlim_cur: 128 << 20,
-        rlim_max: 128 << 20,
-    };
+/// The peer-observer extractor
+/// Hooks into a Bitcoin Core binary with tracepoints and extracts events
+/// from it into a nanomsg PUB-SUB queue.
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// TCP socket the nanomsg publisher binds on.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
 
-    if unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlimit) } != 0 {
-        panic!("Failed to increase rlimit");
-    }
+    /// Path to the Bitcoin Core (bitcoind) binary that should be hooked into.
+    #[arg(short, long)]
+    bitcoind_path: String,
+
+    // Default tracepoints
+    /// Controls if the p2p message tracepoints should be hooked into.
+    #[arg(long)]
+    no_p2pmsg_tracepoints: bool,
+    /// Controls if the connection tracepoints should be hooked into.
+    #[arg(long)]
+    no_connection_tracepoints: bool,
+    /// Controls if the mempool tracepoints should be hooked into.
+    #[arg(long)]
+    no_mempool_tracepoints: bool,
+    /// Controls if the validation tracepoints should be hooked into.
+    #[arg(long)]
+    no_validation_tracepoints: bool,
+
+    // Custom tracepoints
+    /// Controls if the addrman tracepoints should be hooked into.
+    /// These may not have been PRed to Bitcoin Core yet.
+    #[arg(long)]
+    addrman_tracepoints: bool,
 }
 
-#[path = "tracing.gen.rs"]
-mod tracing;
-
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
-
 fn main() -> Result<(), libbpf_rs::Error> {
-    let bitcoind_path = env::args().nth(1).expect("No bitcoind path provided.");
+    let args = Args::parse();
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(true);
 
-    bump_memlock_rlimit();
-
-    let open_skel: OpenTracingSkel = skel_builder.open().unwrap();
+    let open_skel: tracing::OpenTracingSkel = skel_builder.open().unwrap();
     let mut obj: libbpf_rs::Object = match open_skel.obj.load() {
         Ok(skel) => skel,
         Err(e) => {
@@ -145,26 +158,48 @@ fn main() -> Result<(), libbpf_rs::Error> {
         }
     };
 
-    let active_tracepoints = TRACEPOINTS_NET_MESSAGE
-        .iter()
-        .chain(TRACEPOINTS_NET_CONN.iter())
-        .chain(TRACEPOINTS_VALIDATION.iter())
-        .chain(TRACEPOINTS_MEMPOOL.iter());
+    let mut active_tracepoints = vec![];
+    if !args.no_p2pmsg_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_NET_MESSAGE);
+    }
+    if !args.no_connection_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_NET_CONN);
+    }
+    if !args.no_validation_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_VALIDATION);
+    }
+    if !args.no_mempool_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_MEMPOOL);
+    }
+
+    if args.addrman_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_ADDRMAN);
+    }
+
+    if active_tracepoints.is_empty() {
+        println!("No tracepoints enabled.");
+        return Ok(());
+    }
     let mut links = Vec::new();
     for tracepoint in active_tracepoints {
         links.push(obj.prog_mut(tracepoint.function).unwrap().attach_usdt(
             -1,
-            &bitcoind_path,
+            &args.bitcoind_path,
             tracepoint.context,
             tracepoint.name,
         )?)
     }
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
-    socket.listen(ADDRESS).unwrap();
-    println!("listening on {}", ADDRESS);
+    match socket.listen(&args.address) {
+        Ok(()) => {
+            println!("listening on {}", args.address);
+        }
+        Err(e) => {
+            panic!("Could not listen on {}: {}", args.address, e);
+        }
+    }
 
-    //let maps = skel.map();
     let mut ringbuff_builder = RingBufferBuilder::new();
 
     #[cfg_attr(rustfmt, rustfmt_skip)]

@@ -3,8 +3,9 @@
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
-
 use shared::addrman::addrman_event;
+use shared::clap;
+use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::mempool::mempool_event;
@@ -14,21 +15,28 @@ use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::util;
 use shared::validation::validation_event;
-
 use std::collections::HashMap;
-use std::env;
 use std::time;
 
 mod metrics;
 mod metricserver;
 
 const LOG_TARGET: &str = "main";
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
+
+/// Simple peer-observer tool that produces Prometheus metrics for received event messages
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    // The extractor address the tool should connect to.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
+    // The metrics server address the tool should listen on.
+    #[arg(short, long, default_value = "127.0.0.1:8282")]
+    metrics_address: String,
+}
 
 fn main() {
-    let metricserver_address = env::args()
-        .nth(1)
-        .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
+    let args = Args::parse();
 
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
@@ -40,13 +48,13 @@ fn main() {
     );
 
     let sub = Socket::new(Protocol::Sub0).unwrap();
-    sub.dial(ADDRESS).unwrap();
+    sub.dial(&args.address).unwrap();
 
     let all_topics = vec![];
     sub.set_opt::<Subscribe>(all_topics).unwrap();
 
-    metricserver::start(&metricserver_address).unwrap();
-    log::info!(target: LOG_TARGET, "metrics-server listening on: {}", metricserver_address);
+    metricserver::start(&args.metrics_address).unwrap();
+    log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
 
     loop {
         let msg = sub.recv().unwrap();
@@ -58,7 +66,7 @@ fn main() {
                     handle_p2p_message(&msg, unwrapped.timestamp);
                 }
                 Event::Conn(c) => {
-                    handle_connection_event(c.event.unwrap());
+                    handle_connection_event(c.event.unwrap(), unwrapped.timestamp);
                 }
                 Event::Addrman(a) => {
                     handle_addrman_event(&a.event.unwrap());
@@ -113,7 +121,7 @@ fn main() {
         }
     }
 
-    fn handle_connection_event(cevent: connection_event::Event) {
+    fn handle_connection_event(cevent: connection_event::Event, timestamp: u64) {
         match cevent {
             connection_event::Event::Inbound(i) => {
                 let ip = util::ip_from_ipport(i.conn.addr);
@@ -137,7 +145,7 @@ fn main() {
                 metrics::CONN_INBOUND_NETWORK
                     .with_label_values(&[&i.conn.network.to_string()])
                     .inc();
-                metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64 + 1);
+                metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64);
             }
             connection_event::Event::Outbound(o) => {
                 let ip = util::ip_from_ipport(o.conn.addr);
@@ -148,11 +156,12 @@ fn main() {
                 metrics::CONN_OUTBOUND_SUBNET
                     .with_label_values(&[&util::subnet(ip)])
                     .inc();
-                metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64 + 1);
+                metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64);
             }
             connection_event::Event::Closed(c) => {
                 let ip = util::ip_from_ipport(c.conn.addr);
                 metrics::CONN_CLOSED.inc();
+                metrics::CONN_CLOSED_AGE.inc_by(timestamp - c.time_established);
                 metrics::CONN_CLOSED_NETWORK
                     .with_label_values(&[&c.conn.network.to_string()])
                     .inc();

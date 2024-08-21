@@ -1,17 +1,18 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use std::collections::HashMap;
-use std::env;
-use std::fmt;
-use std::fs::OpenOptions;
-use std::io::{BufReader, Write};
-use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-
+use crossbeam;
+use crossbeam::channel::{unbounded, Receiver, Sender};
+use nng::options::protocol::pubsub::Subscribe;
+use nng::options::Options;
+use nng::{Protocol, Socket};
+use rand::Rng;
 use shared::bitcoin::consensus::{encode, Decodable};
+use shared::bitcoin::p2p::message::NetworkMessage;
+use shared::bitcoin::p2p::message_network::VersionMessage;
 use shared::bitcoin::p2p::{address, message, message_network, ServiceFlags};
 use shared::bitcoin::Network;
+use shared::clap;
+use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::net_msg::message::Msg;
@@ -20,18 +21,17 @@ use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
 use shared::prost::Message as ProstMessage;
 use shared::util;
-
-use crossbeam;
-use crossbeam::channel::{unbounded, Receiver, Sender};
-use nng::options::protocol::pubsub::Subscribe;
-use nng::options::Options;
-use nng::{Protocol, Socket};
-use rand::Rng;
+use std::collections::HashMap;
+use std::fmt;
+use std::fs::OpenOptions;
+use std::io::{BufReader, Write};
+use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 mod metrics;
 mod metricserver;
 
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
 const WORKERS: usize = 50;
 
 const NETWORK: Network = Network::Bitcoin;
@@ -39,6 +39,19 @@ const USER_AGENT: &str = "/bitnodes.io:0.3/";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
+
+/// Simple peer-observer tool that checks the connectivity of received addr message entries
+/// and offers stats as prometheus metrics
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    // The extractor address the tool should connect to.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
+    // The metrics server address the tool should listen on.
+    #[arg(short, long, default_value = "127.0.0.1:18282")]
+    metrics_address: String,
+}
 
 #[derive(Clone, Debug)]
 enum AddrMessageVersion {
@@ -85,6 +98,7 @@ struct Output {
     pub result: bool,
     pub cached: bool,
     pub network: NetworkType,
+    pub version: Option<VersionMessage>,
 }
 
 #[derive(serde::Serialize)]
@@ -101,6 +115,13 @@ struct Row {
     source_tor_exit_node: bool,
     result_success: bool,
     result_cached: bool,
+    version: bool,
+    version_useragent: String,
+    version_relay: bool,
+    version_version: u32,
+    version_services: u64,
+    version_start_height: i32,
+    version_nonce: u64,
 }
 
 fn worker(
@@ -145,10 +166,12 @@ fn worker(
             };
 
             if let Some(ip_addr) = ip_addr_opt {
+                let mut version: Option<VersionMessage> = None;
                 let result: bool = match recent_succesful_connection {
                     true => true,
                     false => {
-                        if try_connect(SocketAddr::new(ip_addr, input.address.port as u16)) {
+                        version = try_connect(SocketAddr::new(ip_addr, input.address.port as u16));
+                        if version.is_some() {
                             recent_succesful_connections_cache
                                 .lock()
                                 .expect("could not lock cache for insert")
@@ -166,6 +189,7 @@ fn worker(
                         result,
                         cached: recent_succesful_connection,
                         network: network_type,
+                        version,
                     })
                     .unwrap();
             }
@@ -253,7 +277,7 @@ fn build_version_message() -> message::NetworkMessage {
     ))
 }
 
-fn try_connect(address: SocketAddr) -> bool {
+fn try_connect(address: SocketAddr) -> Option<VersionMessage> {
     if let Ok(mut stream) = TcpStream::connect_timeout(&address, CONNECT_TIMEOUT) {
         let _ = stream.write_all(
             encode::serialize(&build_raw_network_message(build_version_message())).as_slice(),
@@ -263,13 +287,21 @@ fn try_connect(address: SocketAddr) -> bool {
 
         if let Ok(read_stream) = stream.try_clone() {
             let mut stream_reader = BufReader::new(read_stream);
-            if let Ok(_) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
-                let _ = stream.shutdown(Shutdown::Both);
-                return true;
+            if let Ok(msg) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
+                println!("msg: {:?}", msg);
+                match msg.payload() {
+                    NetworkMessage::Version(version) => {
+                        let _ = stream.shutdown(Shutdown::Both);
+                        return Some(version.clone());
+                    }
+                    _ => {
+                        let _ = stream.shutdown(Shutdown::Both);
+                    }
+                }
             }
         }
     }
-    return false;
+    return None;
 }
 
 // TODO:
@@ -278,12 +310,9 @@ fn try_connect(address: SocketAddr) -> bool {
 // - error handling
 
 fn main() {
-    let metricserver_address = env::args()
-        .nth(1)
-        .expect("No metric server address to bind on provided (.e.g. 'localhost:8282').");
-
+    let args = Args::parse();
     let sub = Socket::new(Protocol::Sub0).unwrap();
-    sub.dial(ADDRESS).unwrap();
+    sub.dial(&args.address).unwrap();
 
     let all_topics = vec![];
     sub.set_opt::<Subscribe>(all_topics).unwrap();
@@ -291,8 +320,8 @@ fn main() {
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
 
-    metricserver::start(&metricserver_address).unwrap();
-    println!("metrics-server started on {}", &metricserver_address);
+    metricserver::start(&args.metrics_address).unwrap();
+    println!("metrics-server started on {}", &args.metrics_address);
 
     crossbeam::scope(|s| {
         s.spawn(|_| loop {
@@ -375,6 +404,8 @@ fn main() {
                 .expect("Time error")
                 .as_secs();
 
+            let version_msg = output.version;
+
             wtr.serialize(Row {
                 result_timestamp: timestamp,
                 addr_address: output
@@ -393,6 +424,15 @@ fn main() {
                 source_tor_exit_node: util::is_tor_exit_node(&source_ip),
                 result_success: output.result,
                 result_cached: output.cached,
+                version: version_msg.is_some(),
+                version_useragent: version_msg
+                    .as_ref()
+                    .map_or(String::default(), |v| v.user_agent.clone()),
+                version_relay: version_msg.as_ref().map_or(false, |v| v.relay),
+                version_version: version_msg.as_ref().map_or(0, |v| v.version),
+                version_services: version_msg.as_ref().map_or(0, |v| v.services.to_u64()),
+                version_start_height: version_msg.as_ref().map_or(-1, |v| v.start_height),
+                version_nonce: version_msg.as_ref().map_or(0, |v| v.nonce),
             })
             .unwrap();
         }
