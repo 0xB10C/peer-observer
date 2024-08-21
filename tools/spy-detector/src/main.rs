@@ -12,13 +12,13 @@ use shared::net_msg;
 use shared::prost::Message;
 
 const ADDRESS: &str = "tcp://127.0.0.1:8883";
-const SPY_THRESHOLD: f64 = 0.5; // Adjust this value for spy detection
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq)]
 struct PeerStats {
     inv_sent: u32,
-    getdata_received: u32,
     inv_received: u32,
+    getdata_sent: u32,
+    getdata_received: u32,
     last_activity: Option<Instant>,
 }
 
@@ -63,8 +63,10 @@ fn main() {
 
 fn process_p2p_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &str) {
     let mut map = peer_map.lock().unwrap();
-    let peer_id = format!("{}:{}", meta.peer_id, meta.conn_type);
+    let peer_id = format!("{}:{}", meta.peer_id, meta.addr);
     let stats = map.entry(peer_id.clone()).or_default();
+
+    let old_stats = stats.clone();
 
     stats.last_activity = Some(Instant::now());
 
@@ -79,55 +81,60 @@ fn process_p2p_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &s
         "getdata" => {
             if meta.inbound {
                 stats.getdata_received += 1;
+            } else {
+                stats.getdata_sent += 1;
             }
         }
         "tx" => {}
         _ => return,
     }
 
-    analyze_peer_behavior(&peer_id, stats);
+    if *stats != old_stats {
+        print_peer_stats(&peer_id, stats);
+    }
 }
 
 fn process_connection_event(peer_map: &PeerMap, event: &str) {
     if event.starts_with("closed") {
         let peer_id = event.split(' ').nth(1).unwrap_or("");
         let mut map = peer_map.lock().unwrap();
-        map.remove(peer_id);
-        println!("Connection closed for peer: {}", peer_id);
+        if let Some(stats) = map.remove(peer_id) {
+            println!("Connection closed for peer: {}", peer_id);
+            print_peer_stats(peer_id, &stats);
+        }
     }
 }
 
-fn analyze_peer_behavior(peer_id: &str, stats: &PeerStats) {
-    let inv_getdata_ratio = if stats.inv_sent > 0 {
-        stats.getdata_received as f64 / stats.inv_sent as f64
-    } else {
-        1.0
-    };
-
-    let behavior = if inv_getdata_ratio < SPY_THRESHOLD || stats.inv_received == 0 {
-        "SPY NODE"
-    } else {
-        "NORMAL NODE"
-    };
-
+fn print_peer_stats(peer_id: &str, stats: &PeerStats) {
     println!(
-        "Peer {}: {} (inv_sent: {}, getdata_received: {}, inv_received: {}, ratio: {:.2})",
+        "[{}] Peer {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
         peer_id,
-        behavior,
         stats.inv_sent,
-        stats.getdata_received,
         stats.inv_received,
-        inv_getdata_ratio
+        stats.getdata_sent,
+        stats.getdata_received
     );
 }
 
 fn cleanup_inactive_peers(peer_map: &PeerMap) {
     let mut map = peer_map.lock().unwrap();
     let now = Instant::now();
-    map.retain(|_, stats| {
-        stats
-            .last_activity
-            .map(|last| now.duration_since(last) < Duration::from_secs(3600))
-            .unwrap_or(false)
-    });
+    let inactive_peers: Vec<String> = map
+        .iter()
+        .filter(|(_, stats)| {
+            stats
+                .last_activity
+                .map(|last| now.duration_since(last) >= Duration::from_secs(3600))
+                .unwrap_or(true)
+        })
+        .map(|(peer_id, _)| peer_id.clone())
+        .collect();
+
+    for peer_id in inactive_peers {
+        if let Some(stats) = map.remove(&peer_id) {
+            println!("Removed inactive peer: {}", peer_id);
+            print_peer_stats(&peer_id, &stats);
+        }
+    }
 }

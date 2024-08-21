@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4.38"
 nng = "1.0.1"
+tui = "0.19"
+crossterm = "0.25"
 shared = { version = "0.1.0", path = "../../shared" }
