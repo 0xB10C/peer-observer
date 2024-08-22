@@ -1839,6 +1839,7 @@ name = "spy-detector"
 version = "0.1.0"
 dependencies = [
 <<<<<<< HEAD
+<<<<<<< HEAD
  "chrono",
  "crossterm",
  "dashmap",
@@ -1851,6 +1852,13 @@ dependencies = [
 >>>>>>> 269499f (add: spy-detector(main.rs))
 =======
 >>>>>>> 07118aa (update: cargo.toml)
+=======
+ "chrono",
+ "crossterm",
+ "nng",
+ "shared",
+ "tui",
+>>>>>>> 9ec4dcd (updated)
 ]
 
 [[package]]
