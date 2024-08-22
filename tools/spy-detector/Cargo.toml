@@ -10,6 +10,7 @@ nng = "1.0.1"
 tui = "0.19"
 crossterm = "0.25"
 shared = { version = "0.1.0", path = "../../shared" }
+<<<<<<< HEAD
 dashmap = "6.1.0"
 chrono = "0.4.38"
 =======
@@ -17,3 +18,7 @@ chrono = "0.4.38"
 =======
 shared = { path = "../../shared" }
 >>>>>>> 07118aa (update: cargo.toml)
+=======
+simple_logger = "5.0.0"
+log = "0.4.22"
+>>>>>>> 6285823 (upated with simple logger)
