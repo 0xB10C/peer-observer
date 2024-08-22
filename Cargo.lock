@@ -1885,8 +1885,11 @@ dependencies = [
 name = "spy-detector"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "crossterm",
  "nng",
  "shared",
+ "tui",
 ]
 
 [[package]]
