@@ -140,24 +140,24 @@ fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
     );
 }
 
-fn cleanup_inactive_peers(peer_map: &PeerMap) {
-    let mut map = peer_map.lock().unwrap();
-    let now = Instant::now();
-    let inactive_peers: Vec<String> = map
-        .iter()
-        .filter(|(_, stats)| {
-            stats
-                .last_activity
-                .map(|last| now.duration_since(last) >= Duration::from_secs(3600))
-                .unwrap_or(true)
-        })
-        .map(|(peer_id, _)| peer_id.clone())
-        .collect();
+// fn cleanup_inactive_peers(peer_map: &PeerMap) {
+//     let mut map = peer_map.lock().unwrap();
+//     let now = Instant::now();
+//     let inactive_peers: Vec<String> = map
+//         .iter()
+//         .filter(|(_, stats)| {
+//             stats
+//                 .last_activity
+//                 .map(|last| now.duration_since(last) >= Duration::from_secs(3600))
+//                 .unwrap_or(true)
+//         })
+//         .map(|(peer_id, _)| peer_id.clone())
+//         .collect();
 
-    for peer_addr in inactive_peers {
-        if let Some(stats) = map.remove(&peer_addr) {
-            println!("Removed inactive peer: {}", peer_addr);
-            print_peer_stats(&peer_addr, &stats);
-        }
-    }
-}
+//     for peer_addr in inactive_peers {
+//         if let Some(stats) = map.remove(&peer_addr) {
+//             println!("Removed inactive peer: {}", peer_addr);
+//             print_peer_stats(&peer_addr, &stats);
+//         }
+//     }
+// }
