@@ -13,6 +13,7 @@ use shared::prost::Message;
 use simple_logger::SimpleLogger;
 
 const ADDRESS: &str = "tcp://127.0.0.1:8883";
+const STATS_INTERVAL: Duration = Duration::from_secs(120); // Duration(seconds) to print stats of peers
 
 #[derive(Debug, Default, Clone, PartialEq)]
 struct PeerStats {
@@ -26,7 +27,7 @@ struct PeerStats {
 }
 
 type PeerMap = Arc<Mutex<HashMap<String, PeerStats>>>;
-const LOG_TARGET: &str = "main";
+// const LOG_TARGET: &str = "main";
 
 fn main() {
     SimpleLogger::new()
@@ -41,11 +42,19 @@ fn main() {
 
     let peer_map: PeerMap = Arc::new(Mutex::new(HashMap::new()));
 
-    // let cleanup_peer_map = peer_map.clone();
-    // std::thread::spawn(move || loop {
-    //     std::thread::sleep(Duration::from_secs(60));
-    //     cleanup_inactive_peers(&cleanup_peer_map);
-    // });
+    // Spawn a thread for periodic stats display
+    let display_peer_map = peer_map.clone();
+    std::thread::spawn(move || {
+        let mut last_display = Instant::now();
+        loop {
+            let now = Instant::now();
+            if now.duration_since(last_display) >= STATS_INTERVAL {
+                display_all_stats(&display_peer_map);
+                last_display = now;
+            }
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    });
 
     loop {
         let msg = sub.recv().unwrap();
@@ -71,10 +80,10 @@ fn main() {
 
 fn process_p2p_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &str) {
     let mut map = peer_map.lock().unwrap();
-    let peer_addr = format!("{}:{}", meta.addr, meta.addr);
-    let stats = map.entry(peer_addr.clone()).or_default();
+    let peer_id = format!("{}", meta.peer_id);
+    let stats = map.entry(peer_id.clone()).or_default();
 
-    let old_stats = stats.clone();
+    // let old_stats = stats.clone();
 
     stats.last_activity = Some(Instant::now());
 
@@ -82,35 +91,32 @@ fn process_p2p_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &s
 
     match msg_type {
         "Inv" => {
-            log::info!(target: LOG_TARGET, "processing inv messages",);
             if meta.inbound {
-                stats.inv_sent += 1;
-            } else {
                 stats.inv_received += 1;
+            } else {
+                stats.inv_sent += 1;
             }
         }
         "GetData" => {
-            log::info!(target: LOG_TARGET, "processing getdata messages",);
             if meta.inbound {
-                stats.getdata_sent += 1;
-            } else {
                 stats.getdata_received += 1;
+            } else {
+                stats.getdata_sent += 1;
             }
         }
         "Tx" => {
-            log::info!(target: LOG_TARGET, "processing tx messages",);
             if meta.inbound {
-                stats.tx_sent += 1;
-            } else {
                 stats.tx_received += 1;
+            } else {
+                stats.tx_sent += 1;
             }
         }
         _ => return,
     }
 
-    if *stats != old_stats {
-        print_peer_stats(&peer_addr, stats);
-    }
+    // if *stats != old_stats {
+    //     print_peer_stats(&peer_addr, stats);
+    // }
 }
 
 fn process_connection_event(peer_map: &PeerMap, event: &str) {
@@ -126,7 +132,7 @@ fn process_connection_event(peer_map: &PeerMap, event: &str) {
 
 fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
     println!(
-        "[{}] Peer {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received {}",
+        "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
         peer_addr,
         stats.inv_sent,
@@ -138,24 +144,15 @@ fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
     );
 }
 
-// fn cleanup_inactive_peers(peer_map: &PeerMap) {
-//     let mut map = peer_map.lock().unwrap();
-//     let now = Instant::now();
-//     let inactive_peers: Vec<String> = map
-//         .iter()
-//         .filter(|(_, stats)| {
-//             stats
-//                 .last_activity
-//                 .map(|last| now.duration_since(last) >= Duration::from_secs(3600))
-//                 .unwrap_or(true)
-//         })
-//         .map(|(peer_id, _)| peer_id.clone())
-//         .collect();
-
-//     for peer_addr in inactive_peers {
-//         if let Some(stats) = map.remove(&peer_addr) {
-//             println!("Removed inactive peer: {}", peer_addr);
-//             print_peer_stats(&peer_addr, &stats);
-//         }
-//     }
-// }
+fn display_all_stats(peer_map: &PeerMap) {
+    let map = peer_map.lock().unwrap();
+    println!(
+        "\n===== Stats for all peers ({}): =====",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    );
+    for (peer_id, stats) in map.iter() {
+        print_peer_stats(peer_id, stats);
+        println!("----------------------------------------");
+    }
+    println!("=====================================\n");
+}
