@@ -78,8 +78,6 @@ fn process_p2p_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &s
 
     stats.last_activity = Some(Instant::now());
 
-    //log::info!(target: LOG_TARGET, "processing {} messages", p2p_msg);
-
     let msg_type = p2p_msg.split('(').next().unwrap_or("").trim();
 
     match msg_type {
@@ -92,7 +90,7 @@ fn process_p2p_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &s
             }
         }
         "GetData" => {
-            log::info!(target: LOG_TARGET, "processing inv messages",);
+            log::info!(target: LOG_TARGET, "processing getdata messages",);
             if meta.inbound {
                 stats.getdata_sent += 1;
             } else {
@@ -100,7 +98,7 @@ fn process_p2p_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &s
             }
         }
         "Tx" => {
-            log::info!(target: LOG_TARGET, "processing inv messages",);
+            log::info!(target: LOG_TARGET, "processing tx messages",);
             if meta.inbound {
                 stats.tx_sent += 1;
             } else {
@@ -128,7 +126,7 @@ fn process_connection_event(peer_map: &PeerMap, event: &str) {
 
 fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
     println!(
-        "[{}] Peer {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n Tx sent: {}\n Tx received {}",
+        "[{}] Peer {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received {}",
         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
         peer_addr,
         stats.inv_sent,
