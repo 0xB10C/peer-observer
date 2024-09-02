@@ -2,6 +2,8 @@
 
 use async_broadcast::broadcast;
 use async_std::task;
+use shared::clap;
+use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
@@ -13,12 +15,28 @@ use shared::simple_logger;
 use std::net::TcpListener;
 use tungstenite::accept;
 
-const ADDRESS: &'static str = "tcp://127.0.0.1:8883";
-const WS_ADDRESS: &'static str = "127.0.0.1:47482";
+/// A peer-observer tool that sends out all events on a websocket
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The extractor address the tool should connect to.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
+
+    /// The websocket address the tool listens on.
+    #[arg(short, long, default_value = "127.0.0.1:47482")]
+    websocket_address: String,
+
+    /// The log level the took should run with. Valid log levels are "trace",
+    /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
+    #[arg(short, long, default_value_t = log::Level::Debug)]
+    log_level: log::Level,
+}
 
 #[async_std::main]
 async fn main() {
-    simple_logger::init_with_level(log::Level::Debug).unwrap();
+    let args = Args::parse();
+    simple_logger::init_with_level(args.log_level).unwrap();
 
     let (mut sender, broadcast_receiver) = broadcast(128);
     sender.set_overflow(true);
@@ -27,7 +45,7 @@ async fn main() {
     // nano message receive task
     task::spawn(async move {
         let sub = Socket::new(Protocol::Sub0).unwrap();
-        sub.dial(ADDRESS).unwrap();
+        sub.dial(&args.address).unwrap();
 
         let all_topics = vec![];
         sub.set_opt::<Subscribe>(all_topics).unwrap();
@@ -42,11 +60,15 @@ async fn main() {
         }
     });
 
-    log::info!("Starting websocket server on {}", WS_ADDRESS);
-    let server = match TcpListener::bind(WS_ADDRESS) {
+    log::info!("Starting websocket server on {}", args.websocket_address);
+    let server = match TcpListener::bind(args.websocket_address.clone()) {
         Ok(s) => s,
         Err(e) => {
-            log::error!("Could not start websocket server on {}: {}", WS_ADDRESS, e);
+            log::error!(
+                "Could not start websocket server on {}: {}",
+                args.websocket_address,
+                e
+            );
             return;
         }
     };
