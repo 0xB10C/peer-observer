@@ -13,6 +13,8 @@ use shared::ctypes::{
 };
 use shared::event_msg::event_msg::Event;
 use shared::event_msg::EventMsg;
+use shared::log;
+use shared::simple_logger;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
 use std::time::Duration;
 use std::time::SystemTime;
@@ -142,10 +144,17 @@ struct Args {
     /// These may not have been PRed to Bitcoin Core yet.
     #[arg(long)]
     addrman_tracepoints: bool,
+
+    // The log level the extractor should run with. Valid log levels are "trace",
+    // "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
+    #[arg(short, long, default_value_t = log::Level::Debug)]
+    log_level: log::Level,
 }
 
 fn main() -> Result<(), libbpf_rs::Error> {
     let args = Args::parse();
+
+    simple_logger::init_with_level(args.log_level).unwrap();
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(true);
@@ -177,7 +186,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     }
 
     if active_tracepoints.is_empty() {
-        println!("No tracepoints enabled.");
+        log::error!("No tracepoints enabled.");
         return Ok(());
     }
     let mut links = Vec::new();
@@ -193,7 +202,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
     match socket.listen(&args.address) {
         Ok(()) => {
-            println!("listening on {}", args.address);
+            log::info!("listening on {}", args.address);
         }
         Err(e) => {
             panic!("Could not listen on {}: {}", args.address, e);
@@ -225,7 +234,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     loop {
         match ring_buffers.poll(Duration::from_millis(1)) {
             Ok(_) => (),
-            Err(e) => println!("Failed to poll on ring buffers {}", e),
+            Err(e) => log::warn!("Failed to poll on ring buffers {}", e),
         };
     }
 }
@@ -334,8 +343,7 @@ fn handle_net_message(data: &[u8], s: Socket) -> i32 {
     let protobuf_message = match message.decode_to_protobuf_network_message() {
         Ok(msg) => msg.into(),
         Err(e) => {
-            // TODO: warn
-            println!("could not handle msg with size={}: {}", data.len(), e);
+            log::warn!("could not handle msg with size={}: {}", data.len(), e);
             return -1;
         }
     };
