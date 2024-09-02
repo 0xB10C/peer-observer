@@ -3,6 +3,7 @@
 pub extern crate bitcoin;
 pub extern crate clap;
 pub extern crate prost;
+pub extern crate simple_logger;
 
 pub mod addrman;
 pub mod ctypes;

@@ -8,10 +8,7 @@ shared = { path = "../../shared" }
 
 prometheus = "0.13.0"
 lazy_static = "1.4.0"
-
 log = "0.4.14"
-simple_logger = "5.0.0"
-
 nng = "1.0.1"
 
 [features]
