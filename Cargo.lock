@@ -471,11 +471,10 @@ checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
 name = "colored"
-version = "2.0.4"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2674ec482fbc38012cf31e6c42ba0177b431a0cb6f15fe40efa5aab1bda516f6"
+checksum = "cbf2150cce219b664a8a70df7a1f933836724b503f8a413af9365b4dcc4d90b8"
 dependencies = [
- "is-terminal",
  "lazy_static",
  "windows-sys 0.48.0",
 ]
@@ -496,7 +495,6 @@ dependencies = [
  "crossbeam",
  "csv",
  "lazy_static",
- "nng",
  "prometheus",
  "rand",
  "serde",
@@ -722,7 +720,6 @@ version = "0.1.0"
 dependencies = [
  "libbpf-cargo",
  "libbpf-rs",
- "nng",
  "prost",
  "shared",
 ]
@@ -957,17 +954,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "is-terminal"
-version = "0.4.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb0889898416213fab133e1d33a0e5858a48177452750691bde3666d0fdbaf8b"
-dependencies = [
- "hermit-abi",
- "rustix 0.38.13",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1096,7 +1082,6 @@ dependencies = [
 name = "logger"
 version = "0.1.0"
 dependencies = [
- "nng",
  "shared",
 ]
 
@@ -1129,7 +1114,6 @@ name = "metrics"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
- "nng",
  "prometheus",
  "shared",
 ]
@@ -1210,9 +1194,9 @@ dependencies = [
 
 [[package]]
 name = "num_threads"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2819ce041d2ee131036f4fc9d6ae7ae125a3a40e97ba64d04fe799ad9dabbb44"
+checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
 dependencies = [
  "libc",
 ]
@@ -1652,6 +1636,7 @@ dependencies = [
  "clap",
  "hex",
  "log",
+ "nng",
  "prost",
  "prost-build",
  "serde",
@@ -2035,7 +2020,6 @@ version = "0.1.0"
 dependencies = [
  "async-broadcast",
  "async-std",
- "nng",
  "serde_json",
  "shared",
  "tungstenite",

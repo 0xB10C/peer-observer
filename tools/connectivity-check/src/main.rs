@@ -2,9 +2,6 @@
 
 use crossbeam;
 use crossbeam::channel::{unbounded, Receiver, Sender};
-use nng::options::protocol::pubsub::Subscribe;
-use nng::options::Options;
-use nng::{Protocol, Socket};
 use rand::Rng;
 use shared::bitcoin::consensus::{encode, Decodable};
 use shared::bitcoin::p2p::message::NetworkMessage;
@@ -18,6 +15,9 @@ use shared::event_msg::event_msg::Event;
 use shared::log;
 use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
+use shared::nng::options::protocol::pubsub::Subscribe;
+use shared::nng::options::Options;
+use shared::nng::{Protocol, Socket};
 use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
 use shared::prost::Message as ProstMessage;

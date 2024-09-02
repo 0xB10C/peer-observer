@@ -2,12 +2,12 @@
 
 use async_broadcast::broadcast;
 use async_std::task;
-use nng::options::protocol::pubsub::Subscribe;
-use nng::options::Options;
-use nng::{Protocol, Socket};
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
+use shared::nng::options::protocol::pubsub::Subscribe;
+use shared::nng::options::Options;
+use shared::nng::{Protocol, Socket};
 use shared::prost::Message;
 use shared::simple_logger;
 use std::net::TcpListener;
