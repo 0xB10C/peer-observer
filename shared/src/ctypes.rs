@@ -468,19 +468,19 @@ fn decode_weird_network_message(
         "addrv2" => {
             if meta.msg_size == 0 {
                 // case: empty addrv2 message.
-                println!("emtpy addrv2: {}", meta);
+                log::debug!("emtpy addrv2: {}", meta);
                 return Some(net_msg::message::Msg::Emptyaddrv2(true));
             }
         }
         "ping" => {
             if meta.msg_size == 0 {
                 // case: old ping message with no nonce.
-                println!("no-value ping: {}", meta);
+                log::debug!("no-value ping: {}", meta);
                 return Some(net_msg::message::Msg::Oldping(true));
             }
         }
         "tx" => {
-            println!(
+            log::debug!(
                 "invalid (?) tx with {} byte: {}",
                 meta.msg_size,
                 payload.to_lower_hex_string(),
