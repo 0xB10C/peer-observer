@@ -15,11 +15,13 @@ use shared::clap;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
+use shared::log;
 use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
 use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
 use shared::prost::Message as ProstMessage;
+use shared::simple_logger;
 use shared::util;
 use std::collections::HashMap;
 use std::fmt;
@@ -51,6 +53,12 @@ struct Args {
     // The metrics server address the tool should listen on.
     #[arg(short, long, default_value = "127.0.0.1:18282")]
     metrics_address: String,
+
+    // The log level the tool should run with.
+    // Valid log levels are "trace", "debug", "info", "warn",
+    // "error". See https://docs.rs/log/latest/log/enum.Level.html
+    #[arg(short, long, default_value_t = log::Level::Debug)]
+    log_level: log::Level,
 }
 
 #[derive(Clone, Debug)]
@@ -213,7 +221,7 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
         match inbound_msg {
             Msg::Addr(addr) => {
                 if addr.addresses.len() == 1000 {
-                    println!("Received an addr message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
+                    log::info!("Received an addr message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
                     return;
                 }
 
@@ -230,7 +238,7 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
             }
             Msg::Addrv2(addrv2) => {
                 if addrv2.addresses.len() == 1000 {
-                    println!("Received an addrv2 message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
+                    log::info!("Received an addrv2 message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
                     return;
                 }
 
@@ -288,7 +296,7 @@ fn try_connect(address: SocketAddr) -> Option<VersionMessage> {
         if let Ok(read_stream) = stream.try_clone() {
             let mut stream_reader = BufReader::new(read_stream);
             if let Ok(msg) = message::RawNetworkMessage::consensus_decode(&mut stream_reader) {
-                println!("msg: {:?}", msg);
+                log::debug!("msg: {:?}", msg);
                 match msg.payload() {
                     NetworkMessage::Version(version) => {
                         let _ = stream.shutdown(Shutdown::Both);
@@ -305,12 +313,13 @@ fn try_connect(address: SocketAddr) -> Option<VersionMessage> {
 }
 
 // TODO:
-// - change println to proper logging
 // - general clean up
 // - error handling
 
 fn main() {
     let args = Args::parse();
+    simple_logger::init_with_level(args.log_level).unwrap();
+
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(&args.address).unwrap();
 
@@ -321,7 +330,7 @@ fn main() {
     let (output_sender, output_receiver) = unbounded();
 
     metricserver::start(&args.metrics_address).unwrap();
-    println!("metrics-server started on {}", &args.metrics_address);
+    log::info!("metrics-server started on {}", &args.metrics_address);
 
     crossbeam::scope(|s| {
         s.spawn(|_| loop {
@@ -350,7 +359,7 @@ fn main() {
         let mut wtr = csv::Writer::from_writer(file);
 
         for output in output_receiver.iter() {
-            println!("Sink received {:?}", output);
+            log::debug!("Sink received {:?}", output);
 
             let network = output.network.to_string();
             let version = output.input.version.to_string();
