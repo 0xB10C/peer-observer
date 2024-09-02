@@ -2,6 +2,7 @@
 
 pub extern crate bitcoin;
 pub extern crate clap;
+pub extern crate log;
 pub extern crate prost;
 pub extern crate simple_logger;
 

@@ -8,6 +8,7 @@ use shared::clap;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
+use shared::log;
 use shared::mempool::mempool_event;
 use shared::net_conn::connection_event;
 use shared::net_msg;

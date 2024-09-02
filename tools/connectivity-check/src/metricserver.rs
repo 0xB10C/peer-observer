@@ -1,3 +1,5 @@
+use prometheus::Encoder;
+use shared::log;
 use std::error;
 use std::fmt;
 use std::io;
@@ -6,8 +8,6 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 use std::string::FromUtf8Error;
 use std::thread;
-
-use prometheus::Encoder;
 
 const LOG_TARGET: &str = "metricserver";
 
