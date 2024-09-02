@@ -2,7 +2,6 @@
 
 use libbpf_rs::skel::SkelBuilder;
 use libbpf_rs::RingBufferBuilder;
-use nng::{Protocol, Socket};
 use prost::Message;
 use shared::clap;
 use shared::clap::Parser;
@@ -14,6 +13,7 @@ use shared::ctypes::{
 use shared::event_msg::event_msg::Event;
 use shared::event_msg::EventMsg;
 use shared::log;
+use shared::nng::{Protocol, Socket};
 use shared::simple_logger;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
 use std::time::Duration;

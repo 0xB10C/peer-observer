@@ -1,8 +1,5 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use nng::options::protocol::pubsub::Subscribe;
-use nng::options::Options;
-use nng::{Protocol, Socket};
 use shared::addrman::addrman_event;
 use shared::clap;
 use shared::clap::Parser;
@@ -13,6 +10,9 @@ use shared::mempool::mempool_event;
 use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
+use shared::nng::options::protocol::pubsub::Subscribe;
+use shared::nng::options::Options;
+use shared::nng::{Protocol, Socket};
 use shared::prost::Message;
 use shared::simple_logger::SimpleLogger;
 use shared::util;

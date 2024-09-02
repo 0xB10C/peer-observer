@@ -1,13 +1,13 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use nng::options::protocol::pubsub::Subscribe;
-use nng::options::Options;
-use nng::{Protocol, Socket};
 use shared::clap;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
+use shared::nng::options::protocol::pubsub::Subscribe;
+use shared::nng::options::Options;
+use shared::nng::{Protocol, Socket};
 use shared::prost::Message;
 use shared::simple_logger;
 
