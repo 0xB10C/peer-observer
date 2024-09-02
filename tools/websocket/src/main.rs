@@ -7,7 +7,9 @@ use nng::options::Options;
 use nng::{Protocol, Socket};
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
+use shared::log;
 use shared::prost::Message;
+use shared::simple_logger;
 use std::net::TcpListener;
 use tungstenite::accept;
 
@@ -16,6 +18,8 @@ const WS_ADDRESS: &'static str = "127.0.0.1:47482";
 
 #[async_std::main]
 async fn main() {
+    simple_logger::init_with_level(log::Level::Debug).unwrap();
+
     let (mut sender, broadcast_receiver) = broadcast(128);
     sender.set_overflow(true);
     let inactive_broadcast_receiver = broadcast_receiver.deactivate();
@@ -32,17 +36,17 @@ async fn main() {
             let unwrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap().event;
             if let Some(event) = unwrapped {
                 if let Err(e) = sender.broadcast(event).await {
-                    println!("Could not send msg event into broadcast channel: {}", e);
+                    log::error!("Could not send msg event into broadcast channel: {}", e);
                 }
             }
         }
     });
 
-    println!("Starting websocket server on {}", WS_ADDRESS);
+    log::info!("Starting websocket server on {}", WS_ADDRESS);
     let server = match TcpListener::bind(WS_ADDRESS) {
         Ok(s) => s,
         Err(e) => {
-            println!("Could not start websocket server on {}: {}", WS_ADDRESS, e);
+            log::error!("Could not start websocket server on {}: {}", WS_ADDRESS, e);
             return;
         }
     };
@@ -54,7 +58,7 @@ async fn main() {
                 task::spawn(async move {
                     match accept(stream) {
                         Ok(mut websocket) => {
-                            println!(
+                            log::info!(
                                 "Accepted new websocket connection: connections={}",
                                 r.receiver_count()
                             );
@@ -67,7 +71,7 @@ async fn main() {
                                                 if let Err(e) =
                                                     websocket.send(tungstenite::Message::Text(msg))
                                                 {
-                                                    println!("Could not send msg to websocket: {}. Connection probably closed.", e);
+                                                    log::warn!("Could not send msg to websocket: {}. Connection probably closed.", e);
                                                     // Try our best to close and flush the websocket. If we can't,
                                                     // we can't..
                                                     let _ = websocket.close(None);
@@ -76,7 +80,7 @@ async fn main() {
                                                 }
                                             }
                                             Err(e) => {
-                                                println!(
+                                                log::error!(
                                                     "Could not serialize the message to JSON: {}",
                                                     e
                                                 )
@@ -84,19 +88,19 @@ async fn main() {
                                         }
                                     }
                                     Err(e) => {
-                                        println!("Could not receive msg: {}", e);
+                                        log::error!("Could not receive msg: {}", e);
                                     }
                                 }
                             }
                         }
                         Err(e) => {
-                            println!("Failed to open websocket on incoming connection: {}", e);
+                            log::warn!("Failed to open websocket on incoming connection: {}", e);
                         }
                     }
                 });
             }
             Err(e) => {
-                println!("Failed to accept incomming TCP connection: {}", e);
+                log::warn!("Failed to accept incomming TCP connection: {}", e);
             }
         }
     }
