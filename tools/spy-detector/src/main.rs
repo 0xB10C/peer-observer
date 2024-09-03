@@ -8,6 +8,8 @@ use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
 use shared::net_msg;
+use shared::net_msg::GetData;
+use shared::primitive::InventoryItem;
 use shared::prost::Message;
 use shared::simple_logger;
 use std::sync::atomic;
