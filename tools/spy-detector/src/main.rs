@@ -5,14 +5,14 @@ use std::time::{Duration, Instant};
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
+use shared::event_msg;
+use shared::event_msg::event_msg::Event;
 use shared::net_msg;
-use shared::net_msg::GetData;
-use shared::primitive::InventoryItem;
 use shared::prost::Message;
 use simple_logger::SimpleLogger;
 
 const ADDRESS: &str = "tcp://127.0.0.1:8883";
-const STATS_INTERVAL: Duration = Duration::from_secs(120); // Duration(seconds) to print stats of peers
+//const STATS_INTERVAL: Duration = Duration::from_secs(120); // Duration(seconds) to print stats of peers
 
 #[derive(Debug, Default, Clone, PartialEq)]
 struct PeerStats {
@@ -58,28 +58,41 @@ fn main() {
 
     loop {
         let msg = sub.recv().unwrap();
-        //let unwrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap().event;
-        let inventory_item = InventoryItem::decode(msg.as_slice()).unwrap();
+        let message = event_msg::EventMsg::decode(msg.as_slice()).unwrap().event;
 
-        println!("{:}", inventory_item);
+        // println!("{:?}", message);
 
-        //process_p2p_message(&peer_map, &inventory_item);
+        if let Some(event) = message {
+            match event {
+                Event::Msg(msg) => {
+                    if let Some(p2p_msg) = msg.msg {
+                        match p2p_msg {
+                            net_msg::message::Msg::Inv(_) => {
+                                println!("{}", p2p_msg);
+                            }
 
-        // if let Some(event) = unwrapped {
-        //     match event {
-        //         Event::Msg(msg) => {
-        //             if let Some(p2p_msg) = msg.msg {
-        //                 process_p2p_message(&peer_map, &msg.meta, &p2p_msg.to_string());
-        //             }
-        //         }
-        //         Event::Conn(c) => {
-        //             if let Some(event) = c.event {
-        //                 process_connection_event(&peer_map, &event.to_string());
-        //             }
-        //         }
-        //         _ => {}
-        //     }
-        // }
+                            net_msg::message::Msg::Getdata(_) => {
+                                println!("{}", p2p_msg);
+                            }
+
+                            net_msg::message::Msg::Tx(_) => {
+                                println!("{}", p2p_msg);
+                            }
+
+                            _ => {}
+                        }
+                        // process_p2p_message(&peer_map, &msg.meta, &p2p_msg.to_string());
+                    }
+                }
+                Event::Conn(c) => {
+                    if let Some(event) = c.event {
+                        // process_connection_event(&peer_map, &event.to_string());
+                        println!("{}", event);
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 }
 
