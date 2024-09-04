@@ -25,14 +25,14 @@ mod metricserver;
 
 const LOG_TARGET: &str = "main";
 
-/// Simple peer-observer tool that produces Prometheus metrics for received event messages
+/// A peer-observer tool that produces Prometheus metrics for received events
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    // The extractor address the tool should connect to.
+    /// The extractor address the tool should connect to.
     #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
     address: String,
-    // The metrics server address the tool should listen on.
+    /// The metrics server address the tool should listen on.
     #[arg(short, long, default_value = "127.0.0.1:8282")]
     metrics_address: String,
 }
