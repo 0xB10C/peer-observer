@@ -68,20 +68,19 @@ fn main() {
                     if let Some(p2p_msg) = msg.msg {
                         match p2p_msg {
                             net_msg::message::Msg::Inv(_) => {
-                                println!("{}", p2p_msg);
+                                process_inv_msg(&peer_map, &p2p_msg);
                             }
 
                             net_msg::message::Msg::Getdata(_) => {
-                                println!("{}", p2p_msg);
+                                process_getdata_msg(&peer_map, &p2p_msg);
                             }
 
                             net_msg::message::Msg::Tx(_) => {
-                                println!("{}", p2p_msg);
+                                process_tx_msg(&peer_map, &p2p_msg);
                             }
 
                             _ => {}
                         }
-                        // process_p2p_message(&peer_map, &msg.meta, &p2p_msg.to_string());
                     }
                 }
                 Event::Conn(c) => {
@@ -96,79 +95,38 @@ fn main() {
     }
 }
 
-// fn process_inv_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &str) {
-//     let mut map = peer_map.lock().unwrap();
-//     let peer_id = format!("{}", meta.peer_id);
-//     let stats = map.entry(peer_id.clone()).or_default();
+fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
+    let mut map = peer_map.lock().unwrap();
+    let peer_id = format!("{}", msg);
+    let stats = map.entry(peer_id.clone()).or_default();
 
-//     stats.last_activity = Some(Instant::now());
+    println!("{}", msg);
+}
 
-//     let msg_type = p2p_msg.split('(').next().unwrap_or("").trim();
+fn process_getdata_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
+    let mut map = peer_map.lock().unwrap();
+    let peer_id = format!("{}", msg);
 
-//     match msg_type {
-//         "Inv" => {
-//             if meta.inbound {
-//                 stats.inv_received += 1;
-//             } else {
-//                 stats.inv_sent += 1;
-//             }
-//         }
-//         "GetData" => {
-//             if meta.inbound {
-//                 stats.getdata_received += 1;
-//             } else {
-//                 stats.getdata_sent += 1;
-//             }
-//         }
-//         "Tx" => {
-//             if meta.inbound {
-//                 stats.tx_received += 1;
-//             } else {
-//                 stats.tx_sent += 1;
-//             }
-//         }
-//         _ => return,
-//     }
-// }
+    println!("{}", msg);
+}
 
-// fn process_getdata_message(peer_map: &PeerMap, meta: &net_msg::Metadata, p2p_msg: &str) {
-//     let mut map = peer_map.lock().unwrap();
-//     let peer_id = format!("{}", meta.peer_id);
-//     let stats = map.entry(peer_id.clone()).or_default();
+fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
+    let mut map = peer_map.lock().unwrap();
+    let peer_id = format!("{}", msg);
 
-//     stats.last_activity = Some(Instant::now());
+    println!("{}", msg);
+}
 
-//     let msg_type = p2p_msg.split('(').next().unwrap_or("").trim();
-
-//     match msg_type {
-//         "WitnessTx" => {
-//             if meta.inbound {
-//                 stats.getdata_received += 1;
-//             } else {
-//                 stats.getdata_sent += 1;
-//             }
-//         }
-//         "Tx" => {
-//             if meta.inbound {
-//                 stats.tx_received += 1;
-//             } else {
-//                 stats.tx_sent += 1;
-//             }
-//         }
-//         _ => return,
-//     }
-// }
-
-// fn process_connection_event(peer_map: &PeerMap, event: &str) {
-//     if event.starts_with("closed") {
-//         let peer_id = event.split(' ').nth(1).unwrap_or("");
-//         let mut map = peer_map.lock().unwrap();
-//         if let Some(stats) = map.remove(peer_id) {
-//             println!("Connection closed for peer: {}", peer_id);
-//             print_peer_stats(peer_id, &stats);
-//         }
-//     }
-// }
+fn process_connection_event(peer_map: &PeerMap, event: &str) {
+    if event.starts_with("closed") {
+        let peer_id = event.split(' ').nth(1).unwrap_or("");
+        let mut map = peer_map.lock().unwrap();
+        if let Some(stats) = map.remove(peer_id) {
+            println!("Connection closed for peer: {}", peer_id);
+            //print_peer_stats(peer_id, &stats);
+        }
+    }
+}
 
 // fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
 //     println!(
