@@ -14,7 +14,7 @@ use shared::nng::options::protocol::pubsub::Subscribe;
 use shared::nng::options::Options;
 use shared::nng::{Protocol, Socket};
 use shared::prost::Message;
-use shared::simple_logger::SimpleLogger;
+use shared::simple_logger;
 use shared::util;
 use shared::validation::validation_event;
 use std::collections::HashMap;
@@ -35,14 +35,16 @@ struct Args {
     /// The metrics server address the tool should listen on.
     #[arg(short, long, default_value = "127.0.0.1:8282")]
     metrics_address: String,
+    /// The log level the tool should run with. Valid log levels
+    /// are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
+    #[arg(short, long, default_value_t = log::Level::Debug)]
+    log_level: log::Level,
 }
 
 fn main() {
     let args = Args::parse();
 
-    SimpleLogger::new()
-        .init()
-        .expect("Could not setup logging.");
+    simple_logger::init_with_level(args.log_level).unwrap();
 
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
