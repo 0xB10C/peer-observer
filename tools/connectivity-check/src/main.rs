@@ -42,21 +42,20 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
 
-/// Simple peer-observer tool that checks the connectivity of received addr message entries
+/// A peer-observer tool that checks the connectivity of received addr message entries
 /// and offers stats as prometheus metrics
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    // The extractor address the tool should connect to.
+    /// The extractor address the tool should connect to.
     #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
     address: String,
-    // The metrics server address the tool should listen on.
+    /// The metrics server address the tool should listen on.
     #[arg(short, long, default_value = "127.0.0.1:18282")]
     metrics_address: String,
-
-    // The log level the tool should run with.
-    // Valid log levels are "trace", "debug", "info", "warn",
-    // "error". See https://docs.rs/log/latest/log/enum.Level.html
+    /// The log level the tool should run with.
+    /// Valid log levels are "trace", "debug", "info", "warn",
+    /// "error". See https://docs.rs/log/latest/log/enum.Level.html
     #[arg(short, long, default_value_t = log::Level::Debug)]
     log_level: log::Level,
 }

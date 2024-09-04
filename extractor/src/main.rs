@@ -145,8 +145,8 @@ struct Args {
     #[arg(long)]
     addrman_tracepoints: bool,
 
-    // The log level the extractor should run with. Valid log levels are "trace",
-    // "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
+    /// The log level the extractor should run with. Valid log levels are "trace",
+    /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
     #[arg(short, long, default_value_t = log::Level::Debug)]
     log_level: log::Level,
 }

@@ -11,16 +11,16 @@ use shared::nng::{Protocol, Socket};
 use shared::prost::Message;
 use shared::simple_logger;
 
-/// Simple peer-observer tool that logs all received event messages
+/// A peer-observer tool that logs all received event messages
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    // The extractor address the tool should connect to.
+    /// The extractor address the tool should connect to.
     #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
     address: String,
-    // The log level the tool should run on. Events are logged with
-    // the INFO log level. Valid log levels are "trace", "debug",
-    // "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
+    /// The log level the tool should run on. Events are logged with
+    /// the INFO log level. Valid log levels are "trace", "debug",
+    /// "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
     #[arg(short, long, default_value_t = log::Level::Debug)]
     log_level: log::Level,
 }
