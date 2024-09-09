@@ -1,3 +1,5 @@
+use shared::clap;
+use shared::clap::Parser;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -13,6 +15,14 @@ use simple_logger::SimpleLogger;
 
 const ADDRESS: &str = "tcp://127.0.0.1:8883";
 //const STATS_INTERVAL: Duration = Duration::from_secs(120); // Duration(seconds) to print stats of peers
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about=None)]
+struct Args {
+    /// set the threshold for spy detection (default value is 5)
+    #[arg(short, long, default_value = "5")]
+    threshold: u32,
+}
 
 #[derive(Debug, Default, Clone, PartialEq)]
 struct PeerStats {
@@ -30,6 +40,10 @@ type PeerMap = Arc<Mutex<HashMap<String, PeerStats>>>;
 // const LOG_TARGET: &str = "main";
 
 fn main() {
+    let args = Args::parse();
+
+    let threshold = &args.threshold;
+
     SimpleLogger::new()
         .init()
         .expect("Cannot setup Simple Logger.");
