@@ -1,4 +1,13 @@
+<<<<<<< HEAD
 use dashmap::DashMap;
+=======
+use shared::clap;
+use shared::clap::Parser;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+>>>>>>> 60aeb09 (add: clap args)
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
@@ -19,19 +28,37 @@ use std::time::Instant;
 const ADDRESS: &str = "tcp://127.0.0.1:8883";
 const STATS_INTERVAL: Duration = Duration::from_secs(10); // Duration(seconds) to print stats of peers
 
+<<<<<<< HEAD
 const LOG_TARGET: &str = "main";
 
+=======
+>>>>>>> 60aeb09 (add: clap args)
 #[derive(Parser, Debug)]
 #[command(version, about, long_about=None)]
 struct Args {
     /// set the threshold for spy detection (default value is 5)
     #[arg(short, long, default_value = "5")]
     threshold: u32,
+<<<<<<< HEAD
 
     /// The log level the tool should run with. Valid log levels
     /// are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
     #[arg(short, long, default_value_t = log::Level::Debug)]
     log_level: log::Level,
+=======
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
+struct PeerStats {
+    inv_tx_sent: u32,                // TX(INV) sent by the peer
+    inv_wtx_received: u32,           // TX(INV) received by the peer
+    inv_witnesstx_received: u32,     // WitnessTX(INV) received by the peer
+    getdata_witnesstx_sent: u32,     // WitnessTX(GETDATA) sent by the peer
+    getdata_witnesstx_received: u32, // WitnessTX(GETDATA) received by the peer
+    tx_sent: u32,                    // TX sent by the peer
+    tx_received: u32,                // TX received by the peer
+    last_activity: Option<Instant>,  // Last activity time of the peer
+>>>>>>> 60aeb09 (add: clap args)
 }
 
 #[derive(Debug, Default)]
@@ -54,12 +81,20 @@ type PeerMap = Arc<DashMap<String, PeerStats>>;
 fn main() {
     let args = Args::parse();
 
+<<<<<<< HEAD
     //to-do: use threshold at appropriate location
     let threshold = &args.threshold;
 
     simple_logger::init_with_level(args.log_level).unwrap();
 
     log::info!(target: LOG_TARGET, "Starting spy-detector...",);
+=======
+    let threshold = &args.threshold;
+
+    SimpleLogger::new()
+        .init()
+        .expect("Cannot setup Simple Logger.");
+>>>>>>> 60aeb09 (add: clap args)
 
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
