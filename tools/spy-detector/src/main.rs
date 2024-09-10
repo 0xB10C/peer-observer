@@ -1,11 +1,19 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 use dashmap::DashMap;
 =======
 use shared::clap;
+=======
+use chrono::format::Item;
+use dashmap::DashMap;
+>>>>>>> 6b10299 (added loop for matching individual inv messages)
 use shared::clap::Parser;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use shared::primitive::{InventoryItem, Transaction};
+use shared::{clap, primitive};
+use std::sync::atomic;
+use std::sync::atomic::AtomicU32;
+use std::sync::Arc;
+use std::time::Instant;
 
 >>>>>>> 60aeb09 (add: clap args)
 use nng::options::protocol::pubsub::Subscribe;
@@ -17,6 +25,7 @@ use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
 use shared::net_msg;
+use shared::net_msg::Inv;
 use shared::prost::Message;
 use shared::simple_logger;
 use std::sync::atomic;
@@ -48,8 +57,9 @@ struct Args {
 =======
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default)]
 struct PeerStats {
+<<<<<<< HEAD
     inv_tx_sent: u32,                // TX(INV) sent by the peer
     inv_wtx_received: u32,           // TX(INV) received by the peer
     inv_witnesstx_received: u32,     // WitnessTX(INV) received by the peer
@@ -77,6 +87,20 @@ struct PeerStats {
 }
 
 type PeerMap = Arc<DashMap<String, PeerStats>>;
+=======
+    inv_tx_sent: AtomicU32,                // TX(INV) sent by the peer
+    inv_wtx_received: AtomicU32,           // TX(INV) received by the peer
+    inv_witnesstx_received: AtomicU32,     // WitnessTX(INV) received by the peer
+    getdata_witnesstx_sent: AtomicU32,     // WitnessTX(GETDATA) sent by the peer
+    getdata_witnesstx_received: AtomicU32, // WitnessTX(GETDATA) received by the peer
+    tx_sent: AtomicU32,                    // TX sent by the peer
+    tx_received: AtomicU32,                // TX received by the peer
+    last_activity: Option<Instant>,        // Last activity time of the peer
+}
+
+type PeerMap = Arc<DashMap<String, PeerStats>>;
+const LOG_TARGET: &str = "main";
+>>>>>>> 6b10299 (added loop for matching individual inv messages)
 
 fn main() {
     let args = Args::parse();
@@ -156,7 +180,11 @@ fn main() {
                 }
                 Event::Conn(c) => {
                     if let Some(event) = c.event {
+<<<<<<< HEAD
                         process_connection_event(&peer_map, &event.to_string());
+=======
+                        // process_connection_event(&peer_map, &event.to_string());
+>>>>>>> 6b10299 (added loop for matching individual inv messages)
                         //println!("{}", event);
                     }
                 }
@@ -166,10 +194,43 @@ fn main() {
     }
 }
 
+<<<<<<< HEAD
 fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg, msg_type: u32, peer_id: u64) {
     let stats = peer_map
         .entry(peer_id.to_string())
         .or_insert_with(PeerStats::default);
+=======
+fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
+    let peer_id = format!("{}", msg);
+    let stats = peer_map
+        .entry(peer_id.clone())
+        .or_insert_with(PeerStats::default);
+
+    if let net_msg::message::Msg::Inv(inv) = msg {
+        for inv_item in &inv.items {
+            match inv_item.inv_type() {
+                "Tx" => {
+                    //todo
+                    println!("Tx recieved {}", inv_item);
+                    stats.inv_tx_sent.fetch_add(1, atomic::Ordering::Relaxed);
+                }
+                "WTx" => {
+                    //todo
+                    stats
+                        .inv_wtx_received
+                        .fetch_add(1, atomic::Ordering::Relaxed);
+                }
+                "WitnessTx" => {
+                    //todo
+                    stats
+                        .inv_witnesstx_received
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }
+                _ => {} // Ignore other types
+            }
+        }
+    }
+>>>>>>> 6b10299 (added loop for matching individual inv messages)
 
     if let net_msg::message::Msg::Inv(inv) = msg {
         for inv_item in &inv.items {
@@ -209,6 +270,7 @@ fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg, msg_type: u3
     }
 }
 
+<<<<<<< HEAD
 fn process_getdata_msg(
     peer_map: &PeerMap,
     msg: &net_msg::message::Msg,
@@ -217,6 +279,12 @@ fn process_getdata_msg(
 ) {
     let stats = peer_map
         .entry(peer_id.to_string())
+=======
+fn process_getdata_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
+    let peer_id = format!("{}", msg);
+    let stats = peer_map
+        .entry(peer_id.clone())
+>>>>>>> 6b10299 (added loop for matching individual inv messages)
         .or_insert_with(PeerStats::default);
 
     if let net_msg::message::Msg::Inv(inv) = msg {
@@ -239,9 +307,16 @@ fn process_getdata_msg(
     }
 }
 
+<<<<<<< HEAD
 fn process_tx_msg(peer_map: &PeerMap, msg_type: u32, peer_id: u64) {
     let stats = peer_map
         .entry(peer_id.to_string())
+=======
+fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
+    let peer_id = format!("{}", msg);
+    let stats = peer_map
+        .entry(peer_id.clone())
+>>>>>>> 6b10299 (added loop for matching individual inv messages)
         .or_insert_with(PeerStats::default);
 
     if msg_type == 0 {
@@ -251,6 +326,7 @@ fn process_tx_msg(peer_map: &PeerMap, msg_type: u32, peer_id: u64) {
     }
 }
 
+<<<<<<< HEAD
 fn process_connection_event(peer_map: &PeerMap, event: &str) {
     if event.starts_with("closed") {
         let peer_id = event.split(' ').nth(1).unwrap_or("");
@@ -260,6 +336,17 @@ fn process_connection_event(peer_map: &PeerMap, event: &str) {
         }
     }
 }
+=======
+// fn process_connection_event(peer_map: &PeerMap, event: &str) {
+//     if event.starts_with("closed") {
+//         let peer_id = event.split(' ').nth(1).unwrap_or("");
+//         if let Some(stats) = map.remove(peer_id) {
+//             println!("Connection closed for peer: {}", peer_id);
+//             //print_peer_stats(peer_id, &stats);
+//         }
+//     }
+// }
+>>>>>>> 6b10299 (added loop for matching individual inv messages)
 
 fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
     println!(
