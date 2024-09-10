@@ -12,3 +12,4 @@ shared = { version = "0.1.0", path = "../../shared" }
 simple_logger = "5.0.0"
 log = "0.4.22"
 screen-13 = "0.11.4"
+dashmap = "6.1.0"

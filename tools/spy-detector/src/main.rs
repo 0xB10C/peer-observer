@@ -1,8 +1,12 @@
-use shared::clap;
+use chrono::format::Item;
+use dashmap::DashMap;
 use shared::clap::Parser;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use shared::primitive::{InventoryItem, Transaction};
+use shared::{clap, primitive};
+use std::sync::atomic;
+use std::sync::atomic::AtomicU32;
+use std::sync::Arc;
+use std::time::Instant;
 
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
@@ -10,6 +14,7 @@ use nng::{Protocol, Socket};
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::net_msg;
+use shared::net_msg::Inv;
 use shared::prost::Message;
 use simple_logger::SimpleLogger;
 
@@ -24,20 +29,20 @@ struct Args {
     threshold: u32,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default)]
 struct PeerStats {
-    inv_tx_sent: u32,                // TX(INV) sent by the peer
-    inv_wtx_received: u32,           // TX(INV) received by the peer
-    inv_witnesstx_received: u32,     // WitnessTX(INV) received by the peer
-    getdata_witnesstx_sent: u32,     // WitnessTX(GETDATA) sent by the peer
-    getdata_witnesstx_received: u32, // WitnessTX(GETDATA) received by the peer
-    tx_sent: u32,                    // TX sent by the peer
-    tx_received: u32,                // TX received by the peer
-    last_activity: Option<Instant>,  // Last activity time of the peer
+    inv_tx_sent: AtomicU32,                // TX(INV) sent by the peer
+    inv_wtx_received: AtomicU32,           // TX(INV) received by the peer
+    inv_witnesstx_received: AtomicU32,     // WitnessTX(INV) received by the peer
+    getdata_witnesstx_sent: AtomicU32,     // WitnessTX(GETDATA) sent by the peer
+    getdata_witnesstx_received: AtomicU32, // WitnessTX(GETDATA) received by the peer
+    tx_sent: AtomicU32,                    // TX sent by the peer
+    tx_received: AtomicU32,                // TX received by the peer
+    last_activity: Option<Instant>,        // Last activity time of the peer
 }
 
-type PeerMap = Arc<Mutex<HashMap<String, PeerStats>>>;
-// const LOG_TARGET: &str = "main";
+type PeerMap = Arc<DashMap<String, PeerStats>>;
+const LOG_TARGET: &str = "main";
 
 fn main() {
     let args = Args::parse();
@@ -54,7 +59,7 @@ fn main() {
     let all_topics = vec![];
     sub.set_opt::<Subscribe>(all_topics).unwrap();
 
-    let peer_map: PeerMap = Arc::new(Mutex::new(HashMap::new()));
+    let peer_map: PeerMap = Arc::new(DashMap::new());
 
     // Spawn a thread for periodic stats display
     // let display_peer_map = peer_map.clone();
@@ -100,7 +105,7 @@ fn main() {
                 Event::Conn(c) => {
                     if let Some(event) = c.event {
                         // process_connection_event(&peer_map, &event.to_string());
-                        println!("{}", event);
+                        //println!("{}", event);
                     }
                 }
                 _ => {}
@@ -110,37 +115,66 @@ fn main() {
 }
 
 fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
-    let mut map = peer_map.lock().unwrap();
     let peer_id = format!("{}", msg);
-    let stats = map.entry(peer_id.clone()).or_default();
+    let stats = peer_map
+        .entry(peer_id.clone())
+        .or_insert_with(PeerStats::default);
+
+    if let net_msg::message::Msg::Inv(inv) = msg {
+        for inv_item in &inv.items {
+            match inv_item.inv_type() {
+                "Tx" => {
+                    //todo
+                    println!("Tx recieved {}", inv_item);
+                    stats.inv_tx_sent.fetch_add(1, atomic::Ordering::Relaxed);
+                }
+                "WTx" => {
+                    //todo
+                    stats
+                        .inv_wtx_received
+                        .fetch_add(1, atomic::Ordering::Relaxed);
+                }
+                "WitnessTx" => {
+                    //todo
+                    stats
+                        .inv_witnesstx_received
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }
+                _ => {} // Ignore other types
+            }
+        }
+    }
 
     println!("{}", msg);
 }
 
 fn process_getdata_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
-    let mut map = peer_map.lock().unwrap();
     let peer_id = format!("{}", msg);
+    let stats = peer_map
+        .entry(peer_id.clone())
+        .or_insert_with(PeerStats::default);
 
     println!("{}", msg);
 }
 
 fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
-    let mut map = peer_map.lock().unwrap();
     let peer_id = format!("{}", msg);
+    let stats = peer_map
+        .entry(peer_id.clone())
+        .or_insert_with(PeerStats::default);
 
     println!("{}", msg);
 }
 
-fn process_connection_event(peer_map: &PeerMap, event: &str) {
-    if event.starts_with("closed") {
-        let peer_id = event.split(' ').nth(1).unwrap_or("");
-        let mut map = peer_map.lock().unwrap();
-        if let Some(stats) = map.remove(peer_id) {
-            println!("Connection closed for peer: {}", peer_id);
-            //print_peer_stats(peer_id, &stats);
-        }
-    }
-}
+// fn process_connection_event(peer_map: &PeerMap, event: &str) {
+//     if event.starts_with("closed") {
+//         let peer_id = event.split(' ').nth(1).unwrap_or("");
+//         if let Some(stats) = map.remove(peer_id) {
+//             println!("Connection closed for peer: {}", peer_id);
+//             //print_peer_stats(peer_id, &stats);
+//         }
+//     }
+// }
 
 // fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
 //     println!(
