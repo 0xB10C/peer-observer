@@ -210,18 +210,17 @@ fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
         for inv_item in &inv.items {
             match inv_item.inv_type() {
                 "Tx" => {
-                    //todo
-                    println!("Tx recieved {}", inv_item);
+                    println!("Tx recieved ");
                     stats.inv_tx_sent.fetch_add(1, atomic::Ordering::Relaxed);
                 }
                 "WTx" => {
-                    //todo
+                    println!("WTx recieved ");
                     stats
                         .inv_wtx_received
                         .fetch_add(1, atomic::Ordering::Relaxed);
                 }
                 "WitnessTx" => {
-                    //todo
+                    println!("WitnessTx recieved ");
                     stats
                         .inv_witnesstx_received
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -230,6 +229,7 @@ fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
             }
         }
     }
+<<<<<<< HEAD
 >>>>>>> 6b10299 (added loop for matching individual inv messages)
 
     if let net_msg::message::Msg::Inv(inv) = msg {
@@ -268,6 +268,8 @@ fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
             }
         }
     }
+=======
+>>>>>>> c36c87b (refractor: connection event & print peer stats for closed connection)
 }
 
 <<<<<<< HEAD
@@ -327,11 +329,15 @@ fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c36c87b (refractor: connection event & print peer stats for closed connection)
 fn process_connection_event(peer_map: &PeerMap, event: &str) {
     if event.starts_with("closed") {
         let peer_id = event.split(' ').nth(1).unwrap_or("");
         if let Some(stats) = peer_map.remove(peer_id) {
             println!("Connection closed for peer: {}", peer_id);
+<<<<<<< HEAD
             print_peer_stats(peer_id, &stats.1);
         }
     }
@@ -362,6 +368,24 @@ fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
         stats.tx_sent,
         stats.tx_received,
         stats.last_activity
+=======
+            print_peer_stats(peer_id, &stats);
+        }
+    }
+}
+
+fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
+    println!(
+        "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+        peer_addr,
+        stats.inv_sent,
+        stats.inv_received,
+        stats.getdata_sent,
+        stats.getdata_received,
+        stats.tx_sent,
+        stats.tx_received
+>>>>>>> c36c87b (refractor: connection event & print peer stats for closed connection)
     );
 }
 
