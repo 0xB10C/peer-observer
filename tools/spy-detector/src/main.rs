@@ -79,8 +79,6 @@ fn main() {
         let msg = sub.recv().unwrap();
         let message = event_msg::EventMsg::decode(msg.as_slice()).unwrap().event;
 
-        // println!("{:?}", message);
-
         if let Some(event) = message {
             match event {
                 Event::Msg(msg) => {
@@ -97,7 +95,6 @@ fn main() {
                             net_msg::message::Msg::Tx(_) => {
                                 process_tx_msg(&peer_map, &p2p_msg);
                             }
-
                             _ => {}
                         }
                     }
@@ -124,18 +121,17 @@ fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
         for inv_item in &inv.items {
             match inv_item.inv_type() {
                 "Tx" => {
-                    //todo
-                    println!("Tx recieved {}", inv_item);
+                    println!("Tx recieved ");
                     stats.inv_tx_sent.fetch_add(1, atomic::Ordering::Relaxed);
                 }
                 "WTx" => {
-                    //todo
+                    println!("WTx recieved ");
                     stats
                         .inv_wtx_received
                         .fetch_add(1, atomic::Ordering::Relaxed);
                 }
                 "WitnessTx" => {
-                    //todo
+                    println!("WitnessTx recieved ");
                     stats
                         .inv_witnesstx_received
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -144,8 +140,6 @@ fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
             }
         }
     }
-
-    println!("{}", msg);
 }
 
 fn process_getdata_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
@@ -166,29 +160,29 @@ fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
     println!("{}", msg);
 }
 
-// fn process_connection_event(peer_map: &PeerMap, event: &str) {
-//     if event.starts_with("closed") {
-//         let peer_id = event.split(' ').nth(1).unwrap_or("");
-//         if let Some(stats) = map.remove(peer_id) {
-//             println!("Connection closed for peer: {}", peer_id);
-//             //print_peer_stats(peer_id, &stats);
-//         }
-//     }
-// }
+fn process_connection_event(peer_map: &PeerMap, event: &str) {
+    if event.starts_with("closed") {
+        let peer_id = event.split(' ').nth(1).unwrap_or("");
+        if let Some(stats) = peer_map.remove(peer_id) {
+            println!("Connection closed for peer: {}", peer_id);
+            print_peer_stats(peer_id, &stats);
+        }
+    }
+}
 
-// fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
-//     println!(
-//         "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
-//         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-//         peer_addr,
-//         stats.inv_sent,
-//         stats.inv_received,
-//         stats.getdata_sent,
-//         stats.getdata_received,
-//         stats.tx_sent,
-//         stats.tx_received
-//     );
-// }
+fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
+    println!(
+        "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+        peer_addr,
+        stats.inv_sent,
+        stats.inv_received,
+        stats.getdata_sent,
+        stats.getdata_received,
+        stats.tx_sent,
+        stats.tx_received
+    );
+}
 
 // fn display_all_stats(peer_map: &PeerMap) {
 //     let map = peer_map.lock().unwrap();
