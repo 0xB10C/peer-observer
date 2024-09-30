@@ -148,7 +148,21 @@ fn process_getdata_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
         .entry(peer_id.clone())
         .or_insert_with(PeerStats::default);
 
-    println!("{}", msg);
+    if let net_msg::message::Msg::Inv(inv) = msg {
+        for inv_item in &inv.items {
+            match inv_item.inv_type() {
+                "WitnessTx" => {
+                    println!("WitnessTx recieved ");
+                    stats
+                        .getdata_witnesstx_received
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }
+
+                //todo: add functionality for witness_sent messages
+                _ => {} // Ignore other types
+            }
+        }
+    }
 }
 
 fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
@@ -156,6 +170,8 @@ fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
     let stats = peer_map
         .entry(peer_id.clone())
         .or_insert_with(PeerStats::default);
+
+    //todo: add functionality for tx_sent & tx_received messages
 
     println!("{}", msg);
 }
@@ -165,24 +181,24 @@ fn process_connection_event(peer_map: &PeerMap, event: &str) {
         let peer_id = event.split(' ').nth(1).unwrap_or("");
         if let Some(stats) = peer_map.remove(peer_id) {
             println!("Connection closed for peer: {}", peer_id);
-            print_peer_stats(peer_id, &stats);
+            //print_peer_stats(peer_id, &stats);
         }
     }
 }
 
-fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
-    println!(
-        "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
-        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-        peer_addr,
-        stats.inv_sent,
-        stats.inv_received,
-        stats.getdata_sent,
-        stats.getdata_received,
-        stats.tx_sent,
-        stats.tx_received
-    );
-}
+// fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
+//     println!(
+//         "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
+//         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+//         peer_addr,
+//         stats.inv_sent,
+//         stats.inv_received,
+//         stats.getdata_sent,
+//         stats.getdata_received,
+//         stats.tx_sent,
+//         stats.tx_received
+//     );
+// }
 
 // fn display_all_stats(peer_map: &PeerMap) {
 //     let map = peer_map.lock().unwrap();
