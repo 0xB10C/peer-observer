@@ -1,25 +1,22 @@
-use chrono::format::Item;
 use dashmap::DashMap;
-use shared::clap::Parser;
-use shared::primitive::{InventoryItem, Transaction};
-use shared::{clap, primitive};
-use std::sync::atomic;
-use std::sync::atomic::AtomicU32;
-use std::sync::Arc;
-use std::time::Instant;
-
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
+use shared::clap;
+use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::net_msg;
-use shared::net_msg::Inv;
 use shared::prost::Message;
 use simple_logger::SimpleLogger;
+use std::sync::atomic;
+use std::sync::atomic::AtomicU32;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 const ADDRESS: &str = "tcp://127.0.0.1:8883";
-//const STATS_INTERVAL: Duration = Duration::from_secs(120); // Duration(seconds) to print stats of peers
+const STATS_INTERVAL: Duration = Duration::from_secs(120); // Duration(seconds) to print stats of peers
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about=None)]
@@ -61,19 +58,19 @@ fn main() {
 
     let peer_map: PeerMap = Arc::new(DashMap::new());
 
-    // Spawn a thread for periodic stats display
-    // let display_peer_map = peer_map.clone();
-    // std::thread::spawn(move || {
-    //     let mut last_display = Instant::now();
-    //     loop {
-    //         let now = Instant::now();
-    //         if now.duration_since(last_display) >= STATS_INTERVAL {
-    //             display_all_stats(&display_peer_map);
-    //             last_display = now;
-    //         }
-    //         std::thread::sleep(Duration::from_secs(1));
-    //     }
-    // });
+    // Spawn a thread for periodic stats display - 2 mins
+    let display_peer_map = peer_map.clone();
+    std::thread::spawn(move || {
+        let mut last_display = Instant::now();
+        loop {
+            let now = Instant::now();
+            if now.duration_since(last_display) >= STATS_INTERVAL {
+                display_all_stats(&display_peer_map);
+                last_display = now;
+            }
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    });
 
     loop {
         let msg = sub.recv().unwrap();
@@ -186,29 +183,33 @@ fn process_connection_event(peer_map: &PeerMap, event: &str) {
     }
 }
 
-// fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
-//     println!(
-//         "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
-//         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-//         peer_addr,
-//         stats.inv_sent,
-//         stats.inv_received,
-//         stats.getdata_sent,
-//         stats.getdata_received,
-//         stats.tx_sent,
-//         stats.tx_received
-//     );
-// }
+fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
+    println!(
+        "[{}] Peer ID {} stats:\n  INV TX sent: {:?}\n  INV WTX received: {:?}\n INV WitnessTX received: {:?}\n GetDATA WitnessTX received: {:?}\n  GETDATA WitnessTX received: {:?}\n  Tx sent: {:?}\n  Tx received: {:?}\n Last Activity: {:?}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+        peer_addr,
+        stats.inv_tx_sent,
+        stats.inv_wtx_received,
+        stats.inv_witnesstx_received,
+        stats.getdata_witnesstx_sent,
+        stats.getdata_witnesstx_received,
+        stats.tx_sent,
+        stats.tx_received,
+        stats.last_activity
+    );
+}
 
-// fn display_all_stats(peer_map: &PeerMap) {
-//     let map = peer_map.lock().unwrap();
-//     println!(
-//         "\n===== Stats for all peers ({}): =====",
-//         chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-//     );
-//     for (peer_id, stats) in map.iter() {
-//         print_peer_stats(peer_id, stats);
-//         println!("----------------------------------------");
-//     }
-//     println!("=====================================\n");
-// }
+fn display_all_stats(peer_map: &PeerMap) {
+    let map = peer_map;
+    println!(
+        "\n===== Stats for all peers ({}): =====",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    );
+    for item in map.iter() {
+        let peer_id = item.key();
+        let stats = item.value();
+        print_peer_stats(&peer_id, &stats);
+        println!("----------------------------------------");
+    }
+    println!("=====================================\n");
+}
