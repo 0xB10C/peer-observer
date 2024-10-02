@@ -1,21 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 use dashmap::DashMap;
-=======
-use shared::clap;
-=======
-use chrono::format::Item;
-use dashmap::DashMap;
->>>>>>> 6b10299 (added loop for matching individual inv messages)
-use shared::clap::Parser;
-use shared::primitive::{InventoryItem, Transaction};
-use shared::{clap, primitive};
-use std::sync::atomic;
-use std::sync::atomic::AtomicU32;
-use std::sync::Arc;
-use std::time::Instant;
-
->>>>>>> 60aeb09 (add: clap args)
 use nng::options::protocol::pubsub::Subscribe;
 use nng::options::Options;
 use nng::{Protocol, Socket};
@@ -23,9 +6,7 @@ use shared::clap;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
-use shared::log;
 use shared::net_msg;
-use shared::net_msg::Inv;
 use shared::prost::Message;
 use shared::simple_logger;
 use std::sync::atomic;
@@ -37,38 +18,19 @@ use std::time::Instant;
 const ADDRESS: &str = "tcp://127.0.0.1:8883";
 const STATS_INTERVAL: Duration = Duration::from_secs(10); // Duration(seconds) to print stats of peers
 
-<<<<<<< HEAD
 const LOG_TARGET: &str = "main";
 
-=======
->>>>>>> 60aeb09 (add: clap args)
 #[derive(Parser, Debug)]
 #[command(version, about, long_about=None)]
 struct Args {
     /// set the threshold for spy detection (default value is 5)
     #[arg(short, long, default_value = "5")]
     threshold: u32,
-<<<<<<< HEAD
 
     /// The log level the tool should run with. Valid log levels
     /// are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
     #[arg(short, long, default_value_t = log::Level::Debug)]
     log_level: log::Level,
-=======
-}
-
-#[derive(Debug, Default)]
-struct PeerStats {
-<<<<<<< HEAD
-    inv_tx_sent: u32,                // TX(INV) sent by the peer
-    inv_wtx_received: u32,           // TX(INV) received by the peer
-    inv_witnesstx_received: u32,     // WitnessTX(INV) received by the peer
-    getdata_witnesstx_sent: u32,     // WitnessTX(GETDATA) sent by the peer
-    getdata_witnesstx_received: u32, // WitnessTX(GETDATA) received by the peer
-    tx_sent: u32,                    // TX sent by the peer
-    tx_received: u32,                // TX received by the peer
-    last_activity: Option<Instant>,  // Last activity time of the peer
->>>>>>> 60aeb09 (add: clap args)
 }
 
 #[derive(Debug, Default)]
@@ -87,38 +49,16 @@ struct PeerStats {
 }
 
 type PeerMap = Arc<DashMap<String, PeerStats>>;
-=======
-    inv_tx_sent: AtomicU32,                // TX(INV) sent by the peer
-    inv_wtx_received: AtomicU32,           // TX(INV) received by the peer
-    inv_witnesstx_received: AtomicU32,     // WitnessTX(INV) received by the peer
-    getdata_witnesstx_sent: AtomicU32,     // WitnessTX(GETDATA) sent by the peer
-    getdata_witnesstx_received: AtomicU32, // WitnessTX(GETDATA) received by the peer
-    tx_sent: AtomicU32,                    // TX sent by the peer
-    tx_received: AtomicU32,                // TX received by the peer
-    last_activity: Option<Instant>,        // Last activity time of the peer
-}
-
-type PeerMap = Arc<DashMap<String, PeerStats>>;
-const LOG_TARGET: &str = "main";
->>>>>>> 6b10299 (added loop for matching individual inv messages)
 
 fn main() {
     let args = Args::parse();
 
-<<<<<<< HEAD
     //to-do: use threshold at appropriate location
     let threshold = &args.threshold;
 
     simple_logger::init_with_level(args.log_level).unwrap();
 
     log::info!(target: LOG_TARGET, "Starting spy-detector...",);
-=======
-    let threshold = &args.threshold;
-
-    SimpleLogger::new()
-        .init()
-        .expect("Cannot setup Simple Logger.");
->>>>>>> 60aeb09 (add: clap args)
 
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
@@ -180,11 +120,7 @@ fn main() {
                 }
                 Event::Conn(c) => {
                     if let Some(event) = c.event {
-<<<<<<< HEAD
                         process_connection_event(&peer_map, &event.to_string());
-=======
-                        // process_connection_event(&peer_map, &event.to_string());
->>>>>>> 6b10299 (added loop for matching individual inv messages)
                         //println!("{}", event);
                     }
                 }
@@ -194,43 +130,10 @@ fn main() {
     }
 }
 
-<<<<<<< HEAD
 fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg, msg_type: u32, peer_id: u64) {
     let stats = peer_map
         .entry(peer_id.to_string())
         .or_insert_with(PeerStats::default);
-=======
-fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
-    let peer_id = format!("{}", msg);
-    let stats = peer_map
-        .entry(peer_id.clone())
-        .or_insert_with(PeerStats::default);
-
-    if let net_msg::message::Msg::Inv(inv) = msg {
-        for inv_item in &inv.items {
-            match inv_item.inv_type() {
-                "Tx" => {
-                    println!("Tx recieved ");
-                    stats.inv_tx_sent.fetch_add(1, atomic::Ordering::Relaxed);
-                }
-                "WTx" => {
-                    println!("WTx recieved ");
-                    stats
-                        .inv_wtx_received
-                        .fetch_add(1, atomic::Ordering::Relaxed);
-                }
-                "WitnessTx" => {
-                    println!("WitnessTx recieved ");
-                    stats
-                        .inv_witnesstx_received
-                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                }
-                _ => {} // Ignore other types
-            }
-        }
-    }
-<<<<<<< HEAD
->>>>>>> 6b10299 (added loop for matching individual inv messages)
 
     if let net_msg::message::Msg::Inv(inv) = msg {
         for inv_item in &inv.items {
@@ -268,11 +171,8 @@ fn process_inv_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
             }
         }
     }
-=======
->>>>>>> c36c87b (refractor: connection event & print peer stats for closed connection)
 }
 
-<<<<<<< HEAD
 fn process_getdata_msg(
     peer_map: &PeerMap,
     msg: &net_msg::message::Msg,
@@ -281,12 +181,6 @@ fn process_getdata_msg(
 ) {
     let stats = peer_map
         .entry(peer_id.to_string())
-=======
-fn process_getdata_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
-    let peer_id = format!("{}", msg);
-    let stats = peer_map
-        .entry(peer_id.clone())
->>>>>>> 6b10299 (added loop for matching individual inv messages)
         .or_insert_with(PeerStats::default);
 
     if let net_msg::message::Msg::Inv(inv) = msg {
@@ -309,16 +203,9 @@ fn process_getdata_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
     }
 }
 
-<<<<<<< HEAD
 fn process_tx_msg(peer_map: &PeerMap, msg_type: u32, peer_id: u64) {
     let stats = peer_map
         .entry(peer_id.to_string())
-=======
-fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
-    let peer_id = format!("{}", msg);
-    let stats = peer_map
-        .entry(peer_id.clone())
->>>>>>> 6b10299 (added loop for matching individual inv messages)
         .or_insert_with(PeerStats::default);
 
     if msg_type == 0 {
@@ -328,31 +215,15 @@ fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg) {
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> c36c87b (refractor: connection event & print peer stats for closed connection)
 fn process_connection_event(peer_map: &PeerMap, event: &str) {
     if event.starts_with("closed") {
         let peer_id = event.split(' ').nth(1).unwrap_or("");
         if let Some(stats) = peer_map.remove(peer_id) {
             println!("Connection closed for peer: {}", peer_id);
-<<<<<<< HEAD
             print_peer_stats(peer_id, &stats.1);
         }
     }
 }
-=======
-// fn process_connection_event(peer_map: &PeerMap, event: &str) {
-//     if event.starts_with("closed") {
-//         let peer_id = event.split(' ').nth(1).unwrap_or("");
-//         if let Some(stats) = map.remove(peer_id) {
-//             println!("Connection closed for peer: {}", peer_id);
-//             //print_peer_stats(peer_id, &stats);
-//         }
-//     }
-// }
->>>>>>> 6b10299 (added loop for matching individual inv messages)
 
 fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
     println!(
@@ -368,28 +239,9 @@ fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
         stats.tx_sent,
         stats.tx_received,
         stats.last_activity
-=======
-            print_peer_stats(peer_id, &stats);
-        }
-    }
-}
-
-fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
-    println!(
-        "[{}] Peer ID {} stats:\n  INV sent: {}\n  INV received: {}\n  GETDATA sent: {}\n  GETDATA received: {}\n  Tx sent: {}\n  Tx received: {}",
-        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-        peer_addr,
-        stats.inv_sent,
-        stats.inv_received,
-        stats.getdata_sent,
-        stats.getdata_received,
-        stats.tx_sent,
-        stats.tx_received
->>>>>>> c36c87b (refractor: connection event & print peer stats for closed connection)
     );
 }
 
-<<<<<<< HEAD
 fn display_all_stats(peer_map: &PeerMap) {
     let map = peer_map;
     println!(
@@ -406,26 +258,3 @@ fn display_all_stats(peer_map: &PeerMap) {
     }
     println!("=====================================\n");
 }
-=======
-// fn cleanup_inactive_peers(peer_map: &PeerMap) {
-//     let mut map = peer_map.lock().unwrap();
-//     let now = Instant::now();
-//     let inactive_peers: Vec<String> = map
-//         .iter()
-//         .filter(|(_, stats)| {
-//             stats
-//                 .last_activity
-//                 .map(|last| now.duration_since(last) >= Duration::from_secs(3600))
-//                 .unwrap_or(true)
-//         })
-//         .map(|(peer_id, _)| peer_id.clone())
-//         .collect();
-
-//     for peer_addr in inactive_peers {
-//         if let Some(stats) = map.remove(&peer_addr) {
-//             println!("Removed inactive peer: {}", peer_addr);
-//             print_peer_stats(&peer_addr, &stats);
-//         }
-//     }
-// }
->>>>>>> 6fc83b5 (remove: inactive peers logic for now)
