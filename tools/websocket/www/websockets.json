@@ -1,0 +1,6 @@
+{
+ "alice-b": "/websocket/alice", 
+ "bob-b": "/websocket/bob", 
+ "charlie-b": "/websocket/charlie", 
+ "x8284": "ws://127.0.0.1:8284"
+}
