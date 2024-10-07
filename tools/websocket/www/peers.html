@@ -1,140 +1,146 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <title>peers</title>
-  </head>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <title>peers</title>
+</head>
 
 
-  <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-md">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="messageModalLabel">Modal title</h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="messageModalLabel">Modal title</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="float-start">
+            us
+          </div>
+          <div class="float-end">
+            peer
+          </div>
         </div>
-        <div class="modal-body">
-          <div>
-            <div class="float-start">
-              us
-            </div>
-            <div class="float-end">
-              peer
-            </div>
-          </div>
-          <br>
-          <div id="messageList">
-          </div>
+        <br>
+        <div id="messageList">
         </div>
       </div>
     </div>
   </div>
-  
-  <div id="tooltip">
-    <table class="table table-sm">
-      <thead>
-        <tr>
-          <td scope="col"></th>
-          <td scope="col">in</th>
-          <td scope="col">out</th>
-        </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-  </div>
-  <body>
-    <div id="websocket-picker"></div> 
-    <div id="peer-grid"></div>
-  </body>
+</div>
 
-  <template id="peer">
-    <div class="peer">
-      <div class="container p-1">
-        <div class="row">
-          <span id="peer-id" class="col text-truncate"></span>
-        </div>
-        <div class="row">
-          <small class="col text-truncate"><a href="" target="_blank" rel="noopener noreferrer" id="peer-addr"></a></small>
-        </div>
-        <div class="row">
-          <label class="col">sent</label>
-          <span class="col ms-auto" id="count-out-total"></span>
-          <span class="col ms-auto" id="size-out-total"></span>
-        </div>
-        <div class="row">
-          <label class="col">recv</label>
-          <span class="col" id="count-in-total"></span>
-          <span class="col" id="size-in-total"></span>
-        </div>
+<div id="tooltip">
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <td scope="col">
+          </th>
+        <td scope="col">in</th>
+        <td scope="col">out</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+</div>
+
+<body>
+  <div id="websocket-picker"></div>
+  <div id="peer-grid"></div>
+</body>
+
+<template id="peer">
+  <div class="peer">
+    <div class="container p-1">
+      <div class="row">
+        <span id="peer-id" class="col text-truncate"></span>
+      </div>
+      <div class="row">
+        <small class="col text-truncate"><a href="" target="_blank" rel="noopener noreferrer"
+            id="peer-addr"></a></small>
+      </div>
+      <div class="row">
+        <label class="col">sent</label>
+        <span class="col ms-auto" id="count-out-total"></span>
+        <span class="col ms-auto" id="size-out-total"></span>
+      </div>
+      <div class="row">
+        <label class="col">recv</label>
+        <span class="col" id="count-in-total"></span>
+        <span class="col" id="size-in-total"></span>
       </div>
     </div>
-  </template>
-  
-  <template id="table-row">
-    <tr>
-      <td scope="row" id="name"></th>
-      <td id="in">0</td>
-      <td id="out">0</td>
-    </tr>
-  </template>
+  </div>
+</template>
 
-  <script src="js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
-  <script src="js/websocket-picker.js"></script>
-  <script src="js/lib.js"></script>
+<template id="table-row">
+  <tr>
+    <td scope="row" id="name">
+      </th>
+    <td id="in">0</td>
+    <td id="out">0</td>
+  </tr>
+</template>
+
+<script src="js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy"
+  crossorigin="anonymous"></script>
+<script src="js/websocket-picker.js"></script>
+<script src="js/lib.js"></script>
+
 </html>
 
 <style>
+  #peer-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
 
-#peer-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
+  .peer {
+    height: 100px;
+    width: 200px;
+    transition: transform 0.3s ease;
+  }
 
-.peer {
-  height: 100px;
-  width: 200px;
-  transition: transform 0.3s ease;
-}
+  .peer a {
+    text-decoration: none;
+    color: inherit;
+  }
 
-.peer a {
-  text-decoration: none;
-  color: inherit;
-}
+  #tooltip {
+    display: none;
+    position: absolute;
+    z-index: 1;
+  }
 
-#tooltip {
-  display: none;
-  position: absolute;
-  z-index: 1;
-}
+  .inbound {
+    background: #F6EACB;
+  }
 
-.inbound {
-  background: #F6EACB;
-}
+  .outbound-full {
+    background: #EECAD5;
+  }
 
-.outbound-full {
-  background: #EECAD5;
-}
+  .outbound-block {
+    background: lightgray;
+  }
 
-.outbound-block {
-  background: lightgray;
-}
+  .feeler {
+    background: #D1E9F6;
+  }
 
-.feeler {
-  background: #D1E9F6;
-}
+  .closed {
+    opacity: 0.5;
+  }
 
-.closed {
-  opacity: 0.5;
-}
-
-.weird {
-  background: #fff9f0;
-}
-
+  .weird {
+    background: #fff9f0;
+  }
 </style>
 
 <script>
@@ -148,9 +154,9 @@
     if (b < 1_000) {
       return b + "b"
     } else if (b < 1_000_000) {
-      return (b/ 1_000).toFixed(1) + "kB"
+      return (b / 1_000).toFixed(1) + "kB"
     } else if (b < 1_000_000_000) {
-      return (b/1_000_000).toFixed(1) + "MB"
+      return (b / 1_000_000).toFixed(1) + "MB"
     }
     return b
   }
@@ -164,22 +170,22 @@
       details.classList.add("text-muted")
       details.classList.add("px-1")
     }
-    
+
     let command = document.createElement("span");
     command.classList.add("badge")
-    command.classList.add("text-bg-secondary")    
+    command.classList.add("text-bg-secondary")
     command.textContent = msg.msg
-    
+
     let arrow = document.createElement("small");
     arrow.textContent = msg.dir == "inbound" ? "<--" : "-->"
     arrow.classList.add("mx-1")
-    
+
     if (msg.dir == "outbound") {
       message.appendChild(command)
       message.appendChild(details)
       message.appendChild(arrow)
     }
-    
+
     if (msg.dir == "inbound") {
       message.appendChild(arrow)
       message.appendChild(details)
@@ -194,80 +200,80 @@
   }
 
   function addPeer(peer) {
-      const template = document.querySelector("#peer");
-      clone = template.content.cloneNode(true);
-      clone.querySelector(".peer").classList.add(peer.conn)
-      clone.querySelector("#peer-id").textContent = "#" + peer.id + ": " + peer.conn
-      clone.querySelector("#peer-addr").textContent = removePortFromIPPort(peer.addr)
-      clone.querySelector("#peer-addr").href = "https://utrace.me/?query=" + removePortFromIPPort(peer.addr).replace("[", "").replace("]", "")
-      clone.querySelector(".peer").id = "peer-" + peer.id
-      clone.querySelector(".peer").style.order = peer.id;
-      
-      let cloneDiv = clone.querySelector(".peer")
-      cloneDiv.addEventListener('mouseenter', () => {
-        tooltip.style.display = 'block';
-        let tbody = tooltip.querySelector("tbody")
-        let p = peers[peer.id]
-        let msgs = new Set()
-        Object.keys(p.msg_count.inbound).forEach(k => msgs.add(k))
-        Object.keys(p.msg_count.outbound).forEach(k => msgs.add(k))
-        tbody.replaceChildren();
-        Array.from(msgs).sort().forEach(m => {
-          if(m != "total") {
-            const template = document.querySelector("#table-row");
-            clone = template.content.cloneNode(true);
-            clone.querySelector("#name").textContent = m
-            if (m in p.msg_count.inbound) {
-              clone.querySelector("#in").textContent = p.msg_count.inbound[m]
-            }
-            if (m in p.msg_count.outbound) {
-              clone.querySelector("#out").textContent = p.msg_count.outbound[m]
-            }
-            tbody.appendChild(clone)
+    const template = document.querySelector("#peer");
+    clone = template.content.cloneNode(true);
+    clone.querySelector(".peer").classList.add(peer.conn)
+    clone.querySelector("#peer-id").textContent = "#" + peer.id + ": " + peer.conn
+    clone.querySelector("#peer-addr").textContent = removePortFromIPPort(peer.addr)
+    clone.querySelector("#peer-addr").href = "https://utrace.me/?query=" + removePortFromIPPort(peer.addr).replace("[", "").replace("]", "")
+    clone.querySelector(".peer").id = "peer-" + peer.id
+    clone.querySelector(".peer").style.order = peer.id;
+
+    let cloneDiv = clone.querySelector(".peer")
+    cloneDiv.addEventListener('mouseenter', () => {
+      tooltip.style.display = 'block';
+      let tbody = tooltip.querySelector("tbody")
+      let p = peers[peer.id]
+      let msgs = new Set()
+      Object.keys(p.msg_count.inbound).forEach(k => msgs.add(k))
+      Object.keys(p.msg_count.outbound).forEach(k => msgs.add(k))
+      tbody.replaceChildren();
+      Array.from(msgs).sort().forEach(m => {
+        if (m != "total") {
+          const template = document.querySelector("#table-row");
+          clone = template.content.cloneNode(true);
+          clone.querySelector("#name").textContent = m
+          if (m in p.msg_count.inbound) {
+            clone.querySelector("#in").textContent = p.msg_count.inbound[m]
           }
-        })
-      });
+          if (m in p.msg_count.outbound) {
+            clone.querySelector("#out").textContent = p.msg_count.outbound[m]
+          }
+          tbody.appendChild(clone)
+        }
+      })
+    });
 
-      cloneDiv.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-      });
+    cloneDiv.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
 
-      cloneDiv.addEventListener('mousemove', (e) => {
-        const x = e.pageX + 5
-        const y = e.pageY + 5
-        tooltip.style.left = `${x}px`
-        tooltip.style.top = `${y}px`
-      });
-      
-      cloneDiv.addEventListener('click', (e) => {
-        const modal = new bootstrap.Modal('#messageModal', {})
-        modal.show()
-        modalPeerId = peer.id;
-        document.getElementById("messageModalLabel").innerText = "peer #" + peer.id + " (" + removePortFromIPPort(peer.addr)  + ")"
-        messageList = document.getElementById("messageList")
-        messageList.replaceChildren()
+    cloneDiv.addEventListener('mousemove', (e) => {
+      const x = e.pageX + 5
+      const y = e.pageY + 5
+      tooltip.style.left = `${x}px`
+      tooltip.style.top = `${y}px`
+    });
 
-        peers[peer.id].msgs.forEach(addMessageToModal)
-      });
-      
-      peerGrid.appendChild(clone)
+    cloneDiv.addEventListener('click', (e) => {
+      const modal = new bootstrap.Modal('#messageModal', {})
+      modal.show()
+      modalPeerId = peer.id;
+      document.getElementById("messageModalLabel").innerText = "peer #" + peer.id + " (" + removePortFromIPPort(peer.addr) + ")"
+      messageList = document.getElementById("messageList")
+      messageList.replaceChildren()
+
+      peers[peer.id].msgs.forEach(addMessageToModal)
+    });
+
+    peerGrid.appendChild(clone)
   }
-  
+
   function removePeer(id) {
-      let node = document.getElementById("peer-"+id)
-      if (node) {
-        node.remove()
-      }
-      if (id in peers) {
-        delete peers[id]
-      }
+    let node = document.getElementById("peer-" + id)
+    if (node) {
+      node.remove()
+    }
+    if (id in peers) {
+      delete peers[id]
+    }
   }
 
   function cleanUpClosedPeers() {
     let peersToRemove = []
-    for(peer of Object.values(peers)) {
+    for (peer of Object.values(peers)) {
       if (peer.closed || peer.evicted) {
-        if(peer.sheduledForRemoval) {
+        if (peer.sheduledForRemoval) {
           peersToRemove.push(peer.id)
         }
         peer.sheduledForRemoval = true;
@@ -276,31 +282,31 @@
 
     console.log("Cleanup closed peers: ", peersToRemove)
     peersToRemove.forEach(id => removePeer(id))
-    
+
     setTimeout(() => {
       cleanUpClosedPeers()
     }, 10_000);
   }
 
   function redrawPeer(id) {
-      let node = document.getElementById("peer-"+id)
-      node.querySelector("#count-in-total").textContent = peers[id].msg_count.inbound.total
-      node.querySelector("#count-out-total").textContent = peers[id].msg_count.outbound.total
-      node.querySelector("#size-in-total").textContent = formatSIBytes(peers[id].msg_size.inbound.total)
-      node.querySelector("#size-out-total").textContent = formatSIBytes(peers[id].msg_size.outbound.total)
-      if (peers[id].closed || peers[id].evicted) {
-        node.classList.add("closed")
-      }
-      if (peers[id].weird) {
-        node.classList.add("weird")
-      }
+    let node = document.getElementById("peer-" + id)
+    node.querySelector("#count-in-total").textContent = peers[id].msg_count.inbound.total
+    node.querySelector("#count-out-total").textContent = peers[id].msg_count.outbound.total
+    node.querySelector("#size-in-total").textContent = formatSIBytes(peers[id].msg_size.inbound.total)
+    node.querySelector("#size-out-total").textContent = formatSIBytes(peers[id].msg_size.outbound.total)
+    if (peers[id].closed || peers[id].evicted) {
+      node.classList.add("closed")
+    }
+    if (peers[id].weird) {
+      node.classList.add("weird")
+    }
   }
 
-  function handleWebsocketMessage(e) {    
+  function handleWebsocketMessage(e) {
     let event = JSON.parse(e.data)
-    if("Msg" in event) {
+    if ("Msg" in event) {
       let meta = event["Msg"]["meta"]
-      if(!(meta.peer_id in peers)) {
+      if (!(meta.peer_id in peers)) {
         peers[meta.peer_id] = {
           id: meta.peer_id,
           addr: meta.addr,
@@ -316,12 +322,12 @@
       }
 
       let direction = meta.inbound ? "inbound" : "outbound"
-      if(!(meta.command in peers[meta.peer_id].msg_count[direction])) {
+      if (!(meta.command in peers[meta.peer_id].msg_count[direction])) {
         peers[meta.peer_id].msg_count[direction][meta.command] = 0
         peers[meta.peer_id].msg_size[direction][meta.command] = 0
       }
       peers[meta.peer_id].msg_count[direction].total += 1
-      peers[meta.peer_id].msg_count[direction][meta.command] += 1    
+      peers[meta.peer_id].msg_count[direction][meta.command] += 1
       peers[meta.peer_id].msg_size[direction].total += meta.size
       peers[meta.peer_id].msg_size[direction][meta.command] += meta.size
 
@@ -334,31 +340,31 @@
         let inv = event["Msg"].msg.Inv.items
         inv.forEach(i => {
           let invType = Object.keys(i.item)[0]
-          if(!(invType in invTypeCount)) {
+          if (!(invType in invTypeCount)) {
             invTypeCount[invType] = 0
           }
           invTypeCount[invType] += 1
         })
-        
+
         details = Object.entries(invTypeCount).map(([k, v]) => v + "x " + k).join(", ")
       } else if (meta.command == "getdata") {
         let getdataTypeCount = {}
         let getdata = event["Msg"].msg.Getdata.items
         getdata.forEach(i => {
           let getdataType = Object.keys(i.item)[0]
-          if(!(getdataType in getdataTypeCount)) {
+          if (!(getdataType in getdataTypeCount)) {
             getdataTypeCount[getdataType] = 0
           }
           getdataTypeCount[getdataType] += 1
         })
-        
+
         details = Object.entries(getdataTypeCount).map(([k, v]) => v + "x " + k).join(", ")
       } else if (meta.command == "addrv2") {
         if (event["Msg"].msg.Emptyaddrv2) {
           details = "empty!"
           peers[meta.peer_id].weird = true;
         } else {
-          details = event["Msg"].msg.Addrv2.addresses.length + "x "   
+          details = event["Msg"].msg.Addrv2.addresses.length + "x "
         }
       } else if (meta.command == "addr") {
         console.log("addr", event["Msg"].msg)
@@ -379,10 +385,10 @@
         txid.reverse();
         details = uint8ArrayToHexString(txid).substr(0, 8) + "…"
       }
-      
-      let msg = {dir: direction, msg: meta.command, details: details}
+
+      let msg = { dir: direction, msg: meta.command, details: details }
       peers[meta.peer_id].msgs.push(msg)
-      if (meta.peer_id == modalPeerId){
+      if (meta.peer_id == modalPeerId) {
         addMessageToModal(msg)
       }
 
@@ -394,9 +400,9 @@
           peers[closeEvent.conn.peer_id].closed = true;
           redrawPeer(closeEvent.conn.peer_id)
         }
-      } else if ("Inbound" in event.Conn.event){
+      } else if ("Inbound" in event.Conn.event) {
 
-      } else if ("InboundEvicted" in event.Conn.event){
+      } else if ("InboundEvicted" in event.Conn.event) {
         inboundEvictionEvent = event.Conn.event.InboundEvicted
         if (inboundEvictionEvent.conn.peer_id in peers) {
           peers[inboundEvictionEvent.conn.peer_id].evicted = true;
@@ -406,7 +412,7 @@
         console.log(event.Conn.event)
       }
     }
-    
+
   };
 
   function handleWebsocketReset() {
@@ -421,7 +427,7 @@
   };
 
 
-  
+
 
 
 
