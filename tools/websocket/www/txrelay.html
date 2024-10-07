@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <title>txreleay</title>
+</head>
+
+
+<body>
+  <div id="websocket-picker"></div>
+  <table class="table table-striped table-sm">
+    <thead>
+      <tr>
+        <th colspan="4">info</th>
+        <th colspan="4" class="inbound-msg">relay to us</th>
+        <th colspan="4" class="outbound-msg">relay to peer</th>
+        <th colspan="2">behavior</th>
+      </tr>
+      <tr>
+        <th scope="col">id</th>
+        <th scope="col">conn</th>
+        <th scope="col">version</th>
+        <th scope="col">addr</th>
+        <th scope="col" class="inbound-msg">ann</th>
+        <th scope="col" class="inbound-msg">req</th>
+        <th scope="col" class="inbound-msg">recv</th>
+        <th scope="col" class="inbound-msg">ann/recv</th>
+        <th scope="col" class="outbound-msg">ann</th>
+        <th scope="col" class="outbound-msg">req</th>
+        <th scope="col" class="outbound-msg">sent</th>
+        <th scope="col" class="outbound-msg">ann/sent</th>
+        <th scope="col">unannounced</th>
+        <th scope="col">unsolicited</th>
+      </tr>
+    </thead>
+    <tbody id="peer-table"></tbody>
+  </table>
+</body>
+
+<template id="table-row">
+  <tr class="peer-row">
+    <td id="id">-1</td>
+    <td id="conn">-</td>
+    <td id="version" class="col-sm-1 small"></td>
+    <td><a id="peer-addr" class="small text-decoration-none" style="color: inherit;"></a></td>
+
+    <td id="inv-in" class="inbound-msg">0</td>
+    <td id="getdata-out" class="inbound-msg">0</td>
+    <td id="tx-in" class="inbound-msg">0</td>
+    <td id="inv-tx-in" class="inbound-msg">0</td>
+
+    <td id="inv-out" class="outbound-msg">0</td>
+    <td id="getdata-in" class="outbound-msg">0</td>
+    <td id="tx-out" class="outbound-msg">0</td>
+    <td id="inv-tx-out" class="outbound-msg">0</td>
+
+    <td id="unannounced"></td>
+    <td id="unsolicited"></td>
+  </tr>
+</template>
+
+<script src="js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy"
+  crossorigin="anonymous"></script>
+<script src="js/websocket-picker.js"></script>
+<script src="js/lib.js"></script>
+
+</html>
+
+<style>
+  .inbound-msg {
+    background: #0000ff29 !important;
+  }
+
+  .outbound-msg {
+    background: #ffee0029 !important;
+  }
+
+  .inbound {
+    background: #F6EACB !important;
+  }
+
+  .outbound-full {
+    background: #EECAD5 !important;
+  }
+
+  .outbound-block {
+    background: lightgray !important;
+  }
+
+  .feeler {
+    background: #D1E9F6 !important;
+  }
+
+  .closed {
+    opacity: 0.5;
+  }
+</style>
+
+<script>
+  const peerTable = document.getElementById("peer-table")
+  const tooltip = document.getElementById('tooltip')
+  // Maximal number of transaction announcement or request
+  // txids to keep in memory per peer. 
+  const MAX_ANN_REQ_TX_PER_PEER = 5000;
+  var peers = new Object()
+  let modalPeerId = -1;
+
+  function addPeer(peer) {
+    const template = document.querySelector("#table-row");
+    clone = template.content.cloneNode(true);
+    clone.querySelector(".peer-row").id = "peer-" + peer.id
+    clone.querySelector(".peer-row").dataset.id = peer.id
+    clone.querySelector("#id").textContent = "#" + peer.id
+    let address = removePortFromIPPort(peer.addr).replace("[", "").replace("]", "")
+    if (address.length > 16) {
+      address = "..." + address.substring(address.length - 16, address.length)
+    }
+    clone.querySelector("#peer-addr").textContent = address
+    clone.querySelector("#peer-addr").href = "https://utrace.me/?query=" + removePortFromIPPort(peer.addr).replace("[", "").replace("]", "")
+    clone.querySelector("#conn").textContent = peer.conn
+    clone.querySelector("#conn").classList.add(peer.conn)
+
+    peerTable.appendChild(clone)
+    let rows = Array.from(peerTable.querySelectorAll('tr'))
+    rows.sort((a, b) => a.dataset.id - b.dataset.id)
+    peerTable.replaceChildren(...rows)
+
+  }
+
+  function removePeer(id) {
+    let node = document.getElementById("peer-" + id)
+    if (node) {
+      node.remove()
+    }
+    if (id in peers) {
+      delete peers[id]
+    }
+  }
+
+  function cleanUpClosedPeers() {
+    let peersToRemove = []
+    for (peer of Object.values(peers)) {
+      if (peer.closed || peer.evicted) {
+        if (peer.sheduledForRemoval) {
+          peersToRemove.push(peer.id)
+        }
+        peer.sheduledForRemoval = true;
+      }
+    }
+
+    console.log("Cleanup closed peers: ", peersToRemove)
+    peersToRemove.forEach(id => removePeer(id))
+
+    setTimeout(() => {
+      cleanUpClosedPeers()
+    }, 10_000);
+  }
+
+  function redrawPeer(id) {
+    let node = document.getElementById("peer-" + id)
+    node.querySelector("#version").textContent = peers[id].version.length > 20 ? peers[id].version.substring(0, 20) + "..." : peers[id].version
+    node.querySelector("#inv-in").textContent = peers[id].inbound.inv
+    node.querySelector("#getdata-in").textContent = peers[id].inbound.getdata
+    node.querySelector("#tx-in").textContent = peers[id].inbound.tx
+    node.querySelector("#inv-tx-in").textContent = peers[id].inbound.inv > 0 ? (peers[id].inbound.tx * 100 / peers[id].inbound.inv).toFixed(0) + "%" : 0
+    node.querySelector("#inv-out").textContent = peers[id].outbound.inv
+    node.querySelector("#getdata-out").textContent = peers[id].outbound.getdata
+    node.querySelector("#tx-out").textContent = peers[id].outbound.tx
+    node.querySelector("#inv-tx-out").textContent = peers[id].outbound.inv > 0 ? (peers[id].outbound.tx * 100 / peers[id].outbound.inv).toFixed(0) + "%" : 0
+    if (peers[id].requestedUnannounced) {
+      node.querySelector("#unannounced").textContent = peers[id].requestedUnannounced
+    }
+    if (peers[id].sentUnrequested) {
+      node.querySelector("#unsolicited").textContent = peers[id].sentUnrequested
+    }
+    if (peers[id].closed || peers[id].evicted) {
+      node.classList.add("closed")
+    }
+  }
+
+  function handleWebsocketMessage(e) {
+    let event = JSON.parse(e.data)
+    if ("Msg" in event) {
+      let meta = event["Msg"]["meta"]
+      if (!(meta.peer_id in peers)) {
+        peers[meta.peer_id] = {
+          id: meta.peer_id,
+          addr: meta.addr,
+          conn: connTypeToString(meta.conn_type),
+          closed: false,
+          evicted: false,
+          weird: false,
+          version: "unknown",
+          inbound: { inv: 0, getdata: 0, tx: 0 },
+          outbound: { inv: 0, getdata: 0, tx: 0 },
+          // store transactions we announced to a peer
+          // to see if the peer requests transactions that we
+          // didn't announce
+          transactionsWeAnnounced: [],
+          // store transactions we requested from a peer
+          // to see if the peer sends transactions that we
+          // didn't request
+          transactionsWeRequested: [],
+          requestedUnannounced: 0,
+          // unsolicited transaction
+          sentUnrequested: 0,
+          sheduledForRemoval: false,
+        }
+        addPeer(peers[meta.peer_id])
+      }
+
+      let direction = meta.inbound ? "inbound" : "outbound"
+      if (meta.command == "inv") {
+        let inv = event["Msg"].msg.Inv.items
+        inv.forEach(entry => {
+          if (entry.item.Wtx || entry.item.Transaction) {
+            peers[meta.peer_id][direction].inv += 1
+            if (!meta.inbound && entry.item.Wtx) {
+              let id = uint8ArrayToHexString(new Uint8Array(entry.item.Wtx))
+              peers[meta.peer_id].transactionsWeAnnounced.push(id)
+            } else if (!meta.inbound && entry.item.Transaction) {
+              let id = uint8ArrayToHexString(new Uint8Array(entry.item.Transaction))
+              peers[meta.peer_id].transactionsWeAnnounced.push(id)
+            }
+          }
+        })
+      } else if (meta.command == "getdata") {
+        let getdata = event["Msg"].msg.Getdata.items
+        getdata.forEach(entry => {
+          if (entry.item.Wtx || entry.item.WitnessTransaction) {
+            peers[meta.peer_id][direction].getdata += 1
+            id = ""
+            if (entry.item.Wtx) {
+              id = uint8ArrayToHexString(new Uint8Array(entry.item.Wtx))
+            } else if (!meta.inbound && entry.item.Transaction) {
+              id = uint8ArrayToHexString(new Uint8Array(entry.item.Transaction))
+            }
+
+            if (meta.inbound) {
+              if (!peers[meta.peer_id].transactionsWeAnnounced.includes(id)) {
+                peers[meta.peer_id].requestedUnannounced += 1
+                console.log(meta.peer_id, "requested a transaction that we didn't announce")
+              }
+            } else {
+              peers[meta.peer_id].transactionsWeRequested.push(id)
+            }
+          }
+        })
+      } else if (meta.command == "tx") {
+        peers[meta.peer_id][direction].tx += 1
+        if (meta.inbound) {
+          let tx = event["Msg"].msg.Tx.tx;
+          let txid = uint8ArrayToHexString(new Uint8Array(tx.txid))
+          let wtxid = uint8ArrayToHexString(new Uint8Array(tx.wtxid))
+          if (!(peers[meta.peer_id].transactionsWeRequested.includes(txid) || peers[meta.peer_id].transactionsWeRequested.includes(wtxid))) {
+            console.log(meta.peer_id, "sent a transaction that we didn't request")
+            peers[meta.peer_id].sentUnrequested += 1
+          }
+        }
+      } else if (meta.command == "version") {
+        if (meta.inbound) {
+          peers[meta.peer_id].version = event["Msg"].msg.Version.user_agent
+        }
+      }
+
+      if (peers[meta.peer_id].transactionsWeAnnounced.length > MAX_ANN_REQ_TX_PER_PEER) {
+        peers[meta.peer_id].transactionsWeAnnounced.slice(peers[meta.peer_id].transactionsWeAnnounced.length - MAX_ANN_REQ_TX_PER_PEER)
+      }
+      if (peers[meta.peer_id].transactionsWeRequested.length > MAX_ANN_REQ_TX_PER_PEER) {
+        peers[meta.peer_id].transactionsWeRequested.slice(peers[meta.peer_id].transactionsWeRequested.length - MAX_ANN_REQ_TX_PER_PEER)
+      }
+      console.log(
+        peers[meta.peer_id].transactionsWeAnnounced.length,
+        peers[meta.peer_id].transactionsWeRequested.length,
+      )
+
+      redrawPeer(meta.peer_id)
+    } if ("Conn" in event) {
+      if ("Closed" in event.Conn.event) {
+        closeEvent = event.Conn.event.Closed
+        if (closeEvent.conn.peer_id in peers) {
+          peers[closeEvent.conn.peer_id].closed = true;
+          redrawPeer(closeEvent.conn.peer_id)
+        }
+      } else if ("InboundEvicted" in event.Conn.event) {
+        inboundEvictionEvent = event.Conn.event.InboundEvicted
+        if (inboundEvictionEvent.conn.peer_id in peers) {
+          peers[inboundEvictionEvent.conn.peer_id].evicted = true;
+          redrawPeer(inboundEvictionEvent.conn.peer_id)
+        }
+      }
+    }
+  };
+
+  function handleWebsocketReset() {
+    peers = new Object()
+    peerTable.replaceChildren()
+  };
+
+  window.onload = (event) => {
+    cleanUpClosedPeers()
+
+    initWebsocketPicker("websockets.json", "websocket-picker", handleWebsocketMessage, handleWebsocketReset)
+  };
+
+
+
+
+
+
+</script>
