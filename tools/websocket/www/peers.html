@@ -7,8 +7,6 @@
     <title>peers</title>
   </head>
 
-  <div id="websocket-picker">
-  </div> 
 
   <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-md">
@@ -48,6 +46,7 @@
     </table>
   </div>
   <body>
+    <div id="websocket-picker"></div> 
     <div id="peer-grid"></div>
   </body>
 
@@ -84,6 +83,7 @@
 
   <script src="js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
   <script src="js/websocket-picker.js"></script>
+  <script src="js/lib.js"></script>
 </html>
 
 <style>
@@ -143,30 +143,6 @@
   const MAX_MESSAGES_IN_LIST = 16;
   var peers = new Object()
   let modalPeerId = -1;
-
-  function connTypeToString(i) {
-    switch (i) {
-      case 1:
-        return "inbound"
-      case 2:
-        return "outbound-full"
-      case 3:
-        return "outbound-block"
-      case 4:
-        return "feeler"
-      default:
-        return "unknown"
-    }
-  }
-
-  function uint8ArrayToHexString(uint8Array) {
-    return Array.from(uint8Array, byte => byte.toString(16).padStart(2, '0')).join('');
-  }
-
-  function removePortFromIPPort(str) {
-    let port = str.split(":").slice(-1)[0]
-    return str.replace(":"+port, "")
-  }
 
   function formatSIBytes(b) {
     if (b < 1_000) {
