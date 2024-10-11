@@ -55,6 +55,35 @@ function isLinkingLion(address) {
   );
 }
 
+function isLikelySpy(address) {
+  return (
+    address.startsWith("147.229.8.240") || // anton1.fit.vutbr.cz
+    address.includes("2001:67c:1220:808:") || // Brno
+    address.startsWith("141.20.33.66") || // KIT DSN Bitcoin Monitoring
+    address.startsWith("129.13.189.202") || // KIT DSN Bitcoin Monitoring
+    address.startsWith("129.13.189.200") || // KIT DSN Bitcoin Monitoring
+    address.includes("2a00:1398:4:2a03") || // KIT DSN Bitcoin Monitoring
+    address.startsWith("161.53.40.241") || // AS2108 Croatian Academic and Research Network (pollux.riteh.hr)
+    address.startsWith("188.166.69.73") || // DigitalOcean
+    address.startsWith("24.144.98.209") || // DigitalOcean
+    address.startsWith("46.101.92.98") || // DigitalOcean
+    address.startsWith("24.199.125.72") || // DigitalOcean
+    address.startsWith("64.227.3.73") || // DigitalOcean
+    address.startsWith("68.183.38.98") || // DigitalOcean
+    address.startsWith("207.154.205.24") || // DigitalOcean
+    address.startsWith("64.227.74.130") || // DigitalOcean
+    address.includes("2a03:b0c0:2:d0::") || // DigitalOcean
+    address.includes("2a03:b0c0:1:d0::") || // DigitalOcean
+    address.includes("2a03:b0c0:3:d0::") || // DigitalOcean
+    address.includes("2604:a880:4:1d0::") || // DigitalOcean
+    address.startsWith("88.198.10.155") || // Bitnodes
+    address.startsWith("88.198.10.156") || // Bitnodes
+    address.includes("2a01:4f8:222:291f") || // Bitnodes
+    address.includes("2a04:3544:1000:1510:b08f:6fff:fe1b:3007") || // Upcloud
+    isLinkingLion(address) // Linking Lion
+  );
+}
+
 function testIsLinkingLion() {
   const testcases = [
     ["162.218.65.53", true],
@@ -62,6 +91,7 @@ function testIsLinkingLion() {
     ["209.222.252.1", true],
     ["91.198.110", false],
     ["127.0.0.1", false],
+    ["[2604:d500:4:1::4]", true],
   ];
 
   for (test of testcases) {
@@ -103,8 +133,36 @@ function testNetworkFromAddress() {
   }
 }
 
+function testIsLikelySpy() {
+  const testcases = [
+    ["162.218.65.53", true], // LinkingLion
+    ["[2604:d500:4:1::2]", true], // LinkingLion
+    ["209.222.252.1", true], // LinkingLion
+    ["91.198.110", false], // not LinkingLion
+    ["127.0.0.1", false],
+    ["129.13.189.200", true], // KIT
+    ["[2a00:1398:4:2a03::1234]", true], // KIT
+    ["2001:67c:1220:808:f6:d81b:74a:ae60", true], // Brno
+  ];
+
+  for (test of testcases) {
+    if (isLikelySpy(test[0]) != test[1]) {
+      alert(
+        "test 'isLikelySpy' failed for address '" +
+          test[0] +
+          "', expected: '" +
+          test[1] +
+          "' but got: '" +
+          isLikelySpy(test[0]) +
+          "'"
+      );
+    }
+  }
+}
+
 function runUnitTests() {
   console.log("running lib.js unit tests..");
   testIsLinkingLion();
   testNetworkFromAddress();
+  testIsLikelySpy();
 }
