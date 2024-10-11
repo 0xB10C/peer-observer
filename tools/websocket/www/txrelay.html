@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-  <title>txreleay</title>
+  <title>tx relay</title>
 </head>
 
 
 <body>
+  <h1>tx relay</h1>
   <div id="websocket-picker"></div>
   <table class="table table-striped table-sm">
     <thead>
@@ -46,7 +47,8 @@
     <td id="id">-1</td>
     <td id="conn">-</td>
     <td id="version" class="col-sm-1 small"></td>
-    <td><a id="peer-addr" class="small text-decoration-none" style="color: inherit;"></a></td>
+    <td><a id="peer-addr" target="_blank" rel="noopener noreferrer" class="small text-decoration-none"
+        style="color: inherit;"></a></td>
 
     <td id="inv-in" class="inbound-msg">0</td>
     <td id="getdata-out" class="inbound-msg">0</td>
@@ -104,7 +106,7 @@
   const peerTable = document.getElementById("peer-table")
   const tooltip = document.getElementById('tooltip')
   // Maximal number of transaction announcement or request
-  // txids to keep in memory per peer. 
+  // txids to keep in memory per peer.
   const MAX_ANN_REQ_TX_PER_PEER = 5000;
   var peers = new Object()
   let modalPeerId = -1;
@@ -120,6 +122,9 @@
       address = "..." + address.substring(address.length - 16, address.length)
     }
     clone.querySelector("#peer-addr").textContent = address
+    if (isLikelySpy(peer.addr)) {
+      clone.querySelector("#peer-addr").style.background = "pink";
+    }
     clone.querySelector("#peer-addr").href = "https://utrace.me/?query=" + removePortFromIPPort(peer.addr).replace("[", "").replace("]", "")
     clone.querySelector("#conn").textContent = peer.conn
     clone.querySelector("#conn").classList.add(peer.conn)
@@ -145,10 +150,10 @@
     let peersToRemove = []
     for (peer of Object.values(peers)) {
       if (peer.closed || peer.evicted) {
-        if (peer.sheduledForRemoval) {
+        if (peer.scheduledForRemoval) {
           peersToRemove.push(peer.id)
         }
-        peer.sheduledForRemoval = true;
+        peer.scheduledForRemoval = true;
       }
     }
 
@@ -171,6 +176,17 @@
     node.querySelector("#getdata-out").textContent = peers[id].outbound.getdata
     node.querySelector("#tx-out").textContent = peers[id].outbound.tx
     node.querySelector("#inv-tx-out").textContent = peers[id].outbound.inv > 0 ? (peers[id].outbound.tx * 100 / peers[id].outbound.inv).toFixed(0) + "%" : 0
+
+    if (
+      peers[id].inbound.inv == 0 &&
+      peers[id].inbound.getdata == 0 &&
+      peers[id].inbound.tx == 0 &&
+      peers[id].outbound.tx == 0 &&
+      peers[id].outbound.inv > 1000 &&
+      node.querySelector("#peer-addr").style.background == "") {
+      node.querySelector("#peer-addr").style.background = "orange";
+    }
+
     if (peers[id].requestedUnannounced) {
       node.querySelector("#unannounced").textContent = peers[id].requestedUnannounced
     }
@@ -208,7 +224,7 @@
           requestedUnannounced: 0,
           // unsolicited transaction
           sentUnrequested: 0,
-          sheduledForRemoval: false,
+          scheduledForRemoval: false,
         }
         addPeer(peers[meta.peer_id])
       }
@@ -273,10 +289,6 @@
       if (peers[meta.peer_id].transactionsWeRequested.length > MAX_ANN_REQ_TX_PER_PEER) {
         peers[meta.peer_id].transactionsWeRequested.slice(peers[meta.peer_id].transactionsWeRequested.length - MAX_ANN_REQ_TX_PER_PEER)
       }
-      console.log(
-        peers[meta.peer_id].transactionsWeAnnounced.length,
-        peers[meta.peer_id].transactionsWeRequested.length,
-      )
 
       redrawPeer(meta.peer_id)
     } if ("Conn" in event) {
@@ -303,13 +315,8 @@
 
   window.onload = (event) => {
     cleanUpClosedPeers()
-
+    runUnitTests()
     initWebsocketPicker("websockets.json", "websocket-picker", handleWebsocketMessage, handleWebsocketReset)
   };
-
-
-
-
-
 
 </script>

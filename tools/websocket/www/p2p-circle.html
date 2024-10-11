@@ -26,9 +26,10 @@
     <label for="control-peer-color">peer color</label>
     <select name="control-peer-color" id="control-peer-color">
       <option value="plain" selected>plain</option>
-      <option value="conntype">by connection type</option>
-      <option value="network">by network</option>
-      <option value="linkinglion">linkinglion</option>
+      <option value="conntype">connection type</option>
+      <option value="network">network</option>
+      <option value="linkinglion">Linking Lion</option>
+      <option value="spynodes">spy-nodes</option>
     </select>
     <br>
     <ul>
@@ -210,7 +211,10 @@
             context.fillStyle = networkToColor(node.network)
             break;
           case "linkinglion":
-            context.fillStyle = isLinkingLion(node.addr) ? "red" : "white";
+            context.fillStyle = node.isLinkingLion ? "red" : "white";
+            break;
+          case "spynodes":
+            context.fillStyle = node.isLikelySpy ? "orange" : "white";
             break;
           default:
             context.fillStyle = "white"
@@ -263,6 +267,8 @@
       network: networkFromAddress(addr),
       conn_type: connTypeToString(conn_type),
       color: connTypeToColor[connTypeToString(conn_type)],
+      isLinkingLion: isLinkingLion(addr),
+      isLikelySpy: isLikelySpy(addr),
       closeTime: undefined
     };
     g_nodes.set(peer_id, node);

@@ -422,7 +422,7 @@
 
   window.onload = (event) => {
     cleanUpClosedPeers()
-
+    runUnitTests()
     initWebsocketPicker("websockets.json", "websocket-picker", handleWebsocketMessage, handleWebsocketReset)
   };
 
