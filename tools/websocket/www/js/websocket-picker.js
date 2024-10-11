@@ -33,8 +33,8 @@ function switchWebsocket(url) {
 function drawWebsockets(id) {
   let picker = document.getElementById(id);
   picker.style.padding = "1em";
-  let heading = document.createElement("h2");
-  heading.textContent = "Websockets";
+  let heading = document.createElement("h5");
+  heading.textContent = "Nodes";
   picker.appendChild(heading);
 
   for (websocket in websockets) {

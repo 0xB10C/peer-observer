@@ -4,21 +4,64 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bootstrap demo</title>
+  <link href="css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <title>P2P circle</title>
 </head>
 
-<body>
+<body class="container">
+  <h1>P2P connections and messages</h1>
   <div id="websocket-picker"></div>
-  <div id="plot"></div>
+  <div id="plot" class="d-flex justify-content-center"></div>
+  <div>
+    <label>connections </label> <span id="stats-connections">-</span>
+    <br>
+    <label>peer label</label>
+    <select name="control-peer-label" id="control-peer-label">
+      <option value="nothing" selected>nothing</option>
+      <option value="id">peer id</option>
+      <option value="address">address</option>
+    </select>
+    <br>
+    <label for="control-peer-color">peer color</label>
+    <select name="control-peer-color" id="control-peer-color">
+      <option value="plain" selected>plain</option>
+      <option value="conntype">by connection type</option>
+      <option value="network">by network</option>
+      <option value="linkinglion">linkinglion</option>
+    </select>
+    <br>
+    <ul>
+      <li>Outbound peers have a thicker circle</li>
+      <li>Received messages have a blue line</li>
+      <li>Sent messages have a thicker line</li>
+    </ul>
+
+  </div>
 </body>
 
 <script src="js/d3@7.js"></script>
 <script src="js/plot@0.6.js"></script>
 <script src="js/websocket-picker.js"></script>
 <script type="module">
-  const width = 800;
-  const height = 720;
+  const width = 1000;
+  const height = 900;
+  const MSG_SHOW_DURATION_MS = 400;
+  const CLOSED_PEER_CONN_SHOW_DURATION_MSG = 2000;
+  const LEFT_ARROW = "🠰 ";
+  const RIGHT_ARROW = " 🠲";
 
+  const connTypeToColor = {
+    "inbound": "#008F95",
+    "outbound-full": "#EB6E80",
+    "outbound-block": "#E9B000",
+    "feeler": "lime",
+    "unknown": "black",
+  }
+
+  const statsConnections = document.getElementById("stats-connections")
+  const controlPeerLabel = document.getElementById("control-peer-label")
+  const controlPeerColor = document.getElementById("control-peer-color")
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -28,28 +71,27 @@
   let g_links = [];
   let g_msgs = [];
 
-  function hslhash(input) {
-    let hash = input.hashCode();
-    // h 0 - 360
-    let h = hash % 360;
-    // s 70% - 100%
-    let s = (hash % 30) + 70;
-    // l 65% - 90%
-    let l = (hash % 25) + 65;
-    return `hsl(${h} ${s}% ${l}%)`;
-  }
-
-  String.prototype.hashCode = function () {
-    let hash = 0,
-      i,
-      chr;
-    if (this.length === 0) return hash;
-    for (i = 0; i < this.length; i++) {
-      chr = this.charCodeAt(i);
-      hash = (hash << 5) - hash + chr;
-      hash |= 0; // Convert to 32bit integer
+  function networkToColor(network) {
+    switch (network) {
+      case NETWORK_IPV4:
+        return "#008F95"
+        break;
+      case NETWORK_IPV6:
+        return "#EB6E80"
+        break;
+      case NETWORK_ONION:
+        return "#E9B000"
+        break;
+      case NETWORK_I2P:
+        return "lime"
+        break;
+      case NETWORK_CJDNS:
+        return "pink"
+        break;
+      default:
+        return "black"
+        break;
     }
-    return hash;
   }
 
   const simulation = d3
@@ -57,13 +99,16 @@
     .force("link", d3.forceLink(g_links))
     .force("charge", d3.forceManyBody().strength(-200))
     .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1))
-    .force("radial", d3.forceRadial(600, width / 2, height / 2).strength(1))
+    .force("radial", d3.forceRadial(600, width / 2, height / 2).strength(1.1))
     .alpha(1)
     .alphaDecay(0.0)
     .velocityDecay(0.5)
     .restart();
 
   function update() {
+    // update stats (we count as one node, so -1)
+    statsConnections.textContent = g_nodes.keys().toArray().length - 1
+
     context.clearRect(0, 0, width, height);
     context.font = "10px monospace";
     context.fillStyle = "black";
@@ -71,35 +116,113 @@
     simulation.nodes(Array.from(g_nodes.values()));
     let linksToRemove = [];
     let nodesToRemove = [];
+
     g_links.forEach((link) => {
-      context.fillText(link.msg, ((link.source.x - link.target.x) / 1.3) + width / 2, ((link.source.y - link.target.y) / 1.3) + height / 2);
+      // draw msgs
+      const x = link.source.x - link.target.x
+      const y = link.source.y - link.target.y
+      const r = Math.atan2(y, x)
+      const flip = link.target.id == "we"
+      if (link.outbound_msg != "") {
+        context.save();
+        context.textAlign = flip ? "right" : "left";
+        context.translate(width / 2, height / 2);
+        context.rotate(r);
+        context.fillText((flip ? "" : LEFT_ARROW) + link.outbound_msg + (flip ? RIGHT_ARROW : ""), flip ? 150 : -150, 0);
+        context.restore();
+      }
+      if (link.inbound_msg != "") {
+        context.save();
+        context.textAlign = flip ? "right" : "left";
+        context.translate(width / 2, height / 2);
+        context.rotate(r);
+        context.fillText((flip ? LEFT_ARROW : "") + link.inbound_msg + (flip ? "" : RIGHT_ARROW), flip ? 320 : -320, 0);
+        context.restore();
+      }
+
+      // draw a node label
+      let nodeLabel = ""
+
+      switch (controlPeerLabel.value) {
+        case "plain":
+          break;
+        case "id":
+          nodeLabel = flip ? link.source.id : link.target.id
+          break;
+        case "address":
+          nodeLabel = flip ? removePortFromIPPort(link.source.addr) : removePortFromIPPort(link.target.addr)
+          break;
+        default:
+          break;
+      }
+
+      if (nodeLabel != "") {
+        context.save();
+        context.textAlign = flip ? "left" : "right";
+        context.translate(width / 2, height / 2);
+        context.rotate(r);
+        context.fillStyle = "gray";
+        context.fillText(nodeLabel, flip ? 360 : -360, 4);
+        context.restore();
+      }
+
+      // draw links
       context.beginPath();
       context.moveTo(link.source.x, link.source.y);
       context.lineTo(link.target.x, link.target.y);
       context.strokeStyle = link.color;
+      context.strokeStyle = link.inbound_msg ? "lightblue" : "gray";
+      context.lineWidth = link.outbound_msg ? 2 : 1;
       context.stroke();
-      if (link.closeTime !== undefined && Date.now() - link.closeTime > 1000) {
+
+      if (link.closeTime !== undefined && Date.now() - link.closeTime > CLOSED_PEER_CONN_SHOW_DURATION_MSG) {
         linksToRemove.push(link.peer_id);
       }
     });
-    g_links.map((l) => {
-      l.msgshowcounter += 1;
-      if (l.msgshowcounter > 10) {
-        l.msg = "";
-        l.color = "ligthgray";
-      }
-      return l;
-    })
 
+    // reset in and outbound msgs after MSG_SHOW_DURATION_MS
+    g_links.map((link) => {
+      if (Date.now() - link.outbound_msg_time > MSG_SHOW_DURATION_MS) {
+        link.outbound_msg = "";
+      }
+      if (Date.now() - link.inbound_msg_time > MSG_SHOW_DURATION_MS) {
+        link.inbound_msg = "";
+      }
+      return link;
+    })
 
     g_nodes.values().forEach((node) => {
       context.globalAlpha = node.closeTime ? 0.2 : 1;
       context.beginPath();
       context.arc(node.x, node.y, node.id == "we" ? 20 : 10, 0, 2 * Math.PI);
-      context.fillStyle = node.color;
-      context.strokeStyle = "gray";
+
+      if (node.id == "we") {
+        context.fillStyle = "white"
+      } else {
+        switch (controlPeerColor.value) {
+          case "plain":
+            context.fillStyle = "white"
+            break;
+          case "conntype":
+            context.fillStyle = connTypeToColor[node.conn_type]
+            break;
+          case "network":
+            context.fillStyle = networkToColor(node.network)
+            break;
+          case "linkinglion":
+            context.fillStyle = isLinkingLion(node.addr) ? "red" : "white";
+            break;
+          default:
+            context.fillStyle = "white"
+            break;
+        }
+      }
+
+      context.strokeStyle = node.conn_type == "inbound" ? "gray" : "black";
+      context.lineWidth = node.conn_type == "inbound" ? 1 : 3;
       context.fill();
       context.stroke();
+      context.lineWidth = 1;
       if (node.closeTime !== undefined && Date.now() - node.closeTime > 10000) {
         nodesToRemove.push(node.id);
       }
@@ -113,7 +236,6 @@
       d3.forceLink(g_links).id((d) => d.id)
     );
     let tmpnodes = Array.from(g_nodes.values());
-    //tmpnodes.sort((a,b) => (a.addr > b.addr) ? 1 : ((b.addr > a.addr) ? -1 : 0))
     simulation.nodes(tmpnodes);
   }
 
@@ -131,13 +253,16 @@
     }
   }
 
-  function addNodeAndLink(peer_id, addr, inbound) {
+  function addNodeAndLink(peer_id, addr, inbound, conn_type) {
     let node = {
       id: peer_id,
-      x: width / 2,
-      y: height / 2,
+      // new inbound connections appear from 0/0 and outbound from the middle
+      x: inbound ? 0 : width / 2,
+      y: inbound ? 0 : height / 2,
       addr: addr,
-      color: hslhash(addr.split(":")[0].split(".").slice(0, 2).join(".")),
+      network: networkFromAddress(addr),
+      conn_type: connTypeToString(conn_type),
+      color: connTypeToColor[connTypeToString(conn_type)],
       closeTime: undefined
     };
     g_nodes.set(peer_id, node);
@@ -146,14 +271,15 @@
       target: inbound ? "we" : peer_id,
       peer_id: peer_id,
       color: "#999",
-      msg: "",
-      msgshowcounter: 99,
+      inbound_msg: "",
+      inbound_msg_time: new Date(),
+      outbound_msg: "",
+      outbound_msg_time: new Date(),
     };
     g_links.push(link);
     simulation.nodes(Array.from(g_nodes.values()));
     simulation.alpha(0.1);
   }
-
 
   function handleWebsocketMessage(event) {
     const m = JSON.parse(event.data);
@@ -179,7 +305,7 @@
         return;
       } else if (m.Conn.event.hasOwnProperty("Inbound")) {
         let event = m.Conn.event.Inbound.conn;
-        addNodeAndLink(event.peer_id, event.addr, event.inbound);
+        addNodeAndLink(event.peer_id, event.addr, event.inbound, event.conn_type,);
       } else {
         console.log(m.Conn);
       }
@@ -187,12 +313,17 @@
       // Handle P2P msg events
       let meta = m.Msg.meta;
       if (!g_nodes.has(meta.peer_id)) {
-        addNodeAndLink(meta.peer_id, meta.addr, true);
+        addNodeAndLink(meta.peer_id, meta.addr, meta.inbound, meta.conn_type);
       }
       g_links.map((l) => {
         if (l.peer_id === meta.peer_id) {
-          l.msg = meta.inbound ? "<-" + meta.command : "->" + meta.command;
-          l.msgshowcounter = 0;
+          if (meta.inbound) {
+            l.inbound_msg = meta.command;
+            l.inbound_msg_time = new Date();
+          } else {
+            l.outbound_msg = meta.command;
+            l.outbound_msg_time = new Date();
+          }
         }
         return l
       })
@@ -209,12 +340,15 @@
 
     const we = { id: "we", color: "white", addr: "", fx: width / 2, fy: height / 2 };
     g_nodes.set(we.id, we);
+    simulation.nodes(Array.from(g_nodes.values()))
   }
 
   window.onload = (event) => {
+    runUnitTests()
     initWebsocketPicker("websockets.json", "websocket-picker", handleWebsocketMessage, handleWebsocketReset)
   };
 
 </script>
+<script src="js/lib.js"></script>
 
 </html>
