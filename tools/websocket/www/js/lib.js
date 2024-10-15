@@ -5,6 +5,9 @@ function uint8ArrayToHexString(uint8Array) {
 }
 
 function removePortFromIPPort(str) {
+  if (!str) {
+    return ""
+  }
   let port = str.split(":").slice(-1)[0];
   return str.replace(":" + port, "");
 }
