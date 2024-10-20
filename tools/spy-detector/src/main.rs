@@ -60,6 +60,8 @@ fn main() {
 
     log::info!(target: LOG_TARGET, "Starting spy-detector...",);
 
+    log::info!(target: LOG_TARGET, "Starting spy-detector...",);
+
     let sub = Socket::new(Protocol::Sub0).unwrap();
     sub.dial(ADDRESS).unwrap();
 
