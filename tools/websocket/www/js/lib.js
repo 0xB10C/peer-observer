@@ -39,7 +39,7 @@ function networkFromAddress(address) {
     return NETWORK_ONION;
   } else if (address.includes(".i2p")) {
     return NETWORK_I2P;
-  } else if (address.includes("[fc00")) {
+  } else if (address.includes("[fc")) {
     return NETWORK_CJDNS;
   } else if (address.includes("[")) {
     return NETWORK_IPV6;
@@ -118,7 +118,7 @@ function testNetworkFromAddress() {
     ["[2604:d500:4:1::2]", NETWORK_IPV6],
     ["abcdefghijklmno.onion", NETWORK_ONION],
     ["abcdefghijklmno.b32.i2p", NETWORK_I2P],
-    ["[fc00:1245::1]", NETWORK_CJDNS],
+    ["[fcd1:c209:bc03:1a75:80d8:fake:0000:0000]", NETWORK_CJDNS],
   ];
 
   for (test of testcases) {
