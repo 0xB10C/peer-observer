@@ -48,6 +48,7 @@ type PeerMap = Arc<DashMap<String, PeerStats>>;
 fn main() {
     let args = Args::parse();
 
+    //to-do: use threshold at appropriate location
     let threshold = &args.threshold;
 
     SimpleLogger::new()
