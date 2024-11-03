@@ -108,7 +108,7 @@ fn main() {
                             }
 
                             net_msg::message::Msg::Tx(_) => {
-                                process_tx_msg(&peer_map, &p2p_msg, msg_type, peer_id);
+                                process_tx_msg(&peer_map, msg_type, peer_id);
                             }
                             _ => {}
                         }
@@ -184,12 +184,10 @@ fn process_getdata_msg(
             match inv_item.inv_type() {
                 "WitnessTx" => {
                     if msg_type == 0 {
-                        println!("WitnessTx recieved");
                         stats
                             .getdata_witnesstx_received
                             .fetch_add(1, atomic::Ordering::Relaxed);
                     } else {
-                        println!("WitnessTx sent");
                         stats
                             .getdata_witnesstx_sent
                             .fetch_add(1, atomic::Ordering::Relaxed);
@@ -201,7 +199,7 @@ fn process_getdata_msg(
     }
 }
 
-fn process_tx_msg(peer_map: &PeerMap, msg: &net_msg::message::Msg, msg_type: u32, peer_id: u64) {
+fn process_tx_msg(peer_map: &PeerMap, msg_type: u32, peer_id: u64) {
     let stats = peer_map
         .entry(peer_id.to_string())
         .or_insert_with(PeerStats::default);
