@@ -30,7 +30,7 @@ struct Args {
 
 #[derive(Debug, Default)]
 struct PeerStats {
-    inv_tx_received: AtomicU32,
+    inv_tx_received: AtomicU32,            // TX(INV) received by the peer
     inv_tx_sent: AtomicU32,                // TX(INV) sent by the peer
     inv_wtx_sent: AtomicU32,               // WTX(INV) received by the peer
     inv_wtx_received: AtomicU32,           // WTX(INV) received by the peer
@@ -116,7 +116,7 @@ fn main() {
                 }
                 Event::Conn(c) => {
                     if let Some(event) = c.event {
-                        // process_connection_event(&peer_map, &event.to_string());
+                        process_connection_event(&peer_map, &event.to_string());
                         //println!("{}", event);
                     }
                 }
@@ -218,7 +218,7 @@ fn process_connection_event(peer_map: &PeerMap, event: &str) {
         let peer_id = event.split(' ').nth(1).unwrap_or("");
         if let Some(stats) = peer_map.remove(peer_id) {
             println!("Connection closed for peer: {}", peer_id);
-            //print_peer_stats(peer_id, &stats);
+            print_peer_stats(peer_id, &stats.1);
         }
     }
 }
