@@ -8,7 +8,4 @@ members = [
   "tools/websocket",
   "tools/metrics",
   "tools/connectivity-check", "tools/spy-detector",
-  "tools/connectivity-check", 
-  "tools/spy-detector",
-  "tools/connectivity-check", "tools/spy-detector",
 ]
