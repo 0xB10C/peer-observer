@@ -9,10 +9,10 @@ edition = "2021"
 shared = { path = "../shared" }
 
 prost = "0.10"
-libbpf-rs = "0.23"
+libbpf-rs = "0.24"
 
 [build-dependencies]
-libbpf-cargo = "0.23"
+libbpf-cargo = "0.24"
 
 [features]
 # Treat warnings as a build error.

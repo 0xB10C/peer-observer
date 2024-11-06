@@ -1,7 +1,7 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use libbpf_rs::skel::SkelBuilder;
-use libbpf_rs::RingBufferBuilder;
+use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
+use libbpf_rs::{Map, MapCore, Object, ProgramMut, RingBufferBuilder};
 use prost::Message;
 use shared::clap;
 use shared::clap::Parser;
@@ -16,6 +16,7 @@ use shared::log;
 use shared::nng::{Protocol, Socket};
 use shared::simple_logger;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
+use std::mem::MaybeUninit;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -151,6 +152,28 @@ struct Args {
     log_level: log::Level,
 }
 
+/// Find the BPF program with the given name, panic if it does not exist.
+// inspired by https://github.com/libbpf/libbpf-rs/blob/18581bc5fb85bbbfd2c6ca6424a56f7b5d438470/libbpf-rs/tests/common/mod.rs#L70-L77
+// TODO: this currently panics
+// We can probably be a bit nicer with the error handling here.
+pub fn find_prog_mut<'obj>(object: &'obj Object, name: &str) -> ProgramMut<'obj> {
+    object
+        .progs_mut()
+        .find(|map| map.name() == name)
+        .unwrap_or_else(|| panic!("failed to find BPF program `{name}`"))
+}
+
+/// Find the BPF map with the given name, panic if it does not exist.
+// inspired by https://github.com/libbpf/libbpf-rs/blob/18581bc5fb85bbbfd2c6ca6424a56f7b5d438470/libbpf-rs/tests/common/mod.rs#L63-L68
+// TODO: this currently panics
+// We can probably be a bit nicer with the error handling here.
+pub fn find_map<'obj>(object: &'obj Object, name: &str) -> Map<'obj> {
+    object
+        .maps()
+        .find(|map| map.name() == name)
+        .unwrap_or_else(|| panic!("failed to find BPF map `{name}`"))
+}
+
 fn main() -> Result<(), libbpf_rs::Error> {
     let args = Args::parse();
 
@@ -159,45 +182,11 @@ fn main() -> Result<(), libbpf_rs::Error> {
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(true);
 
-    let open_skel: tracing::OpenTracingSkel = skel_builder.open().unwrap();
-    let mut obj: libbpf_rs::Object = match open_skel.obj.load() {
-        Ok(skel) => skel,
-        Err(e) => {
-            panic!("Could not load skeleton file: {}", e);
-        }
-    };
-
-    let mut active_tracepoints = vec![];
-    if !args.no_p2pmsg_tracepoints {
-        active_tracepoints.extend(&TRACEPOINTS_NET_MESSAGE);
-    }
-    if !args.no_connection_tracepoints {
-        active_tracepoints.extend(&TRACEPOINTS_NET_CONN);
-    }
-    if !args.no_validation_tracepoints {
-        active_tracepoints.extend(&TRACEPOINTS_VALIDATION);
-    }
-    if !args.no_mempool_tracepoints {
-        active_tracepoints.extend(&TRACEPOINTS_MEMPOOL);
-    }
-
-    if args.addrman_tracepoints {
-        active_tracepoints.extend(&TRACEPOINTS_ADDRMAN);
-    }
-
-    if active_tracepoints.is_empty() {
-        log::error!("No tracepoints enabled.");
-        return Ok(());
-    }
-    let mut links = Vec::new();
-    for tracepoint in active_tracepoints {
-        links.push(obj.prog_mut(tracepoint.function).unwrap().attach_usdt(
-            -1,
-            &args.bitcoind_path,
-            tracepoint.context,
-            tracepoint.name,
-        )?)
-    }
+    let mut uninit = MaybeUninit::uninit();
+    // We can probably be a bit nicer with the error handling here.
+    let open_skel: tracing::OpenTracingSkel = skel_builder.open(&mut uninit).unwrap();
+    let skel: tracing::TracingSkel = open_skel.load()?;
+    let obj = skel.object();
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
     match socket.listen(&args.address) {
@@ -209,28 +198,94 @@ fn main() -> Result<(), libbpf_rs::Error> {
         }
     }
 
+    let mut active_tracepoints = vec![];
     let mut ringbuff_builder = RingBufferBuilder::new();
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    ringbuff_builder
-        .add(obj.map("net_msg_small").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
-        .add(obj.map("net_msg_medium").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
-        .add(obj.map("net_msg_large").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
-        .add(obj.map("net_msg_huge").unwrap(), |data| { handle_net_message(data, socket.clone()) })?
-        .add(obj.map("net_conn_inbound").unwrap(), |data| { handle_net_conn_inbound(data, socket.clone()) })?
-        .add(obj.map("net_conn_outbound").unwrap(), |data| { handle_net_conn_outbound(data, socket.clone()) })?
-        .add(obj.map("net_conn_closed").unwrap(), |data| { handle_net_conn_closed(data, socket.clone()) })?
-        .add(obj.map("net_conn_inbound_evicted").unwrap(), |data| { handle_net_conn_inbound_evicted(data, socket.clone()) })?
-        .add(obj.map("net_conn_misbehaving").unwrap(), |data| { handle_net_conn_misbehaving(data, socket.clone()) })?
-        .add(obj.map("addrman_insert_new").unwrap(), |data| { handle_addrman_new(data, socket.clone()) })?
-        .add(obj.map("addrman_insert_tried").unwrap(), |data| { handle_addrman_tried(data, socket.clone()) })?
-        .add(obj.map("mempool_added").unwrap(), |data| { handle_mempool_added(data, socket.clone()) })?
-        .add(obj.map("mempool_removed").unwrap(), |data| { handle_mempool_removed(data, socket.clone()) })?
-        .add(obj.map("mempool_rejected").unwrap(), |data| { handle_mempool_rejected(data, socket.clone()) })?
-        .add(obj.map("mempool_replaced").unwrap(), |data| { handle_mempool_replaced(data, socket.clone()) })?
-        .add(obj.map("validation_block_connected").unwrap(), |data| { handle_validation_block_connected(data, socket.clone()) })?;
-    let ring_buffers = ringbuff_builder.build()?;
+    // P2P net msgs tracepoints
+    let map_net_msg_small = find_map(&obj, "net_msg_small");
+    let map_net_msg_medium = find_map(&obj, "net_msg_medium");
+    let map_net_msg_large = find_map(&obj, "net_msg_large");
+    let map_net_msg_huge = find_map(&obj, "net_msg_huge");
+    if !args.no_p2pmsg_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_NET_MESSAGE);
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        ringbuff_builder
+            .add(&map_net_msg_small,    |data| { handle_net_message(data, socket.clone()) })?
+            .add(&map_net_msg_medium,   |data| { handle_net_message(data, socket.clone()) })?
+            .add(&map_net_msg_large,    |data| { handle_net_message(data, socket.clone()) })?
+            .add(&map_net_msg_huge,     |data| { handle_net_message(data, socket.clone()) })?;
+    }
 
+    // P2P connection tracepoints
+    let map_net_conn_inbound = find_map(&obj, "net_conn_inbound");
+    let map_net_conn_outbound = find_map(&obj, "net_conn_outbound");
+    let map_net_conn_closed = find_map(&obj, "net_conn_closed");
+    let map_net_conn_inbound_evicted = find_map(&obj, "net_conn_inbound_evicted");
+    let map_net_conn_misbehaving = find_map(&obj, "net_conn_misbehaving");
+    if !args.no_connection_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_NET_CONN);
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        ringbuff_builder
+            .add(&map_net_conn_inbound,         |data| { handle_net_conn_inbound(data, socket.clone()) })?
+            .add(&map_net_conn_outbound,        |data| { handle_net_conn_outbound(data, socket.clone()) })?
+            .add(&map_net_conn_closed,          |data| { handle_net_conn_closed(data, socket.clone()) })?
+            .add(&map_net_conn_inbound_evicted, |data| { handle_net_conn_inbound_evicted(data, socket.clone()) })?
+            .add(&map_net_conn_misbehaving,     |data| { handle_net_conn_misbehaving(data, socket.clone()) })?;
+    }
+
+    // validation tracepoints
+    let map_validation_block_connected = find_map(&obj, "validation_block_connected");
+    if !args.no_validation_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_VALIDATION);
+        ringbuff_builder.add(&map_validation_block_connected, |data| {
+            handle_validation_block_connected(data, socket.clone())
+        })?;
+    }
+
+    // mempool tracepoints
+    let map_mempool_added = find_map(&obj, "mempool_added");
+    let map_mempool_removed = find_map(&obj, "mempool_removed");
+    let map_mempool_rejected = find_map(&obj, "mempool_rejected");
+    let map_mempool_replaced = find_map(&obj, "mempool_replaced");
+    if !args.no_mempool_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_MEMPOOL);
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        ringbuff_builder
+            .add(&map_mempool_added,    |data| { handle_mempool_added(data, socket.clone()) })?
+            .add(&map_mempool_removed,  |data| { handle_mempool_removed(data, socket.clone()) })?
+            .add(&map_mempool_rejected, |data| { handle_mempool_rejected(data, socket.clone()) })?
+            .add(&map_mempool_replaced, |data| { handle_mempool_replaced(data, socket.clone()) })?;
+    }
+
+    // addrman tracepoints
+    let map_addrman_insert_new = find_map(&obj, "addrman_insert_new");
+    let map_addrman_insert_tried = find_map(&obj, "addrman_insert_tried");
+    if args.addrman_tracepoints {
+        active_tracepoints.extend(&TRACEPOINTS_ADDRMAN);
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        ringbuff_builder
+            .add(&map_addrman_insert_new,   |data| { handle_addrman_new(data, socket.clone()) })?
+            .add(&map_addrman_insert_tried, |data| { handle_addrman_tried(data, socket.clone()) })?;
+    }
+
+    if active_tracepoints.is_empty() {
+        log::error!("No tracepoints enabled.");
+        return Ok(());
+    }
+
+    // attach tracepoints
+    let mut _links = Vec::new();
+    for tracepoint in active_tracepoints {
+        let prog = find_prog_mut(&obj, tracepoint.function);
+        _links.push(prog.attach_usdt(
+            -1,
+            &args.bitcoind_path,
+            tracepoint.context,
+            tracepoint.name,
+        )?)
+    }
+
+    let ring_buffers = ringbuff_builder.build()?;
     loop {
         match ring_buffers.poll(Duration::from_millis(1)) {
             Ok(_) => (),
