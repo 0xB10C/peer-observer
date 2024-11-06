@@ -4,8 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nng = "1.0.1"
 dashmap = "6.1.0"
-chrono = "0.4.38"
 shared = { path = "../../shared" }
-log = "0.4.22"

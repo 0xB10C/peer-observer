@@ -1,12 +1,13 @@
 use dashmap::DashMap;
-use nng::options::protocol::pubsub::Subscribe;
-use nng::options::Options;
-use nng::{Protocol, Socket};
 use shared::clap;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
+use shared::log;
 use shared::net_msg;
+use shared::nng::options::protocol::pubsub::Subscribe;
+use shared::nng::options::Options;
+use shared::nng::{Protocol, Socket};
 use shared::prost::Message;
 use shared::simple_logger;
 use std::sync::atomic;
@@ -15,8 +16,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
-const ADDRESS: &str = "tcp://127.0.0.1:8883";
-const STATS_INTERVAL: Duration = Duration::from_secs(10); // Duration(seconds) to print stats of peers
+// const ADDRESS: &str = "tcp://127.0.0.1:8883";
+// const STATS_INTERVAL: Duration = Duration::from_secs(120); // Duration(seconds) to print stats of peers
 
 const LOG_TARGET: &str = "main";
 
@@ -26,6 +27,14 @@ struct Args {
     /// set the threshold for spy detection (default value is 5)
     #[arg(short, long, default_value = "5")]
     threshold: u32,
+
+    /// The extractor address the tool should connect to.
+    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
+    address: String,
+
+    /// Duration (in seconds) to print stats of peers
+    #[arg(short = 'i', long, default_value = "120")]
+    stats_interval: u64,
 
     /// The log level the tool should run with. Valid log levels
     /// are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
@@ -55,6 +64,8 @@ fn main() {
 
     //to-do: use threshold at appropriate location
     let threshold = &args.threshold;
+    let address = &args.address;
+    let stats_interval = Duration::from_secs(args.stats_interval);
 
     simple_logger::init_with_level(args.log_level).unwrap();
 
@@ -63,7 +74,7 @@ fn main() {
     log::info!(target: LOG_TARGET, "Starting spy-detector...",);
 
     let sub = Socket::new(Protocol::Sub0).unwrap();
-    sub.dial(ADDRESS).unwrap();
+    sub.dial(address).unwrap();
 
     let all_topics = vec![];
     sub.set_opt::<Subscribe>(all_topics).unwrap();
@@ -76,7 +87,7 @@ fn main() {
         let mut last_display = Instant::now();
         loop {
             let now = Instant::now();
-            if now.duration_since(last_display) >= STATS_INTERVAL {
+            if now.duration_since(last_display) >= stats_interval {
                 display_all_stats(&display_peer_map);
                 last_display = now;
             }
@@ -229,8 +240,7 @@ fn process_connection_event(peer_map: &PeerMap, event: &str) {
 
 fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
     println!(
-        "[{}] Peer ID {} stats:\n  INV TX sent: {:?}\n  INV TX received: {:?}\n  INV WTX received: {:?}\n INV WitnessTX received: {:?}\n GetDATA WitnessTX received: {:?}\n  GETDATA WitnessTX received: {:?}\n  Tx sent: {:?}\n  Tx received: {:?}\n Last Activity: {:?}",
-        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+        "Peer ID {} stats:\n  INV TX sent: {:?}\n  INV TX received: {:?}\n  INV WTX received: {:?}\n INV WitnessTX received: {:?}\n GetDATA WitnessTX received: {:?}\n  GETDATA WitnessTX received: {:?}\n  Tx sent: {:?}\n  Tx received: {:?}\n Last Activity: {:?}",
         peer_addr,
         stats.inv_tx_sent,
         stats.inv_tx_received,
@@ -246,15 +256,11 @@ fn print_peer_stats(peer_addr: &str, stats: &PeerStats) {
 
 fn display_all_stats(peer_map: &PeerMap) {
     let map = peer_map;
-    println!(
-        "\n===== Stats for all peers ({}): =====",
-        chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-    );
+    println!("\n===== Stats for all peers: =====");
     for item in map.iter() {
         let peer_id = item.key();
         let stats = item.value();
 
-        //println!("Key: {}\n", peer_id);
         print_peer_stats(&peer_id, &stats);
         println!("----------------------------------------");
     }
