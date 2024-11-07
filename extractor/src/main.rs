@@ -12,7 +12,7 @@ use shared::ctypes::{
 };
 use shared::event_msg::event_msg::Event;
 use shared::event_msg::EventMsg;
-use shared::log;
+use shared::log::{self, error};
 use shared::nng::{Protocol, Socket};
 use shared::simple_logger;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
@@ -21,6 +21,9 @@ use std::time::Duration;
 
 #[path = "tracing.gen.rs"]
 mod tracing;
+
+const RINGBUFF_CALLBACK_OK: i32 = 0;
+const RINGBUFF_CALLBACK_SOCKET_SEND_ERROR: i32 = -10;
 
 struct Tracepoint<'a> {
     pub context: &'a str,
@@ -298,8 +301,16 @@ fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Closed(closed.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_net_conn_closed': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
@@ -307,8 +318,16 @@ fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Outbound(outbound.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_net_conn_outbound': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
@@ -316,8 +335,16 @@ fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Inbound(inbound.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_net_conn_inbound': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
@@ -327,8 +354,16 @@ fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
             evicted.into(),
         )),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_net_conn_inbound_evicted': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
@@ -338,8 +373,16 @@ fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
             misbehaving.into(),
         )),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_net_conn_misbehaving': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_net_message(data: &[u8], s: Socket) -> i32 {
@@ -355,8 +398,16 @@ fn handle_net_message(data: &[u8], s: Socket) -> i32 {
         meta: message.meta.create_protobuf_metadata(),
         msg: Some(protobuf_message),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_net_message': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
@@ -364,8 +415,16 @@ fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
         event: Some(addrman::addrman_event::Event::New(new.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_addrman_new': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
@@ -373,8 +432,16 @@ fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
         event: Some(addrman::addrman_event::Event::Tried(tried.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_addrman_tried': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
@@ -382,8 +449,16 @@ fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Added(added.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_mempool_added': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
@@ -391,8 +466,16 @@ fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Removed(removed.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_mempool_removed': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
@@ -400,8 +483,16 @@ fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Replaced(replaced.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_mempool_replaced': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
@@ -409,8 +500,16 @@ fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
     let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Rejected(rejected.into())),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_mempool_rejected': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
 
 fn handle_validation_block_connected(data: &[u8], s: Socket) -> i32 {
@@ -420,6 +519,14 @@ fn handle_validation_block_connected(data: &[u8], s: Socket) -> i32 {
             connected.into(),
         )),
     }));
-    s.send(&proto.encode_to_vec()).unwrap();
-    0
+    match s.send(&proto.encode_to_vec()) {
+        Ok(_) => RINGBUFF_CALLBACK_OK,
+        Err(e) => {
+            error!(
+                "could not send into socket in 'handle_validation_block_connected': {}",
+                e.1
+            );
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+        }
+    }
 }
