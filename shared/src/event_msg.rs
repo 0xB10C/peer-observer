@@ -3,18 +3,17 @@ include!(concat!(env!("OUT_DIR"), "/event_msg.rs"));
 
 use crate::event_msg::event_msg::Event;
 use std::time::SystemTime;
+use std::time::SystemTimeError;
 
 impl EventMsg {
-    pub fn new(event: Event) {
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap();
+    pub fn new(event: Event) -> Result<EventMsg, SystemTimeError> {
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
         let timestamp = now.as_secs();
         let timestamp_subsec_micros = now.subsec_micros();
-        EventMsg {
+        Ok(EventMsg {
             timestamp,
             timestamp_subsec_micros,
             event: Some(event),
-        };
+        })
     }
 }
