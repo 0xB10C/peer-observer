@@ -23,6 +23,7 @@ use std::time::Duration;
 mod tracing;
 
 const RINGBUFF_CALLBACK_OK: i32 = 0;
+const RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR: i32 = -5;
 const RINGBUFF_CALLBACK_SOCKET_SEND_ERROR: i32 = -10;
 const RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG: i32 = -20;
 
@@ -294,16 +295,31 @@ fn main() -> Result<(), libbpf_rs::Error> {
             RINGBUFF_CALLBACK_OK => (),
             RINGBUFF_CALLBACK_SOCKET_SEND_ERROR => log::warn!("Could not send into nng socket."),
             RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG => log::warn!("Could not parse P2P message."),
-            _other => log::warn!("Unhandled ringbuffer callback error: {}", _other),
+            RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR => log::warn!("SystemTimeError"),
+            _other => {
+                // values >0 are the number of handled events
+                if _other <= 0 {
+                    log::warn!("Unhandled ringbuffer callback error: {}", _other)
+                }
+            }
         };
     }
 }
 
 fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {
     let closed = ClosedConnection::from_bytes(data);
-    let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+    let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Closed(closed.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -318,9 +334,18 @@ fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {
 
 fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
     let outbound = OutboundConnection::from_bytes(data);
-    let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+    let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Outbound(outbound.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -335,9 +360,18 @@ fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
 
 fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
     let inbound = InboundConnection::from_bytes(data);
-    let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+    let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Inbound(inbound.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -352,11 +386,20 @@ fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
 
 fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
     let evicted = ClosedConnection::from_bytes(data);
-    let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+    let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::InboundEvicted(
             evicted.into(),
         )),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -371,11 +414,20 @@ fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
 
 fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
     let misbehaving = MisbehavingConnection::from_bytes(data);
-    let proto = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+    let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Misbehaving(
             misbehaving.into(),
         )),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -397,10 +449,19 @@ fn handle_net_message(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG;
         }
     };
-    let proto = EventMsg::new(Event::Msg(net_msg::Message {
+    let proto = match EventMsg::new(Event::Msg(net_msg::Message {
         meta: message.meta.create_protobuf_metadata(),
         msg: Some(protobuf_message),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -415,9 +476,18 @@ fn handle_net_message(data: &[u8], s: Socket) -> i32 {
 
 fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
     let new = AddrmanInsertNew::from_bytes(data);
-    let proto = EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
+    let proto = match EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
         event: Some(addrman::addrman_event::Event::New(new.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -432,9 +502,18 @@ fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
 
 fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
     let tried = AddrmanInsertTried::from_bytes(data);
-    let proto = EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
+    let proto = match EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
         event: Some(addrman::addrman_event::Event::Tried(tried.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -449,9 +528,18 @@ fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
 
 fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
     let added = MempoolAdded::from_bytes(data);
-    let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+    let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Added(added.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -466,9 +554,18 @@ fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
 
 fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
     let removed = MempoolRemoved::from_bytes(data);
-    let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+    let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Removed(removed.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -483,9 +580,18 @@ fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
 
 fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
     let replaced = MempoolReplaced::from_bytes(data);
-    let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+    let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Replaced(replaced.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -500,9 +606,18 @@ fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
 
 fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
     let rejected = MempoolRejected::from_bytes(data);
-    let proto = EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+    let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Rejected(rejected.into())),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
@@ -517,11 +632,20 @@ fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
 
 fn handle_validation_block_connected(data: &[u8], s: Socket) -> i32 {
     let connected = ValidationBlockConnected::from_bytes(data);
-    let proto = EventMsg::new(Event::Validation(validation::ValidationEvent {
+    let proto = match EventMsg::new(Event::Validation(validation::ValidationEvent {
         event: Some(validation::validation_event::Event::BlockConnected(
             connected.into(),
         )),
-    }));
+    })) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+            return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
+        }
+    };
     match s.send(&proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
