@@ -24,6 +24,7 @@ mod tracing;
 
 const RINGBUFF_CALLBACK_OK: i32 = 0;
 const RINGBUFF_CALLBACK_SOCKET_SEND_ERROR: i32 = -10;
+const RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG: i32 = -20;
 
 struct Tracepoint<'a> {
     pub context: &'a str,
@@ -289,9 +290,11 @@ fn main() -> Result<(), libbpf_rs::Error> {
 
     let ring_buffers = ringbuff_builder.build()?;
     loop {
-        match ring_buffers.poll(Duration::from_millis(1)) {
-            Ok(_) => (),
-            Err(e) => log::warn!("Failed to poll on ring buffers {}", e),
+        match ring_buffers.poll_raw(Duration::from_secs(1)) {
+            RINGBUFF_CALLBACK_OK => (),
+            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR => log::warn!("Could not send into nng socket."),
+            RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG => log::warn!("Could not parse P2P message."),
+            _other => log::warn!("Unhandled ringbuffer callback error: {}", _other),
         };
     }
 }
@@ -390,8 +393,8 @@ fn handle_net_message(data: &[u8], s: Socket) -> i32 {
     let protobuf_message = match message.decode_to_protobuf_network_message() {
         Ok(msg) => msg.into(),
         Err(e) => {
-            log::warn!("could not handle msg with size={}: {}", data.len(), e);
-            return -1;
+            log::warn!("Could not parse P2P msg with size={}: {}", data.len(), e);
+            return RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG;
         }
     };
     let proto = EventMsg::new(Event::Msg(net_msg::Message {
