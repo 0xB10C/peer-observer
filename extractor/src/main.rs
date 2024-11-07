@@ -130,6 +130,11 @@ struct Args {
     #[arg(short, long)]
     bitcoind_path: String,
 
+    /// PID (Process ID) of the Bitcoin Core (bitcoind) binary that should be hooked into.
+    // TODO: remove the default value once https://github.com/bitcoin/bitcoin/pull/26593 is merged
+    #[arg(long, default_value_t = -1)]
+    bitcoind_pid: i32,
+
     // Default tracepoints
     /// Controls if the p2p message tracepoints should be hooked into.
     #[arg(long)]
@@ -282,7 +287,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     for tracepoint in active_tracepoints {
         let prog = find_prog_mut(&obj, tracepoint.function);
         _links.push(prog.attach_usdt(
-            -1,
+            args.bitcoind_pid,
             &args.bitcoind_path,
             tracepoint.context,
             tracepoint.name,
