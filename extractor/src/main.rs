@@ -291,7 +291,15 @@ fn main() -> Result<(), libbpf_rs::Error> {
             &args.bitcoind_path,
             tracepoint.context,
             tracepoint.name,
-        )?)
+        )?);
+        log::info!(
+            "hooked the BPF script function {} up to the tracepoint {}:{} of '{}' with PID={}",
+            tracepoint.function,
+            tracepoint.context,
+            tracepoint.name,
+            args.bitcoind_path,
+            args.bitcoind_pid
+        );
     }
 
     let ring_buffers = ringbuff_builder.build()?;
