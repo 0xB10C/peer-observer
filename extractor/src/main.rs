@@ -18,6 +18,7 @@ use shared::simple_logger;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
 use std::mem::MaybeUninit;
 use std::time::Duration;
+use std::time::SystemTime;
 
 #[path = "tracing.gen.rs"]
 mod tracing;
@@ -26,6 +27,9 @@ const RINGBUFF_CALLBACK_OK: i32 = 0;
 const RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR: i32 = -5;
 const RINGBUFF_CALLBACK_SOCKET_SEND_ERROR: i32 = -10;
 const RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG: i32 = -20;
+
+const NO_EVENTS_ERROR_DURATION: Duration = Duration::from_secs(60 * 3);
+const NO_EVENTS_WARN_DURATION: Duration = Duration::from_secs(60 * 1);
 
 struct Tracepoint<'a> {
     pub context: &'a str,
@@ -315,6 +319,8 @@ fn main() -> Result<(), libbpf_rs::Error> {
         "Startup successful. Starting to extract events from '{}'..",
         args.bitcoind_path
     );
+    let mut last_event_timestamp = SystemTime::now();
+    let mut has_warned_about_no_events = false;
     loop {
         match ring_buffers.poll_raw(Duration::from_secs(1)) {
             RINGBUFF_CALLBACK_OK => (),
@@ -326,10 +332,35 @@ fn main() -> Result<(), libbpf_rs::Error> {
                 if _other <= 0 {
                     log::warn!("Unhandled ringbuffer callback error: {}", _other)
                 } else {
-                    log::trace!("Extracted {} events from ring buffers and published them via nng", _other);
+                    last_event_timestamp = SystemTime::now();
+                    has_warned_about_no_events = false;
+                    log::trace!(
+                        "Extracted {} events from ring buffers and published them via nng",
+                        _other
+                    );
                 }
             }
         };
+        let duration_since_last_event = SystemTime::now()
+            .duration_since(last_event_timestamp)
+            .unwrap();
+        if duration_since_last_event >= NO_EVENTS_ERROR_DURATION {
+            log::error!(
+                "No events received in the last {:?}.",
+                NO_EVENTS_ERROR_DURATION
+            );
+            log::warn!("The bitcoind process might be down, has restarted and changed PIDs, or the network might be down.");
+            log::warn!("The extractor will exit. Please restart it");
+            return Ok(());
+        } else if duration_since_last_event >= NO_EVENTS_WARN_DURATION
+            && !has_warned_about_no_events
+        {
+            has_warned_about_no_events = true;
+            log::warn!(
+                "No events received in the last {:?}. Is bitcoind or the network down?",
+                NO_EVENTS_WARN_DURATION
+            );
+        }
     }
 }
 
