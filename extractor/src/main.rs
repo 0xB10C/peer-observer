@@ -159,6 +159,12 @@ struct Args {
     /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
     #[arg(short, long, default_value_t = log::Level::Debug)]
     log_level: log::Level,
+
+    /// If used, libbpf will print debug information about the BPF maps,
+    /// programs, and tracepoints during extractor startup. This can be
+    /// useful during debugging.
+    #[arg(long, default_value_t = false)]
+    libbpf_debug: bool,
 }
 
 /// Find the BPF program with the given name, panic if it does not exist.
@@ -189,7 +195,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     simple_logger::init_with_level(args.log_level).unwrap();
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
-    skel_builder.obj_builder.debug(true);
+    skel_builder.obj_builder.debug(args.libbpf_debug);
 
     let mut uninit = MaybeUninit::uninit();
     // We can probably be a bit nicer with the error handling here.
