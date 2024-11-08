@@ -16,6 +16,8 @@ use shared::log::{self, error};
 use shared::nng::{Protocol, Socket};
 use shared::simple_logger;
 use shared::{addrman, mempool, net_conn, net_msg, validation};
+use std::fs::File;
+use std::io::{BufReader, Read};
 use std::mem::MaybeUninit;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -30,6 +32,8 @@ const RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG: i32 = -20;
 
 const NO_EVENTS_ERROR_DURATION: Duration = Duration::from_secs(60 * 3);
 const NO_EVENTS_WARN_DURATION: Duration = Duration::from_secs(60 * 1);
+
+const DEFAULT_PID: i32 = -1;
 
 struct Tracepoint<'a> {
     pub context: &'a str,
@@ -135,9 +139,15 @@ struct Args {
     bitcoind_path: String,
 
     /// PID (Process ID) of the Bitcoin Core (bitcoind) binary that should be hooked into.
+    /// If this is set, the --bitcoind-pid-file argument isn't used.
     // TODO: remove the default value once https://github.com/bitcoin/bitcoin/pull/26593 is merged
-    #[arg(long, default_value_t = -1)]
+    #[arg(long, default_value_t = DEFAULT_PID)]
     bitcoind_pid: i32,
+
+    /// File containing the PID (Process ID) of the Bitcoin Core (bitcoind) binary that should be hooked into.
+    /// If --bitcoind-pid is set, this flag is ignored.
+    #[arg(long, default_value = "")]
+    bitcoind_pid_file: String,
 
     // Default tracepoints
     /// Controls if the p2p message tracepoints should be hooked into.
@@ -193,10 +203,45 @@ pub fn find_map<'obj>(object: &'obj Object, name: &str) -> Map<'obj> {
         .unwrap_or_else(|| panic!("failed to find BPF map `{name}`"))
 }
 
+fn bitcoind_pid(args: &Args) -> i32 {
+    if args.bitcoind_pid != -1 {
+        log::info!(
+            "Using bitcoind PID={} specified via command line option",
+            args.bitcoind_pid
+        );
+        return args.bitcoind_pid;
+    } else if args.bitcoind_pid_file != "" {
+        log::info!(
+            "Reading bitcoind PID file '{}' specified via command line option",
+            args.bitcoind_pid_file
+        );
+        let file = File::open(&args.bitcoind_pid_file).expect("Could not open PID file");
+        let mut reader = BufReader::new(file);
+        let mut content = String::new();
+        reader
+            .read_to_string(&mut content)
+            .expect("Could not read PID file");
+        let pid: i32 = content
+            .trim()
+            .parse()
+            .expect("Failed to parse PID file contents as an integer");
+        log::info!(
+            "Using bitcoind PID={} read from {}",
+            pid,
+            args.bitcoind_pid_file
+        );
+        return pid;
+    }
+    // TODO: this won't work once https://github.com/bitcoin/bitcoin/pull/26593 is merged
+    return DEFAULT_PID;
+}
+
 fn main() -> Result<(), libbpf_rs::Error> {
     let args = Args::parse();
 
     simple_logger::init_with_level(args.log_level).unwrap();
+
+    let pid = bitcoind_pid(&args);
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(args.libbpf_debug);
@@ -299,7 +344,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     for tracepoint in active_tracepoints {
         let prog = find_prog_mut(&obj, tracepoint.function);
         _links.push(prog.attach_usdt(
-            args.bitcoind_pid,
+            pid,
             &args.bitcoind_path,
             tracepoint.context,
             tracepoint.name,
@@ -310,7 +355,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
             tracepoint.context,
             tracepoint.name,
             args.bitcoind_path,
-            args.bitcoind_pid
+            pid
         );
     }
 
