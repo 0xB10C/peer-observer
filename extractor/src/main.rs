@@ -198,18 +198,20 @@ fn main() -> Result<(), libbpf_rs::Error> {
     skel_builder.obj_builder.debug(args.libbpf_debug);
 
     let mut uninit = MaybeUninit::uninit();
-    // We can probably be a bit nicer with the error handling here.
+    // TODO: We can probably be a bit nicer with the error handling here.
+    log::info!("Opening BPF skeleton with debug={}..", args.libbpf_debug);
     let open_skel: tracing::OpenTracingSkel = skel_builder.open(&mut uninit).unwrap();
+    log::info!("Loading BPF functions and maps into kernel..");
     let skel: tracing::TracingSkel = open_skel.load()?;
     let obj = skel.object();
 
     let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
     match socket.listen(&args.address) {
         Ok(()) => {
-            log::info!("listening on {}", args.address);
+            log::info!("nng publisher listening on {}", args.address);
         }
         Err(e) => {
-            panic!("Could not listen on {}: {}", args.address, e);
+            panic!("nng publisher could not listen on {}: {}", args.address, e);
         }
     }
 
@@ -309,6 +311,10 @@ fn main() -> Result<(), libbpf_rs::Error> {
     }
 
     let ring_buffers = ringbuff_builder.build()?;
+    log::info!(
+        "Startup successful. Starting to extract events from '{}'..",
+        args.bitcoind_path
+    );
     loop {
         match ring_buffers.poll_raw(Duration::from_secs(1)) {
             RINGBUFF_CALLBACK_OK => (),
@@ -319,6 +325,8 @@ fn main() -> Result<(), libbpf_rs::Error> {
                 // values >0 are the number of handled events
                 if _other <= 0 {
                     log::warn!("Unhandled ringbuffer callback error: {}", _other)
+                } else {
+                    log::trace!("Extracted {} events from ring buffers and published them via nng", _other);
                 }
             }
         };
