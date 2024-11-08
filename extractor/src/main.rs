@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
+use error::RuntimeError;
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use libbpf_rs::{Map, MapCore, Object, ProgramMut, RingBufferBuilder};
 use prost::Message;
@@ -22,6 +23,7 @@ use std::mem::MaybeUninit;
 use std::time::Duration;
 use std::time::SystemTime;
 
+mod error;
 #[path = "tracing.gen.rs"]
 mod tracing;
 
@@ -181,86 +183,84 @@ struct Args {
     libbpf_debug: bool,
 }
 
-/// Find the BPF program with the given name, panic if it does not exist.
-// inspired by https://github.com/libbpf/libbpf-rs/blob/18581bc5fb85bbbfd2c6ca6424a56f7b5d438470/libbpf-rs/tests/common/mod.rs#L70-L77
-// TODO: this currently panics
-// We can probably be a bit nicer with the error handling here.
-pub fn find_prog_mut<'obj>(object: &'obj Object, name: &str) -> ProgramMut<'obj> {
-    object
-        .progs_mut()
-        .find(|map| map.name() == name)
-        .unwrap_or_else(|| panic!("failed to find BPF program `{name}`"))
+/// Find the BPF program with the given name
+pub fn find_prog_mut<'obj>(
+    object: &'obj Object,
+    name: &str,
+) -> Result<ProgramMut<'obj>, RuntimeError> {
+    match object.progs_mut().find(|prog| prog.name() == name) {
+        Some(prog) => Ok(prog),
+        None => Err(RuntimeError::NoSuchBPFProg(name.to_string())),
+    }
 }
 
-/// Find the BPF map with the given name, panic if it does not exist.
-// inspired by https://github.com/libbpf/libbpf-rs/blob/18581bc5fb85bbbfd2c6ca6424a56f7b5d438470/libbpf-rs/tests/common/mod.rs#L63-L68
-// TODO: this currently panics
-// We can probably be a bit nicer with the error handling here.
-pub fn find_map<'obj>(object: &'obj Object, name: &str) -> Map<'obj> {
-    object
-        .maps()
-        .find(|map| map.name() == name)
-        .unwrap_or_else(|| panic!("failed to find BPF map `{name}`"))
+/// Find the BPF map with the given name
+pub fn find_map<'obj>(object: &'obj Object, name: &str) -> Result<Map<'obj>, RuntimeError> {
+    match object.maps().find(|map| map.name() == name) {
+        Some(map) => Ok(map),
+        None => Err(RuntimeError::NoSuchBPFMap(name.to_string())),
+    }
 }
 
-fn bitcoind_pid(args: &Args) -> i32 {
+fn bitcoind_pid(args: &Args) -> Result<i32, RuntimeError> {
     if args.bitcoind_pid != -1 {
         log::info!(
             "Using bitcoind PID={} specified via command line option",
             args.bitcoind_pid
         );
-        return args.bitcoind_pid;
+        return Ok(args.bitcoind_pid);
     } else if args.bitcoind_pid_file != "" {
         log::info!(
             "Reading bitcoind PID file '{}' specified via command line option",
             args.bitcoind_pid_file
         );
-        let file = File::open(&args.bitcoind_pid_file).expect("Could not open PID file");
+        let file = File::open(&args.bitcoind_pid_file)?;
         let mut reader = BufReader::new(file);
         let mut content = String::new();
-        reader
-            .read_to_string(&mut content)
-            .expect("Could not read PID file");
-        let pid: i32 = content
-            .trim()
-            .parse()
-            .expect("Failed to parse PID file contents as an integer");
+        reader.read_to_string(&mut content)?;
+        let pid: i32 = content.trim().parse()?;
         log::info!(
             "Using bitcoind PID={} read from {}",
             pid,
             args.bitcoind_pid_file
         );
-        return pid;
+        return Ok(pid);
     }
     // TODO: this won't work once https://github.com/bitcoin/bitcoin/pull/26593 is merged
-    return DEFAULT_PID;
+    return Ok(DEFAULT_PID);
 }
 
-fn main() -> Result<(), libbpf_rs::Error> {
+fn main() {
+    if let Err(e) = run() {
+        log::error!("Fatal error during extractor runtime: {}", e);
+    }
+}
+
+fn run() -> Result<(), RuntimeError> {
     let args = Args::parse();
 
-    simple_logger::init_with_level(args.log_level).unwrap();
+    simple_logger::init_with_level(args.log_level)?;
 
-    let pid = bitcoind_pid(&args);
+    let pid = bitcoind_pid(&args)?;
 
     let mut skel_builder = tracing::TracingSkelBuilder::default();
     skel_builder.obj_builder.debug(args.libbpf_debug);
 
     let mut uninit = MaybeUninit::uninit();
-    // TODO: We can probably be a bit nicer with the error handling here.
     log::info!("Opening BPF skeleton with debug={}..", args.libbpf_debug);
-    let open_skel: tracing::OpenTracingSkel = skel_builder.open(&mut uninit).unwrap();
+    let open_skel: tracing::OpenTracingSkel = skel_builder.open(&mut uninit)?;
     log::info!("Loading BPF functions and maps into kernel..");
     let skel: tracing::TracingSkel = open_skel.load()?;
     let obj = skel.object();
 
-    let socket: Socket = Socket::new(Protocol::Pub0).unwrap();
+    let socket: Socket = Socket::new(Protocol::Pub0)?;
     match socket.listen(&args.address) {
         Ok(()) => {
             log::info!("nng publisher listening on {}", args.address);
         }
         Err(e) => {
-            panic!("nng publisher could not listen on {}: {}", args.address, e);
+            error!("nng publisher could not listen on {}: {}", args.address, e);
+            return Err(RuntimeError::Nng(e));
         }
     }
 
@@ -268,10 +268,10 @@ fn main() -> Result<(), libbpf_rs::Error> {
     let mut ringbuff_builder = RingBufferBuilder::new();
 
     // P2P net msgs tracepoints
-    let map_net_msg_small = find_map(&obj, "net_msg_small");
-    let map_net_msg_medium = find_map(&obj, "net_msg_medium");
-    let map_net_msg_large = find_map(&obj, "net_msg_large");
-    let map_net_msg_huge = find_map(&obj, "net_msg_huge");
+    let map_net_msg_small = find_map(&obj, "net_msg_small")?;
+    let map_net_msg_medium = find_map(&obj, "net_msg_medium")?;
+    let map_net_msg_large = find_map(&obj, "net_msg_large")?;
+    let map_net_msg_huge = find_map(&obj, "net_msg_huge")?;
     if !args.no_p2pmsg_tracepoints {
         active_tracepoints.extend(&TRACEPOINTS_NET_MESSAGE);
         #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -283,11 +283,11 @@ fn main() -> Result<(), libbpf_rs::Error> {
     }
 
     // P2P connection tracepoints
-    let map_net_conn_inbound = find_map(&obj, "net_conn_inbound");
-    let map_net_conn_outbound = find_map(&obj, "net_conn_outbound");
-    let map_net_conn_closed = find_map(&obj, "net_conn_closed");
-    let map_net_conn_inbound_evicted = find_map(&obj, "net_conn_inbound_evicted");
-    let map_net_conn_misbehaving = find_map(&obj, "net_conn_misbehaving");
+    let map_net_conn_inbound = find_map(&obj, "net_conn_inbound")?;
+    let map_net_conn_outbound = find_map(&obj, "net_conn_outbound")?;
+    let map_net_conn_closed = find_map(&obj, "net_conn_closed")?;
+    let map_net_conn_inbound_evicted = find_map(&obj, "net_conn_inbound_evicted")?;
+    let map_net_conn_misbehaving = find_map(&obj, "net_conn_misbehaving")?;
     if !args.no_connection_tracepoints {
         active_tracepoints.extend(&TRACEPOINTS_NET_CONN);
         #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -300,7 +300,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     }
 
     // validation tracepoints
-    let map_validation_block_connected = find_map(&obj, "validation_block_connected");
+    let map_validation_block_connected = find_map(&obj, "validation_block_connected")?;
     if !args.no_validation_tracepoints {
         active_tracepoints.extend(&TRACEPOINTS_VALIDATION);
         ringbuff_builder.add(&map_validation_block_connected, |data| {
@@ -309,10 +309,10 @@ fn main() -> Result<(), libbpf_rs::Error> {
     }
 
     // mempool tracepoints
-    let map_mempool_added = find_map(&obj, "mempool_added");
-    let map_mempool_removed = find_map(&obj, "mempool_removed");
-    let map_mempool_rejected = find_map(&obj, "mempool_rejected");
-    let map_mempool_replaced = find_map(&obj, "mempool_replaced");
+    let map_mempool_added = find_map(&obj, "mempool_added")?;
+    let map_mempool_removed = find_map(&obj, "mempool_removed")?;
+    let map_mempool_rejected = find_map(&obj, "mempool_rejected")?;
+    let map_mempool_replaced = find_map(&obj, "mempool_replaced")?;
     if !args.no_mempool_tracepoints {
         active_tracepoints.extend(&TRACEPOINTS_MEMPOOL);
         #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -324,8 +324,8 @@ fn main() -> Result<(), libbpf_rs::Error> {
     }
 
     // addrman tracepoints
-    let map_addrman_insert_new = find_map(&obj, "addrman_insert_new");
-    let map_addrman_insert_tried = find_map(&obj, "addrman_insert_tried");
+    let map_addrman_insert_new = find_map(&obj, "addrman_insert_new")?;
+    let map_addrman_insert_tried = find_map(&obj, "addrman_insert_tried")?;
     if args.addrman_tracepoints {
         active_tracepoints.extend(&TRACEPOINTS_ADDRMAN);
         #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -342,7 +342,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
     // attach tracepoints
     let mut _links = Vec::new();
     for tracepoint in active_tracepoints {
-        let prog = find_prog_mut(&obj, tracepoint.function);
+        let prog = find_prog_mut(&obj, tracepoint.function)?;
         _links.push(prog.attach_usdt(
             pid,
             &args.bitcoind_path,
@@ -386,9 +386,7 @@ fn main() -> Result<(), libbpf_rs::Error> {
                 }
             }
         };
-        let duration_since_last_event = SystemTime::now()
-            .duration_since(last_event_timestamp)
-            .unwrap();
+        let duration_since_last_event = SystemTime::now().duration_since(last_event_timestamp)?;
         if duration_since_last_event >= NO_EVENTS_ERROR_DURATION {
             log::error!(
                 "No events received in the last {:?}.",
