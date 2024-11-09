@@ -8,21 +8,18 @@ use shared::bitcoin::p2p::message::NetworkMessage;
 use shared::bitcoin::p2p::message_network::VersionMessage;
 use shared::bitcoin::p2p::{address, message, message_network, ServiceFlags};
 use shared::bitcoin::Network;
-use shared::clap;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
 use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
-use shared::nng::options::protocol::pubsub::Subscribe;
-use shared::nng::options::Options;
-use shared::nng::{Protocol, Socket};
 use shared::primitive::address::Address as AddressType;
 use shared::primitive::Address;
 use shared::prost::Message as ProstMessage;
 use shared::simple_logger;
 use shared::util;
+use shared::{clap, nats};
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::OpenOptions;
@@ -47,9 +44,9 @@ const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// The extractor address the tool should connect to.
-    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
-    address: String,
+    /// The NATS server address the tool should connect and subscribe to.
+    #[arg(short, long, default_value = "127.0.0.1:4222")]
+    nats_address: String,
     /// The metrics server address the tool should listen on.
     #[arg(short, long, default_value = "127.0.0.1:18282")]
     metrics_address: String,
@@ -319,25 +316,23 @@ fn main() {
     let args = Args::parse();
     simple_logger::init_with_level(args.log_level).unwrap();
 
-    let sub = Socket::new(Protocol::Sub0).unwrap();
-    sub.dial(&args.address).unwrap();
-
-    let all_topics = vec![];
-    sub.set_opt::<Subscribe>(all_topics).unwrap();
-
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
 
     metricserver::start(&args.metrics_address).unwrap();
     log::info!("metrics-server started on {}", &args.metrics_address);
 
+    let nc = nats::connect(args.nats_address).expect("should be able to connect to NATS server");
+    let sub = nc.subscribe("*").expect("could not subscribe to topic '*'");
+
     crossbeam::scope(|s| {
-        s.spawn(|_| loop {
-            let msg = sub.recv().unwrap();
-            let wrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap();
-            let unwrapped = wrapped.event;
-            if let Some(event) = unwrapped {
-                handle_event(event, wrapped.timestamp, input_sender.clone());
+        s.spawn(|_| {
+            for msg in sub.messages() {
+                let wrapped = event_msg::EventMsg::decode(msg.data.as_slice()).unwrap();
+                let unwrapped = wrapped.event;
+                if let Some(event) = unwrapped {
+                    handle_event(event, wrapped.timestamp, input_sender.clone());
+                }
             }
         });
 
