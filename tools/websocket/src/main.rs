@@ -2,16 +2,13 @@
 
 use async_broadcast::broadcast;
 use async_std::task;
-use shared::clap;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
-use shared::nng::options::protocol::pubsub::Subscribe;
-use shared::nng::options::Options;
-use shared::nng::{Protocol, Socket};
 use shared::prost::Message;
 use shared::simple_logger;
+use shared::{clap, nats};
 use std::net::TcpListener;
 use tungstenite::accept;
 
@@ -19,9 +16,9 @@ use tungstenite::accept;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// The extractor address the tool should connect to.
-    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
-    address: String,
+    /// The NATS server address the tool should connect and subscribe to.
+    #[arg(short, long, default_value = "127.0.0.1:4222")]
+    nats_address: String,
 
     /// The websocket address the tool listens on.
     #[arg(short, long, default_value = "127.0.0.1:47482")]
@@ -44,14 +41,13 @@ async fn main() {
 
     // nano message receive task
     task::spawn(async move {
-        let sub = Socket::new(Protocol::Sub0).unwrap();
-        sub.dial(&args.address).unwrap();
-
-        let all_topics = vec![];
-        sub.set_opt::<Subscribe>(all_topics).unwrap();
-        loop {
-            let msg = sub.recv().unwrap();
-            let unwrapped = event_msg::EventMsg::decode(msg.as_slice()).unwrap().event;
+        let nc =
+            nats::connect(args.nats_address).expect("should be able to connect to NATS server");
+        let sub = nc.subscribe("*").expect("could not subscribe to topic '*'");
+        for msg in sub.messages() {
+            let unwrapped = event_msg::EventMsg::decode(msg.data.as_slice())
+                .unwrap()
+                .event;
             if let Some(event) = unwrapped {
                 if let Err(e) = sender.broadcast(event).await {
                     log::error!("Could not send msg event into broadcast channel: {}", e);
