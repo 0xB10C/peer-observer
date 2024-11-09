@@ -4,7 +4,6 @@ use error::RuntimeError;
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use libbpf_rs::{Map, MapCore, Object, ProgramMut, RingBufferBuilder};
 use prost::Message;
-use shared::clap;
 use shared::clap::Parser;
 use shared::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
@@ -14,9 +13,9 @@ use shared::ctypes::{
 use shared::event_msg::event_msg::Event;
 use shared::event_msg::EventMsg;
 use shared::log::{self, error};
-use shared::nng::{Protocol, Socket};
 use shared::simple_logger;
-use shared::{addrman, mempool, net_conn, net_msg, validation};
+use shared::{addrman, mempool, nats_subjects::Subject, net_conn, net_msg, validation};
+use shared::{clap, nats};
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::mem::MaybeUninit;
@@ -29,7 +28,7 @@ mod tracing;
 
 const RINGBUFF_CALLBACK_OK: i32 = 0;
 const RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR: i32 = -5;
-const RINGBUFF_CALLBACK_SOCKET_SEND_ERROR: i32 = -10;
+const RINGBUFF_CALLBACK_PUBLISH_ERROR: i32 = -10;
 const RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG: i32 = -20;
 
 const NO_EVENTS_ERROR_DURATION: Duration = Duration::from_secs(60 * 3);
@@ -126,15 +125,14 @@ const TRACEPOINTS_VALIDATION: [Tracepoint; 1] = [Tracepoint {
     function: "handle_validation_block_connected",
 }];
 
-/// The peer-observer extractor
-/// Hooks into a Bitcoin Core binary with tracepoints and extracts events
-/// from it into a nanomsg PUB-SUB queue.
+/// The peer-observer extractor hooks into a Bitcoin Core binary with
+/// tracepoints and publishes events into a NATS pub-sub queue.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// TCP socket the nanomsg publisher binds on.
-    #[arg(short, long, default_value = "tcp://127.0.0.1:8883")]
-    address: String,
+    /// Address of the NATS server where the extractor will publish messages to.
+    #[arg(short, long, default_value = "127.0.0.1:4222")]
+    nats_address: String,
 
     /// Path to the Bitcoin Core (bitcoind) binary that should be hooked into.
     #[arg(short, long)]
@@ -253,16 +251,7 @@ fn run() -> Result<(), RuntimeError> {
     let skel: tracing::TracingSkel = open_skel.load()?;
     let obj = skel.object();
 
-    let socket: Socket = Socket::new(Protocol::Pub0)?;
-    match socket.listen(&args.address) {
-        Ok(()) => {
-            log::info!("nng publisher listening on {}", args.address);
-        }
-        Err(e) => {
-            error!("nng publisher could not listen on {}: {}", args.address, e);
-            return Err(RuntimeError::Nng(e));
-        }
-    }
+    let nc = nats::connect(args.nats_address)?;
 
     let mut active_tracepoints = vec![];
     let mut ringbuff_builder = RingBufferBuilder::new();
@@ -276,10 +265,10 @@ fn run() -> Result<(), RuntimeError> {
         active_tracepoints.extend(&TRACEPOINTS_NET_MESSAGE);
         #[cfg_attr(rustfmt, rustfmt_skip)]
         ringbuff_builder
-            .add(&map_net_msg_small,    |data| { handle_net_message(data, socket.clone()) })?
-            .add(&map_net_msg_medium,   |data| { handle_net_message(data, socket.clone()) })?
-            .add(&map_net_msg_large,    |data| { handle_net_message(data, socket.clone()) })?
-            .add(&map_net_msg_huge,     |data| { handle_net_message(data, socket.clone()) })?;
+            .add(&map_net_msg_small,    |data| { handle_net_message(data, &nc) })?
+            .add(&map_net_msg_medium,   |data| { handle_net_message(data, &nc) })?
+            .add(&map_net_msg_large,    |data| { handle_net_message(data, &nc) })?
+            .add(&map_net_msg_huge,     |data| { handle_net_message(data, &nc) })?;
     }
 
     // P2P connection tracepoints
@@ -292,11 +281,11 @@ fn run() -> Result<(), RuntimeError> {
         active_tracepoints.extend(&TRACEPOINTS_NET_CONN);
         #[cfg_attr(rustfmt, rustfmt_skip)]
         ringbuff_builder
-            .add(&map_net_conn_inbound,         |data| { handle_net_conn_inbound(data, socket.clone()) })?
-            .add(&map_net_conn_outbound,        |data| { handle_net_conn_outbound(data, socket.clone()) })?
-            .add(&map_net_conn_closed,          |data| { handle_net_conn_closed(data, socket.clone()) })?
-            .add(&map_net_conn_inbound_evicted, |data| { handle_net_conn_inbound_evicted(data, socket.clone()) })?
-            .add(&map_net_conn_misbehaving,     |data| { handle_net_conn_misbehaving(data, socket.clone()) })?;
+            .add(&map_net_conn_inbound,         |data| { handle_net_conn_inbound(data, &nc) })?
+            .add(&map_net_conn_outbound,        |data| { handle_net_conn_outbound(data, &nc) })?
+            .add(&map_net_conn_closed,          |data| { handle_net_conn_closed(data, &nc) })?
+            .add(&map_net_conn_inbound_evicted, |data| { handle_net_conn_inbound_evicted(data, &nc) })?
+            .add(&map_net_conn_misbehaving,     |data| { handle_net_conn_misbehaving(data, &nc) })?;
     }
 
     // validation tracepoints
@@ -304,7 +293,7 @@ fn run() -> Result<(), RuntimeError> {
     if !args.no_validation_tracepoints {
         active_tracepoints.extend(&TRACEPOINTS_VALIDATION);
         ringbuff_builder.add(&map_validation_block_connected, |data| {
-            handle_validation_block_connected(data, socket.clone())
+            handle_validation_block_connected(data, &nc)
         })?;
     }
 
@@ -317,10 +306,10 @@ fn run() -> Result<(), RuntimeError> {
         active_tracepoints.extend(&TRACEPOINTS_MEMPOOL);
         #[cfg_attr(rustfmt, rustfmt_skip)]
         ringbuff_builder
-            .add(&map_mempool_added,    |data| { handle_mempool_added(data, socket.clone()) })?
-            .add(&map_mempool_removed,  |data| { handle_mempool_removed(data, socket.clone()) })?
-            .add(&map_mempool_rejected, |data| { handle_mempool_rejected(data, socket.clone()) })?
-            .add(&map_mempool_replaced, |data| { handle_mempool_replaced(data, socket.clone()) })?;
+            .add(&map_mempool_added,    |data| { handle_mempool_added(data, &nc) })?
+            .add(&map_mempool_removed,  |data| { handle_mempool_removed(data, &nc) })?
+            .add(&map_mempool_rejected, |data| { handle_mempool_rejected(data, &nc) })?
+            .add(&map_mempool_replaced, |data| { handle_mempool_replaced(data, &nc) })?;
     }
 
     // addrman tracepoints
@@ -330,8 +319,8 @@ fn run() -> Result<(), RuntimeError> {
         active_tracepoints.extend(&TRACEPOINTS_ADDRMAN);
         #[cfg_attr(rustfmt, rustfmt_skip)]
         ringbuff_builder
-            .add(&map_addrman_insert_new, |data| { handle_addrman_new(data, socket.clone()) })?
-            .add(&map_addrman_insert_tried, |data| { handle_addrman_tried(data, socket.clone()) })?;
+            .add(&map_addrman_insert_new, |data| { handle_addrman_new(data, &nc) })?
+            .add(&map_addrman_insert_tried, |data| { handle_addrman_tried(data, &nc) })?;
     }
 
     if active_tracepoints.is_empty() {
@@ -369,7 +358,7 @@ fn run() -> Result<(), RuntimeError> {
     loop {
         match ring_buffers.poll_raw(Duration::from_secs(1)) {
             RINGBUFF_CALLBACK_OK => (),
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR => log::warn!("Could not send into nng socket."),
+            RINGBUFF_CALLBACK_PUBLISH_ERROR => log::warn!("Could not publish to NATS server."),
             RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG => log::warn!("Could not parse P2P message."),
             RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR => log::warn!("SystemTimeError"),
             _other => {
@@ -380,7 +369,7 @@ fn run() -> Result<(), RuntimeError> {
                     last_event_timestamp = SystemTime::now();
                     has_warned_about_no_events = false;
                     log::trace!(
-                        "Extracted {} events from ring buffers and published them via nng",
+                        "Extracted {} events from ring buffers and published them",
                         _other
                     );
                 }
@@ -407,7 +396,7 @@ fn run() -> Result<(), RuntimeError> {
     }
 }
 
-fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {
+fn handle_net_conn_closed(data: &[u8], nc: &nats::Connection) -> i32 {
     let closed = ClosedConnection::from_bytes(data);
     let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Closed(closed.into())),
@@ -421,19 +410,19 @@ fn handle_net_conn_closed(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::NetConn.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_net_conn_closed': {}",
-                e.1
+                "could not publish message in 'handle_net_conn_closed': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
+fn handle_net_conn_outbound(data: &[u8], nc: &nats::Connection) -> i32 {
     let outbound = OutboundConnection::from_bytes(data);
     let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Outbound(outbound.into())),
@@ -447,19 +436,19 @@ fn handle_net_conn_outbound(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::NetConn.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_net_conn_outbound': {}",
-                e.1
+                "could not publish message in 'handle_net_conn_outbound': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
+fn handle_net_conn_inbound(data: &[u8], nc: &nats::Connection) -> i32 {
     let inbound = InboundConnection::from_bytes(data);
     let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Inbound(inbound.into())),
@@ -473,19 +462,19 @@ fn handle_net_conn_inbound(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::NetConn.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_net_conn_inbound': {}",
-                e.1
+                "could not publish message in 'handle_net_conn_inbound': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
+fn handle_net_conn_inbound_evicted(data: &[u8], nc: &nats::Connection) -> i32 {
     let evicted = ClosedConnection::from_bytes(data);
     let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::InboundEvicted(
@@ -501,19 +490,19 @@ fn handle_net_conn_inbound_evicted(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::NetConn.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_net_conn_inbound_evicted': {}",
-                e.1
+                "could not publish message in 'handle_net_conn_inbound_evicted': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
+fn handle_net_conn_misbehaving(data: &[u8], nc: &nats::Connection) -> i32 {
     let misbehaving = MisbehavingConnection::from_bytes(data);
     let proto = match EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Misbehaving(
@@ -529,19 +518,19 @@ fn handle_net_conn_misbehaving(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::NetConn.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_net_conn_misbehaving': {}",
-                e.1
+                "could not publish message in 'handle_net_conn_misbehaving': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_net_message(data: &[u8], s: Socket) -> i32 {
+fn handle_net_message(data: &[u8], nc: &nats::Connection) -> i32 {
     let message = P2PMessage::from_bytes(data);
     let protobuf_message = match message.decode_to_protobuf_network_message() {
         Ok(msg) => msg.into(),
@@ -563,19 +552,16 @@ fn handle_net_message(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::NetMsg.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
-            error!(
-                "could not send into socket in 'handle_net_message': {}",
-                e.1
-            );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            error!("could not publish message in 'handle_net_message': {}", e);
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
+fn handle_addrman_new(data: &[u8], nc: &nats::Connection) -> i32 {
     let new = AddrmanInsertNew::from_bytes(data);
     let proto = match EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
         event: Some(addrman::addrman_event::Event::New(new.into())),
@@ -589,19 +575,16 @@ fn handle_addrman_new(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::Addrman.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
-            error!(
-                "could not send into socket in 'handle_addrman_new': {}",
-                e.1
-            );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            error!("could not publish message in 'handle_addrman_new': {}", e);
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
+fn handle_addrman_tried(data: &[u8], nc: &nats::Connection) -> i32 {
     let tried = AddrmanInsertTried::from_bytes(data);
     let proto = match EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
         event: Some(addrman::addrman_event::Event::Tried(tried.into())),
@@ -615,19 +598,16 @@ fn handle_addrman_tried(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::Addrman.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
-            error!(
-                "could not send into socket in 'handle_addrman_tried': {}",
-                e.1
-            );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            error!("could not publish message in 'handle_addrman_tried': {}", e);
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
+fn handle_mempool_added(data: &[u8], nc: &nats::Connection) -> i32 {
     let added = MempoolAdded::from_bytes(data);
     let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Added(added.into())),
@@ -641,19 +621,16 @@ fn handle_mempool_added(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::Mempool.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
-            error!(
-                "could not send into socket in 'handle_mempool_added': {}",
-                e.1
-            );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            error!("could not publish message in 'handle_mempool_added': {}", e);
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
+fn handle_mempool_removed(data: &[u8], nc: &nats::Connection) -> i32 {
     let removed = MempoolRemoved::from_bytes(data);
     let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Removed(removed.into())),
@@ -667,19 +644,19 @@ fn handle_mempool_removed(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::Mempool.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_mempool_removed': {}",
-                e.1
+                "could not publish message in 'handle_mempool_removed': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
+fn handle_mempool_replaced(data: &[u8], nc: &nats::Connection) -> i32 {
     let replaced = MempoolReplaced::from_bytes(data);
     let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Replaced(replaced.into())),
@@ -693,19 +670,19 @@ fn handle_mempool_replaced(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::Mempool.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_mempool_replaced': {}",
-                e.1
+                "could not publish message in 'handle_mempool_replaced': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
+fn handle_mempool_rejected(data: &[u8], nc: &nats::Connection) -> i32 {
     let rejected = MempoolRejected::from_bytes(data);
     let proto = match EventMsg::new(Event::Mempool(mempool::MempoolEvent {
         event: Some(mempool::mempool_event::Event::Rejected(rejected.into())),
@@ -719,19 +696,19 @@ fn handle_mempool_rejected(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::Mempool.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_mempool_rejected': {}",
-                e.1
+                "could not publish message in 'handle_mempool_rejected': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
 
-fn handle_validation_block_connected(data: &[u8], s: Socket) -> i32 {
+fn handle_validation_block_connected(data: &[u8], nc: &nats::Connection) -> i32 {
     let connected = ValidationBlockConnected::from_bytes(data);
     let proto = match EventMsg::new(Event::Validation(validation::ValidationEvent {
         event: Some(validation::validation_event::Event::BlockConnected(
@@ -747,14 +724,14 @@ fn handle_validation_block_connected(data: &[u8], s: Socket) -> i32 {
             return RINGBUFF_CALLBACK_SYSTEM_TIME_ERROR;
         }
     };
-    match s.send(&proto.encode_to_vec()) {
+    match nc.publish(&Subject::Validation.to_string(), &proto.encode_to_vec()) {
         Ok(_) => RINGBUFF_CALLBACK_OK,
         Err(e) => {
             error!(
-                "could not send into socket in 'handle_validation_block_connected': {}",
-                e.1
+                "could not publish message in 'handle_validation_block_connected': {}",
+                e
             );
-            RINGBUFF_CALLBACK_SOCKET_SEND_ERROR
+            RINGBUFF_CALLBACK_PUBLISH_ERROR
         }
     }
 }
