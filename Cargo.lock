@@ -984,9 +984,9 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libbpf-cargo"
-version = "0.24.7"
+version = "0.24.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df118348a241dbaaa2f425856250f0d0c041be172ddbacdbf7b8a08af8dffb0c"
+checksum = "704727a07f185a76c58faa7b8ed08fba3194661c212183aea1174fe2970ee185"
 dependencies = [
  "anyhow",
  "cargo_metadata",
