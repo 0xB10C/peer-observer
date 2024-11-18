@@ -8,7 +8,7 @@ shared = { path = "../../shared" }
 tungstenite = "0.24.0"
 async-std = { version = "1.12.0", features = ["attributes"] }
 async-broadcast = "0.7.0"
-serde_json = "1.0.117"
+serde_json = "1.0.133"
 
 [features]
 # Treat warnings as a build error.
