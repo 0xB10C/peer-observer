@@ -251,7 +251,9 @@ fn run() -> Result<(), RuntimeError> {
     let skel: tracing::TracingSkel = open_skel.load()?;
     let obj = skel.object();
 
-    log::debug!("Connecting to NATS server at {}..", args.nats_address);
+    println!("pre connecting")
+
+    log::info!("Connecting to NATS server at {}..", args.nats_address);
     let nc = nats::connect(&args.nats_address)?;
     log::info!("Connected to NATS server at {}", &args.nats_address);
 
