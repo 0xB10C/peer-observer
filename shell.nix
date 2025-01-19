@@ -14,7 +14,7 @@ pkgs.mkShell {
 
       pkgs.rustfmt
 
-      pkgs.bpftool
+      pkgs.bpftools
 
       # libbpf CO-RE pkgs
       pkgs.clang_14
