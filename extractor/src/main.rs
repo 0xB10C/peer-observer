@@ -251,7 +251,9 @@ fn run() -> Result<(), RuntimeError> {
     let skel: tracing::TracingSkel = open_skel.load()?;
     let obj = skel.object();
 
-    let nc = nats::connect(args.nats_address)?;
+    log::debug!("Connecting to NATS server at {}..", args.nats_address);
+    let nc = nats::connect(&args.nats_address)?;
+    log::info!("Connected to NATS server at {}", &args.nats_address);
 
     let mut active_tracepoints = vec![];
     let mut ringbuff_builder = RingBufferBuilder::new();
