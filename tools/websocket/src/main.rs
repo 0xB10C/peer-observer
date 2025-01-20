@@ -1,7 +1,5 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use async_broadcast::broadcast;
-use async_std::task;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
@@ -9,8 +7,10 @@ use shared::log;
 use shared::prost::Message;
 use shared::simple_logger;
 use shared::{clap, nats};
-use std::net::TcpListener;
-use tungstenite::accept;
+use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use tungstenite::{accept, Message as TungsteniteMessage, WebSocket};
 
 /// A peer-observer tool that sends out all events on a websocket
 #[derive(Parser, Debug)]
@@ -30,96 +30,101 @@ struct Args {
     log_level: log::Level,
 }
 
-#[async_std::main]
-async fn main() {
+fn main() {
     let args = Args::parse();
     simple_logger::init_with_level(args.log_level).unwrap();
 
-    let (mut sender, broadcast_receiver) = broadcast(128);
-    sender.set_overflow(true);
-    let inactive_broadcast_receiver = broadcast_receiver.deactivate();
+    log::info!("Trying to connect to NATS server at {}", args.nats_address);
+    let nc = nats::connect(args.nats_address).expect("should be able to connect to NATS server");
+    let sub = nc.subscribe("*").expect("could not subscribe to topic '*'");
 
-    // nano message receive task
-    task::spawn(async move {
-        let nc =
-            nats::connect(args.nats_address).expect("should be able to connect to NATS server");
-        let sub = nc.subscribe("*").expect("could not subscribe to topic '*'");
-        for msg in sub.messages() {
-            let unwrapped = event_msg::EventMsg::decode(msg.data.as_slice())
-                .unwrap()
-                .event;
-            if let Some(event) = unwrapped {
-                if let Err(e) = sender.broadcast(event).await {
-                    log::error!("Could not send msg event into broadcast channel: {}", e);
+    let clients = Arc::new(Mutex::new(Vec::new()));
+
+    // Spawn a thread to handle NATS messages and broadcast to WebSocket clients
+    {
+        let clients = Arc::clone(&clients);
+        thread::spawn(move || {
+            for msg in sub.messages() {
+                let unwrapped = event_msg::EventMsg::decode(msg.data.as_slice())
+                    .unwrap()
+                    .event;
+                if let Some(event) = unwrapped {
+                    match serde_json::to_string::<Event>(&event.clone().into()) {
+                        Ok(msg) => {
+                            broadcast_to_clients(&msg, &clients);
+                        }
+                        Err(e) => {
+                            log::error!("Could not serialize the message to JSON: {}", e)
+                        }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
     log::info!("Starting websocket server on {}", args.websocket_address);
-    let server = match TcpListener::bind(args.websocket_address.clone()) {
-        Ok(s) => s,
-        Err(e) => {
-            log::error!(
-                "Could not start websocket server on {}: {}",
-                args.websocket_address,
-                e
-            );
-            return;
-        }
-    };
+    let server = TcpListener::bind(args.websocket_address).expect("Failed to bind server");
 
+    // Accept WebSocket clients
     for stream in server.incoming() {
         match stream {
             Ok(stream) => {
-                let mut r = inactive_broadcast_receiver.clone().activate();
-                task::spawn(async move {
-                    match accept(stream) {
-                        Ok(mut websocket) => {
-                            log::info!(
-                                "Accepted new websocket connection: connections={}",
-                                r.receiver_count()
-                            );
-
-                            loop {
-                                match r.recv().await {
-                                    Ok(msg) => {
-                                        match serde_json::to_string::<Event>(&msg.clone().into()) {
-                                            Ok(msg) => {
-                                                if let Err(e) =
-                                                    websocket.send(tungstenite::Message::Text(msg))
-                                                {
-                                                    log::warn!("Could not send msg to websocket: {}. Connection probably closed.", e);
-                                                    // Try our best to close and flush the websocket. If we can't,
-                                                    // we can't..
-                                                    let _ = websocket.close(None);
-                                                    let _ = websocket.flush();
-                                                    break;
-                                                }
-                                            }
-                                            Err(e) => {
-                                                log::error!(
-                                                    "Could not serialize the message to JSON: {}",
-                                                    e
-                                                )
-                                            }
-                                        }
-                                    }
-                                    Err(e) => {
-                                        log::error!("Could not receive msg: {}", e);
-                                    }
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            log::warn!("Failed to open websocket on incoming connection: {}", e);
-                        }
-                    }
+                let clients = Arc::clone(&clients);
+                thread::spawn(move || {
+                    handle_client(stream, clients);
                 });
             }
-            Err(e) => {
-                log::warn!("Failed to accept incomming TCP connection: {}", e);
+            Err(e) => log::warn!("Failed to accept connection: {}", e),
+        }
+    }
+}
+
+fn handle_client(stream: TcpStream, clients: Arc<Mutex<Vec<TcpStream>>>) {
+    let mut websocket = accept(stream).expect("Failed to accept WebSocket");
+    {
+        let mut clients_guard = clients.lock().unwrap();
+        clients_guard.push(websocket.get_ref().try_clone().unwrap());
+    }
+
+    log::info!(
+        "Client '{}' connected",
+        websocket.get_ref().peer_addr().unwrap()
+    );
+    loop {
+        match websocket.read() {
+            Ok(_) => {
+                // We ignore all messages a client sends us.
             }
+            Err(_) => {
+                log::info!(
+                    "Client '{}' disconnected",
+                    websocket.get_ref().peer_addr().unwrap()
+                );
+                // Remove the client from the shared list if the connection is closed
+                let mut clients_guard = clients.lock().unwrap();
+                clients_guard.retain(|client| {
+                    client.peer_addr().ok().map_or(false, |addr| {
+                        addr != websocket.get_ref().peer_addr().unwrap()
+                    })
+                });
+                break;
+            }
+        }
+    }
+}
+
+fn broadcast_to_clients(message: &str, clients: &Arc<Mutex<Vec<TcpStream>>>) {
+    let clients_guard = clients.lock().unwrap();
+
+    for client in clients_guard.iter() {
+        let mut websocket = WebSocket::from_raw_socket(
+            client.try_clone().unwrap(),
+            tungstenite::protocol::Role::Server,
+            None,
+        );
+
+        if let Err(e) = websocket.send(TungsteniteMessage::text(message)) {
+            log::warn!("Failed to send message to a client: {}", e);
         }
     }
 }
