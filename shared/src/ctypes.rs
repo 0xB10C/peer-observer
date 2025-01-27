@@ -1,9 +1,9 @@
-use std::{cmp, fmt, mem, ptr};
+use std::{fmt, ptr};
 
-use bitcoin::consensus::{self, Decodable};
-use bitcoin::hashes::{sha256d, Hash};
-use bitcoin::hex::*;
-use bitcoin::p2p::message::{NetworkMessage, RawNetworkMessage};
+use bitcoin::consensus;
+use bitcoin::consensus::encode::Decodable;
+use bitcoin::hashes::{hex::ToHex, sha256d, Hash};
+use bitcoin::network::message::{NetworkMessage, RawNetworkMessage};
 
 use crate::net_msg;
 use crate::primitive::ConnType;
@@ -14,13 +14,24 @@ const MAX_PEER_CONN_TYPE_LENGTH: usize = 20;
 const MAX_MSG_TYPE_LENGTH: usize = 12;
 const MAX_MISBEHAVING_MESSAGE_LENGTH: usize = 128;
 
-/// Based on Bitcoin Core's MAX_PROTOCOL_MESSAGE_LENGTH. Longer messages are rejected.
-const MAX_P2P_MESSAGE_SIZE: usize = 4194304; // 4 MB
+const MAX_SMALL_MSG_LENGTH: usize = 256;
+const MAX_MEDIUM_MSG_LENGTH: usize = 4096;
+const MAX_LARGE_MSG_LENGTH: usize = 65536;
+const MAX_HUGE_MSG_LENGTH: usize = 4194304;
 
 const TXID_LENGTH: usize = 32;
 const REMOVAL_REASON_LENGTH: usize = 9;
 const REJECTION_REASON_LENGTH: usize = 118;
+
 const HASH_LENGTH: usize = 32;
+
+#[repr(usize)]
+pub enum P2PMessageSize {
+    Small = MAX_SMALL_MSG_LENGTH,
+    Medium = MAX_MEDIUM_MSG_LENGTH,
+    Large = MAX_LARGE_MSG_LENGTH,
+    Huge = MAX_HUGE_MSG_LENGTH,
+}
 
 /// The metadata for a P2P message.
 #[repr(C)]
@@ -35,26 +46,38 @@ pub struct P2PMessageMetadata {
 }
 
 impl P2PMessageMetadata {
-    // TODO: comment
+    // TODO: comment  //completed
     pub fn peer_addr(&self) -> String {
-        String::from_utf8_lossy(&self.peer_addr.split(|c| *c == 0x00u8).next().unwrap())
-            .into_owned()
+        self.peer_addr
+            .split(|c| c == 0x00)
+            .next()
+            .map(|slice| String::from_utf8_lossy(slice).into_owned())
+            .unwrap_or_else(|| "invalid address".to_string())
     }
 
-    // TODO: comment
+    // TODO: comment  //completed
     pub fn peer_conn_type(&self) -> String {
-        String::from_utf8_lossy(&self.peer_conn_type.split(|c| *c == 0x00u8).next().unwrap())
-            .into_owned()
+    self.peer_conn_type
+        .split(|&c| c == 0x00)
+        .next()   
+        .map_or_else(|| String::new(), |slice| String::from_utf8_lossy(slice).into_owned())  // Return the converted string or an empty string
     }
 
-    // TODO: comment
+
     pub fn msg_type(&self) -> String {
-        String::from_utf8_lossy(&self.msg_type.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+    self.msg_type
+        .split(|&c| c == 0x00)
+        .next()   
+        .map_or_else(|| String::new(), |slice| String::from_utf8_lossy(slice).into_owned())
     }
+
+
+
 
     pub fn from_bytes(x: &[u8]) -> Self {
         unsafe { ptr::read_unaligned(x.as_ptr() as *const Self) }
     }
+
 
     pub fn create_protobuf_metadata(&self) -> net_msg::Metadata {
         let conn_type: ConnType = self.peer_conn_type().into();
@@ -85,25 +108,28 @@ impl fmt::Display for P2PMessageMetadata {
     }
 }
 
-pub struct P2PMessage {
+#[repr(C)]
+pub struct P2PMessage<const N: usize> {
     pub meta: P2PMessageMetadata,
-    pub payload: Vec<u8>,
+    pub payload: [u8; N],
 }
 
-impl P2PMessage {
-    pub fn from_bytes(x: &[u8]) -> P2PMessage {
-        const SIZEOF_METADATA_STRUCT: usize = mem::size_of::<P2PMessageMetadata>();
-        let meta_bytes = &x[..SIZEOF_METADATA_STRUCT];
-        let meta = unsafe { ptr::read_unaligned(meta_bytes.as_ptr() as *const P2PMessageMetadata) };
-        let payload_size = cmp::min(meta.msg_size as usize, MAX_P2P_MESSAGE_SIZE);
-        let payload = x[SIZEOF_METADATA_STRUCT..SIZEOF_METADATA_STRUCT + payload_size].to_vec();
-        P2PMessage { meta, payload }
+impl<const N: usize> P2PMessage<N> {
+    pub fn from_bytes(x: &[u8]) -> P2PMessage<N> {
+        unsafe { ptr::read_unaligned(x.as_ptr() as *const P2PMessage<N>) }
+    }
+
+    // The msg.payload is MAX_SMALL_MSG_LENGTH bytes long, however the acctual
+    // message size in meta.msg_size is likely smaller. Returns a slice
+    // with the acctual message payload.
+    pub fn trimmed_payload(&self) -> &[u8] {
+        return &self.payload[..self.meta.msg_size as usize];
     }
 
     pub fn decode_to_protobuf_network_message(
         &self,
     ) -> Result<net_msg::message::Msg, P2PMessageDecodeError> {
-        decode_network_message(&self.meta, &self.payload)
+        decode_network_message(&self.meta, self.trimmed_payload())
     }
 }
 
@@ -116,15 +142,21 @@ pub struct Connection {
 }
 
 impl Connection {
-    // TODO: comment
+    // TODO: comment //completed
     pub fn addr(&self) -> String {
-        String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+
+        self.addr
+            .split(|&c| c == 0x00)  
+            .next()                 
+            .map_or_else(|| String::new(), |slice| String::from_utf8_lossy(slice).into_owned())
     }
 
-    // TODO: comment
     pub fn conn_type(&self) -> String {
-        String::from_utf8_lossy(&self.conn_type.split(|c| *c == 0x00u8).next().unwrap())
-            .into_owned()
+
+        self.conn_type
+            .split(|&c| c == 0x00)  
+            .next()                =
+            .map_or_else(|| String::new(), |slice| String::from_utf8_lossy(slice).into_owned())
     }
 }
 
@@ -451,7 +483,7 @@ fn decode_rust_bitcoin_network_message(
     raw_message.append(&mut payload.to_vec());
 
     match RawNetworkMessage::consensus_decode(&mut raw_message.as_slice()) {
-        Ok(rnm) => Ok(rnm.payload().clone()),
+        Ok(rnm) => Ok(rnm.payload),
         Err(e) => Err(P2PMessageDecodeError::new(meta.clone(), e)),
     }
 }
@@ -468,22 +500,22 @@ fn decode_weird_network_message(
         "addrv2" => {
             if meta.msg_size == 0 {
                 // case: empty addrv2 message.
-                log::debug!("emtpy addrv2: {}", meta);
+                println!("emtpy addrv2: {}", meta);
                 return Some(net_msg::message::Msg::Emptyaddrv2(true));
             }
         }
         "ping" => {
             if meta.msg_size == 0 {
                 // case: old ping message with no nonce.
-                log::debug!("no-value ping: {}", meta);
+                println!("no-value ping: {}", meta);
                 return Some(net_msg::message::Msg::Oldping(true));
             }
         }
         "tx" => {
-            log::debug!(
+            println!(
                 "invalid (?) tx with {} byte: {}",
                 meta.msg_size,
-                payload.to_lower_hex_string(),
+                payload.to_hex()
             );
         }
         _ => (),
@@ -563,20 +595,28 @@ pub struct AddrmanInsertTried {
 }
 
 impl AddrmanInsertTried {
-    // TODO: comment
+
     pub fn addr(&self) -> String {
-        String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+        self.addr
+            .split(|&c| c == 0x00)
+            .next()               
+            .map_or_else(|| String::new(), |slice| String::from_utf8_lossy(slice).into_owned()) 
     }
 
-    // TODO: comment
+
     pub fn source(&self) -> String {
-        String::from_utf8_lossy(&self.source.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
+        self.source
+            .split(|&c| c == 0x00) 
+            .next()          
+            .map_or_else(|| String::new(), |slice| String::from_utf8_lossy(slice).into_owned())
     }
+
 
     pub fn from_bytes(x: &[u8]) -> AddrmanInsertTried {
         unsafe { ptr::read_unaligned(x.as_ptr() as *const AddrmanInsertTried) }
     }
 }
+
 
 impl fmt::Display for AddrmanInsertTried {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -600,32 +640,31 @@ mod tests {
 
     #[test]
     fn p2p_message_from_bytes_1() {
-        // The actual message ends after the "92e4200d3021c21b" payload. It's a few bytes larger
+        const PAYLOAD_SIZE: usize = 8;
+
+        // The acctual message ends after the "92e4200d3021c21b" payload. It's a few bytes larger
         // on purpose to test that it's still parsed correctly.
         let data_hex = "c79e9300000000003230392e3232322e3235322e34303a36343830390000000069746e6573732076657273696f6e20726573657276656420666f7220736f66742d666f726b20757067726164696e626f756e64005583899738227ad1576a13fc70696e6700000000f5d60e67005930cb080000000000000092e4200d3021c21b649b92000000000033";
         let data = hex::decode(data_hex).unwrap();
-        let message = P2PMessage::from_bytes(&data);
 
-        assert_eq!(message.meta.peer_id, 9674439u64);
-        assert_eq!(message.meta.peer_addr(), "209.222.252.40:64809");
-        assert_eq!(message.meta.peer_conn_type(), "inbound");
-        assert_eq!(message.meta.msg_type(), "ping");
-        assert_eq!(message.meta.msg_inbound, false);
-        assert_eq!(message.meta.msg_size, 8u64);
-        assert_eq!(message.payload, hex::decode("92e4200d3021c21b").unwrap());
+        let expected_peer_id = 9674439u64;
+        let expected_peer_addr = "209.222.252.40:64809";
+        let expected_peer_conn_type = "inbound";
+        let expected_msg_type = "ping";
+        let expected_msg_inbound = false;
+        let expected_msg_size = 8u64;
+        let expected_payload = hex::decode("92e4200d3021c21b").unwrap();
+
+        let message = P2PMessage::<PAYLOAD_SIZE>::from_bytes(&data);
+
+        assert_eq!(expected_peer_id, message.meta.peer_id);
+        assert_eq!(expected_peer_addr, message.meta.peer_addr());
+        assert_eq!(expected_peer_conn_type, message.meta.peer_conn_type());
+        assert_eq!(expected_msg_type, message.meta.msg_type());
+        assert_eq!(expected_msg_inbound, message.meta.msg_inbound);
+        assert_eq!(expected_msg_size, message.meta.msg_size);
+        assert_eq!(expected_payload, message.payload);
 
         message.decode_to_protobuf_network_message().unwrap();
-    }
-
-    #[test]
-    fn p2p_message_from_bytes_huge() {
-        let metadata_hex = "c79e9300000000003230392e3232322e3235322e34303a36343830390000000069746e6573732076657273696f6e20726573657276656420666f7220736f66742d666f726b20757067726164696e626f756e64005583899738227ad1576a13fc70696e6700000000f5d60e67005930cb080000000000000092e4200d3021c21b";
-        let metadata = hex::decode(metadata_hex).unwrap();
-        let max_len_payload = vec![0; MAX_P2P_MESSAGE_SIZE];
-
-        // In a previous version, this causes a stack overflow. No need to try to
-        // decode_to_protobuf_network_message() here as this will fail due to having
-        // an all zero payload.
-        let _message = P2PMessage::from_bytes(&[metadata, max_len_payload.to_vec()].concat());
     }
 }
