@@ -88,7 +88,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -99,7 +99,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
       bpf_probe_read_user_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -109,7 +109,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -119,7 +119,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -138,7 +138,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -149,7 +149,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
       bpf_probe_read_user_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -159,7 +159,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -169,7 +169,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read(&msg->payload, msg_size, msg_payload);
+      bpf_probe_read_user(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
     }
@@ -381,7 +381,7 @@ struct MempoolRejected {
 SEC("usdt")
 int BPF_USDT(handle_mempool_added, void *txid, s32 vsize, s64 fee) {
     struct MempoolAdded added = {};
-    bpf_probe_read(&added.txid, sizeof(added.txid), txid);
+    bpf_probe_read_user(&added.txid, sizeof(added.txid), txid);
     added.vsize = vsize;
     added.fee = fee;
     return bpf_ringbuf_output(&mempool_added, &added, sizeof(added), 0);
@@ -390,7 +390,7 @@ int BPF_USDT(handle_mempool_added, void *txid, s32 vsize, s64 fee) {
 SEC("usdt")
 int BPF_USDT(handle_mempool_removed, void *txid, void *reason, s32 vsize, s64 fee, u64 entry_time) {
     struct MempoolRemoved removed = {};
-    bpf_probe_read(&removed.txid, sizeof(removed.txid), txid);
+    bpf_probe_read_user(&removed.txid, sizeof(removed.txid), txid);
     bpf_probe_read_user_str(&removed.reason, sizeof(removed.reason), reason);
     removed.vsize = vsize;
     removed.fee = fee;
@@ -404,11 +404,11 @@ int BPF_USDT(handle_mempool_replaced,
     void *replacement_txid, s32 replacement_vsize, s64 replacement_fee
 ) {
     struct MempoolReplaced replaced = {};
-    bpf_probe_read(&replaced.replaced_txid, sizeof(replaced.replaced_txid), replaced_txid);
+    bpf_probe_read_user(&replaced.replaced_txid, sizeof(replaced.replaced_txid), replaced_txid);
     replaced.replaced_vsize = replaced_vsize;
     replaced.replaced_fee = replaced_fee;
     replaced.replaced_entry_time = replaced_entry_time;
-    bpf_probe_read(&replaced.replacement_txid, sizeof(replaced.replacement_txid), replacement_txid);
+    bpf_probe_read_user(&replaced.replacement_txid, sizeof(replaced.replacement_txid), replacement_txid);
     replaced.replacement_vsize = replacement_vsize;
     replaced.replacement_fee = replacement_fee;
     return bpf_ringbuf_output(&mempool_replaced, &replaced, sizeof(replaced), 0);
@@ -417,7 +417,7 @@ int BPF_USDT(handle_mempool_replaced,
 SEC("usdt")
 int BPF_USDT(handle_mempool_rejected, void *txid, void *reason) {
     struct MempoolRejected rejected = {};
-    bpf_probe_read(&rejected.txid, sizeof(rejected.txid), txid);
+    bpf_probe_read_user(&rejected.txid, sizeof(rejected.txid), txid);
     bpf_probe_read_user_str(&rejected.reason, sizeof(rejected.reason), reason);
     return bpf_ringbuf_output(&mempool_rejected, &rejected, sizeof(rejected), 0);
 };
@@ -442,7 +442,7 @@ struct BlockConnected {
 SEC("usdt")
 int BPF_USDT(handle_validation_block_connected, void *hash, s32 height, u64 transactions, s32 inputs, u64 sigops, u64 connection_time) {
     struct BlockConnected connected = {};
-    bpf_probe_read(&connected.hash, sizeof(connected.hash), hash);
+    bpf_probe_read_user(&connected.hash, sizeof(connected.hash), hash);
     connected.height = height;
     connected.transactions = transactions;
     connected.inputs = inputs;
