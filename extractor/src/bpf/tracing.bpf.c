@@ -74,9 +74,9 @@ void set_meta_data1(struct Metadata *meta, u64 id, bool inbound, u64 msg_size) {
 
 // Helper function to set some of the tracepoint arguments to Metadata.
 void set_meta_data2(struct Metadata *meta, void *addr, void* conn_type, void* msg_type) {
-  bpf_probe_read_str(&meta->addr, sizeof(meta->addr), addr);
-  bpf_probe_read_str(&meta->conn_type, sizeof(meta->conn_type), conn_type);
-  bpf_probe_read_str(&meta->msg_type, sizeof(meta->msg_type), msg_type);
+  bpf_probe_read_user_str(&meta->addr, sizeof(meta->addr), addr);
+  bpf_probe_read_user_str(&meta->conn_type, sizeof(meta->conn_type), conn_type);
+  bpf_probe_read_user_str(&meta->msg_type, sizeof(meta->msg_type), msg_type);
 }
 
 SEC("usdt")
@@ -98,7 +98,7 @@ int BPF_USDT(handle_net_msg_inbound, u64 id, void *addr, void *conn_type, void *
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
+      bpf_probe_read_user_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
       bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
@@ -148,7 +148,7 @@ int BPF_USDT(handle_net_msg_outbound, u64 id, void *addr, void *conn_type, void 
     if (msg) {
       set_meta_data1(&msg->meta, id, IS_INBOUND, msg_size);
       set_meta_data2(&msg->meta, addr, conn_type, msg_type);
-      bpf_probe_read_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
+      bpf_probe_read_user_str(&msg->meta.msg_type, sizeof(msg->meta.msg_type), msg_type);
       bpf_probe_read(&msg->payload, msg_size, msg_payload);
       bpf_ringbuf_submit(msg, 0);
       return 0;
@@ -234,8 +234,8 @@ void set_conn_data1(struct Connection *conn, u64 id, u64 network) {
 
 // Helper function to set some of the tracepoint arguments to Connection.
 void set_conn_data2(struct Connection *conn, void *addr, void *type) {
-  bpf_probe_read_str(&conn->addr, sizeof(conn->addr), addr);
-  bpf_probe_read_str(&conn->type, sizeof(conn->type), type);
+  bpf_probe_read_user_str(&conn->addr, sizeof(conn->addr), addr);
+  bpf_probe_read_user_str(&conn->type, sizeof(conn->type), type);
 }
 
 SEC("usdt")
@@ -280,7 +280,7 @@ int BPF_USDT(handle_net_conn_misbehaving, u64 id, s32 score_before, s32 howmuch,
     misbehaving.id = id;
     misbehaving.score_before = score_before;
     misbehaving.howmuch = howmuch;
-    bpf_probe_read_str(&misbehaving.message, sizeof(misbehaving.message), message);
+    bpf_probe_read_user_str(&misbehaving.message, sizeof(misbehaving.message), message);
     misbehaving.threshold_exceeded = threshold_exceeded;
     return bpf_ringbuf_output(&net_conn_misbehaving, &misbehaving, sizeof(misbehaving), 0);
 };
@@ -317,9 +317,9 @@ int BPF_USDT(handle_addrman_new, bool inserted, s32 bucket, s32 bucket_pos, void
     new.inserted = inserted;
     new.bucket = bucket;
     new.bucket_pos = bucket_pos;
-    bpf_probe_read_str(&new.addr, sizeof(new.addr), addr);
+    bpf_probe_read_user_str(&new.addr, sizeof(new.addr), addr);
     new.addr_AS = addr_AS;
-    bpf_probe_read_str(&new.source, sizeof(new.source), source);
+    bpf_probe_read_user_str(&new.source, sizeof(new.source), source);
     new.source_AS = source_AS;
     return bpf_ringbuf_output(&addrman_insert_new, &new, sizeof(new), 0);
 };
@@ -329,9 +329,9 @@ int BPF_USDT(handle_addrman_tried, s32 bucket, s32 bucket_pos, void *addr, u32 a
     struct AddrmanTried tried = {};
     tried.bucket = bucket;
     tried.bucket_pos = bucket_pos;
-    bpf_probe_read_str(&tried.addr, sizeof(tried.addr), addr);
+    bpf_probe_read_user_str(&tried.addr, sizeof(tried.addr), addr);
     tried.addr_AS = addr_AS;
-    bpf_probe_read_str(&tried.source, sizeof(tried.source), source);
+    bpf_probe_read_user_str(&tried.source, sizeof(tried.source), source);
     tried.source_AS = source_AS;
     return bpf_ringbuf_output(&addrman_insert_tried, &tried, sizeof(tried), 0);
 };
@@ -391,7 +391,7 @@ SEC("usdt")
 int BPF_USDT(handle_mempool_removed, void *txid, void *reason, s32 vsize, s64 fee, u64 entry_time) {
     struct MempoolRemoved removed = {};
     bpf_probe_read(&removed.txid, sizeof(removed.txid), txid);
-    bpf_probe_read_str(&removed.reason, sizeof(removed.reason), reason);
+    bpf_probe_read_user_str(&removed.reason, sizeof(removed.reason), reason);
     removed.vsize = vsize;
     removed.fee = fee;
     removed.entry_time = entry_time;
@@ -418,7 +418,7 @@ SEC("usdt")
 int BPF_USDT(handle_mempool_rejected, void *txid, void *reason) {
     struct MempoolRejected rejected = {};
     bpf_probe_read(&rejected.txid, sizeof(rejected.txid), txid);
-    bpf_probe_read_str(&rejected.reason, sizeof(rejected.reason), reason);
+    bpf_probe_read_user_str(&rejected.reason, sizeof(rejected.reason), reason);
     return bpf_ringbuf_output(&mempool_rejected, &rejected, sizeof(rejected), 0);
 };
 
@@ -436,7 +436,7 @@ struct BlockConnected {
   u64    transactions;
   s32    inputs;
   u64    sigops;
-  u64    connection_time;  
+  u64    connection_time;
 };
 
 SEC("usdt")
@@ -445,8 +445,8 @@ int BPF_USDT(handle_validation_block_connected, void *hash, s32 height, u64 tran
     bpf_probe_read(&connected.hash, sizeof(connected.hash), hash);
     connected.height = height;
     connected.transactions = transactions;
-    connected.inputs = inputs; 
-    connected.sigops = sigops; 
+    connected.inputs = inputs;
+    connected.sigops = sigops;
     connected.connection_time = connection_time;
     return bpf_ringbuf_output(&validation_block_connected, &connected, sizeof(connected), 0);
 };
