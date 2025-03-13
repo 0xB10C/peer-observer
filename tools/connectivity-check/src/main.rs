@@ -1,5 +1,6 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
+use anyhow::Context;
 use crossbeam;
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use rand::Rng;
@@ -132,7 +133,7 @@ fn worker(
     output_sender: &Sender<Output>,
     input_receiver: &Receiver<Input>,
     recent_succesful_connections_cache: Arc<Mutex<HashMap<String, Instant>>>,
-) {
+) -> Result<(), Box<dyn std::error::Error>> {
     for input in input_receiver.iter() {
         let address = input.clone().address.address.unwrap();
         let key = format!(
@@ -142,7 +143,7 @@ fn worker(
         );
         let recent_succesful_connection = match recent_succesful_connections_cache
             .lock()
-            .expect("could not lock cache for lookup")
+            .map_err(|e| format!("could not lock cache for lookup: {}", e))?
             .get(&key)
         {
             Some(last_succesful_connection_time) => {
@@ -178,7 +179,7 @@ fn worker(
                         if version.is_some() {
                             recent_succesful_connections_cache
                                 .lock()
-                                .expect("could not lock cache for insert")
+                                .map_err(|e| format!("could not lock cache for insert: {}", e))?
                                 .insert(key, Instant::now());
                             true
                         } else {
@@ -195,30 +196,32 @@ fn worker(
                         network: network_type,
                         version,
                     })
-                    .unwrap();
+                    .map_err(|e| format!("could not send output: {}", e))?;
             }
         }
     }
+    Ok(())
 }
 
-fn handle_event(event: Event, timestamp: u64, input_sender: Sender<Input>) {
+fn handle_event(event: Event, timestamp: u64, input_sender: Sender<Input>) -> Result<(), Box<dyn std::error::Error>> {
     match event {
         Event::Msg(msg) => {
             if msg.meta.inbound {
-                handle_inbound_message(msg, timestamp, input_sender);
+                handle_inbound_message(msg, timestamp, input_sender)?;
             }
         }
         _ => (),
     }
+    Ok(())
 }
 
-fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<Input>) {
+fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<Input>) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(inbound_msg) = msg.msg {
         match inbound_msg {
             Msg::Addr(addr) => {
                 if addr.addresses.len() == 1000 {
                     log::info!("Received an addr message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
-                    return;
+                    return Ok(());
                 }
 
                 for addr in addr.addresses {
@@ -229,13 +232,13 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addr,
                     };
-                    input_sender.send(input).unwrap();
+                    input_sender.send(input).map_err(|e| format!("could not send input: {}", e))?;
                 }
             }
             Msg::Addrv2(addrv2) => {
                 if addrv2.addresses.len() == 1000 {
                     log::info!("Received an addrv2 message with 1000 addresses from {}. Likely a getaddr response. Ignoring.", msg.meta.addr.clone());
-                    return;
+                    return Ok(());
                 }
 
                 for addr in addrv2.addresses {
@@ -246,12 +249,13 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addrv2,
                     };
-                    input_sender.send(input).unwrap();
+                    input_sender.send(input).map_err(|e| format!("could not send input: {}", e))?;
                 }
             }
             _ => (),
         }
     }
+    Ok(())
 }
 
 fn build_raw_network_message(payload: message::NetworkMessage) -> message::RawNetworkMessage {
@@ -305,25 +309,21 @@ fn try_connect(address: SocketAddr) -> Option<VersionMessage> {
             }
         }
     }
-    return None;
+    None
 }
 
-// TODO:
-// - general clean up
-// - error handling
-
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    simple_logger::init_with_level(args.log_level).unwrap();
+    simple_logger::init_with_level(args.log_level)?;
 
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
 
-    metricserver::start(&args.metrics_address).unwrap();
+    metricserver::start(&args.metrics_address)?;
     log::info!("metrics-server started on {}", &args.metrics_address);
 
-    let nc = nats::connect(args.nats_address).expect("should be able to connect to NATS server");
-    let sub = nc.subscribe("*").expect("could not subscribe to topic '*'");
+    let nc = nats::connect(args.nats_address).context("Failed to connect to NATS server")?;
+    let sub = nc.subscribe("*").context("Failed to subscribe to NATS topic")?;
 
     crossbeam::scope(|s| {
         s.spawn(|_| {
@@ -331,7 +331,7 @@ fn main() {
                 let wrapped = event_msg::EventMsg::decode(msg.data.as_slice()).unwrap();
                 let unwrapped = wrapped.event;
                 if let Some(event) = unwrapped {
-                    handle_event(event, wrapped.timestamp, input_sender.clone());
+                    handle_event(event, wrapped.timestamp, input_sender.clone()).unwrap();
                 }
             }
         });
@@ -341,7 +341,7 @@ fn main() {
         for _ in 0..WORKERS {
             let (sender, receiver) = (output_sender.clone(), input_receiver.clone());
             let cache = recent_succesful_connections_cache.clone();
-            s.spawn(move |_| worker(&sender, &receiver, cache));
+            s.spawn(move |_| worker(&sender, &receiver, cache).unwrap());
         }
 
         let file = OpenOptions::new()
@@ -441,4 +441,6 @@ fn main() {
         }
     })
     .unwrap();
+
+    Ok(())
 }
