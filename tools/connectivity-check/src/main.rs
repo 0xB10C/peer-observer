@@ -203,7 +203,11 @@ fn worker(
     Ok(())
 }
 
-fn handle_event(event: Event, timestamp: u64, input_sender: Sender<Input>) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_event(
+    event: Event,
+    timestamp: u64,
+    input_sender: Sender<Input>,
+) -> Result<(), Box<dyn std::error::Error>> {
     match event {
         Event::Msg(msg) => {
             if msg.meta.inbound {
@@ -215,7 +219,11 @@ fn handle_event(event: Event, timestamp: u64, input_sender: Sender<Input>) -> Re
     Ok(())
 }
 
-fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<Input>) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_inbound_message(
+    msg: NetMessage,
+    timestamp: u64,
+    input_sender: Sender<Input>,
+) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(inbound_msg) = msg.msg {
         match inbound_msg {
             Msg::Addr(addr) => {
@@ -232,7 +240,9 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addr,
                     };
-                    input_sender.send(input).map_err(|e| format!("could not send input: {}", e))?;
+                    input_sender
+                        .send(input)
+                        .map_err(|e| format!("could not send input: {}", e))?;
                 }
             }
             Msg::Addrv2(addrv2) => {
@@ -249,7 +259,9 @@ fn handle_inbound_message(msg: NetMessage, timestamp: u64, input_sender: Sender<
                         source_ip: msg.meta.addr.clone(),
                         version: AddrMessageVersion::Addrv2,
                     };
-                    input_sender.send(input).map_err(|e| format!("could not send input: {}", e))?;
+                    input_sender
+                        .send(input)
+                        .map_err(|e| format!("could not send input: {}", e))?;
                 }
             }
             _ => (),
@@ -323,12 +335,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("metrics-server started on {}", &args.metrics_address);
 
     let nc = nats::connect(args.nats_address).context("Failed to connect to NATS server")?;
-    let sub = nc.subscribe("*").context("Failed to subscribe to NATS topic")?;
+    let sub = nc
+        .subscribe("*")
+        .context("Failed to subscribe to NATS topic")?;
 
     crossbeam::scope(|s| {
         s.spawn(|_| {
             for msg in sub.messages() {
-                let wrapped = event_msg::EventMsg::decode(msg.data.as_slice()).unwrap();
+                let wrapped = match event_msg::EventMsg::decode(msg.data.as_slice()) {
+                    Ok(msg) => msg, 
+                    Err(e) => {
+                        eprintln!("Failed to decode message: {:?}", e); // Handle the error.
+                        return; // Exit the closure early.
+                    }
+                };
                 let unwrapped = wrapped.event;
                 if let Some(event) = unwrapped {
                     handle_event(event, wrapped.timestamp, input_sender.clone()).unwrap();
