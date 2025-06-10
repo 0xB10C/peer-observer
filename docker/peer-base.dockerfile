@@ -1,0 +1,46 @@
+FROM rust:1.87.0-slim-bookworm
+
+# Install dependencies
+RUN apt-get update -y && apt-get install -y \
+    sudo \
+    git \
+    protobuf-compiler \
+    libelf-dev \
+    clang \
+    llvm \
+    llvm-14 \
+    zstd \
+    binutils-dev \
+    elfutils \
+    gcc-multilib
+
+RUN apt-get update -y && apt-get install -y \
+    make \
+    pkg-config \
+    libbpf-dev
+
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user and configure sudo
+RUN useradd -m -s /bin/bash appuser && \
+    echo "appuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/appuser
+
+# Switch to non-root user
+USER appuser
+WORKDIR /home/appuser
+
+RUN rustup component add rustfmt
+
+RUN sudo $(which rustup) default stable
+
+# Clone the repository
+RUN git clone https://github.com/0xB10C/peer-observer.git
+
+# Set working directory to the repository
+WORKDIR /home/appuser/peer-observer
+
+# Build the project
+RUN cargo build
+
+# docker build -f peer-base.dockerfile -t peer-base .
