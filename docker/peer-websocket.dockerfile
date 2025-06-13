@@ -4,7 +4,7 @@ FROM peer-base
 WORKDIR /home/appuser/peer-observer
 
 # Run the websocket binary with sudo
-CMD ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "websocket"]
+CMD ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "websocket", "--", "--nats-address", "nats://nats:4222"]
 
 # docker build -f peer-websocket.dockerfile -t peer-websocket .
 # docker run peer-websocket

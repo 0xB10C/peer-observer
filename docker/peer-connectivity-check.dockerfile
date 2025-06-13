@@ -4,7 +4,7 @@ FROM peer-base
 WORKDIR /home/appuser/peer-observer
 
 # Run the connectivity-check binary with sudo
-CMD ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "connectivity-check"]
+CMD ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "connectivity-check", "--", "--nats-address", "nats://nats:4222"]
 
 # docker build -f peer-connectivity-check.dockerfile -t peer-connectivity-check .
 # docker run peer-connectivity-check

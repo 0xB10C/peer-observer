@@ -1,0 +1,85 @@
+networks:
+  peer-network:
+    driver: bridge
+
+services:
+  peer-base:
+    image: peer-base
+    build:
+      context: .
+      dockerfile: peer-base.dockerfile
+
+  nats:
+    image: nats
+    build:
+      context: .
+      dockerfile: nats.dockerfile
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    networks:
+      - peer-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8222/healthz || exit 1"]
+      interval: 1m
+      timeout: 2s
+      retries: 3
+      start_period: 2s
+
+  peer-logger:
+    image: peer-logger
+    build:
+      context: .
+      dockerfile: peer-logger.dockerfile
+    networks:
+      - peer-network
+    depends_on:
+      nats:
+        condition: service_healthy
+      peer-base:
+        condition: service_completed_successfully
+
+  peer-metrics:
+    image: peer-metrics
+    build:
+      context: .
+      dockerfile: peer-metrics.dockerfile
+    ports:
+      - "8282:8282"
+    networks:
+      - peer-network
+    depends_on:
+      nats:
+        condition: service_healthy
+      peer-base:
+        condition: service_completed_successfully
+
+  peer-websocket:
+    image: peer-websocket
+    build:
+      context: .
+      dockerfile: peer-websocket.dockerfile
+    ports:
+      - "47482:47482"
+    networks:
+      - peer-network
+    depends_on:
+      nats:
+        condition: service_healthy
+      peer-base:
+        condition: service_completed_successfully
+
+  peer-connectivity-check:
+    image: peer-connectivity-check
+    build:
+      context: .
+      dockerfile: peer-connectivity-check.dockerfile
+    ports:
+      - "18282:18282"
+    networks:
+      - peer-network
+    depends_on:
+      nats:
+        condition: service_healthy
+      peer-base:
+        condition: service_completed_successfully
