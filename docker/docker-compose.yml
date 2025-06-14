@@ -1,11 +1,5 @@
 
 services:
-  peer-base:
-    image: peer-base
-    build:
-      context: .
-      dockerfile: peer-base.dockerfile
-
   nats:
     image: nats
     build:
@@ -13,60 +7,59 @@ services:
       dockerfile: nats.dockerfile
     ports:
       - "4222:4222"
-      - "8222:8222"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8222/healthz || exit 1"]
       interval: 1m
-      timeout: 2s
+      timeout: 1s
       retries: 3
-      start_period: 2s
+      start_period: 1s
 
   peer-logger:
-    image: peer-logger
+    image: peer-base
     build:
       context: .
-      dockerfile: peer-logger.dockerfile
+      dockerfile: peer-base.dockerfile
+    command:
+      ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "logger", "--", "--nats-address", "nats://nats:4222"]
     depends_on:
       nats:
         condition: service_healthy
-      peer-base:
-        condition: service_completed_successfully
 
   peer-metrics:
-    image: peer-metrics
+    image: peer-base
     build:
       context: .
-      dockerfile: peer-metrics.dockerfile
+      dockerfile: peer-base.dockerfile
+    command:
+      ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "metrics", "--", "--nats-address", "nats://nats:4222"]
     ports:
       - "8282:8282"
     depends_on:
       nats:
         condition: service_healthy
-      peer-base:
-        condition: service_completed_successfully
 
   peer-websocket:
-    image: peer-websocket
+    image: peer-base
     build:
       context: .
-      dockerfile: peer-websocket.dockerfile
+      dockerfile: peer-base.dockerfile
+    command:
+      ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "websocket", "--", "--nats-address", "nats://nats:4222"]
     ports:
       - "47482:47482"
     depends_on:
       nats:
         condition: service_healthy
-      peer-base:
-        condition: service_completed_successfully
 
   peer-connectivity-check:
-    image: peer-connectivity-check
+    image: peer-base
     build:
       context: .
-      dockerfile: peer-connectivity-check.dockerfile
+      dockerfile: peer-base.dockerfile
+    command:
+      ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "connectivity-check", "--", "--nats-address", "nats://nats:4222"]
     ports:
       - "18282:18282"
     depends_on:
       nats:
         condition: service_healthy
-      peer-base:
-        condition: service_completed_successfully
