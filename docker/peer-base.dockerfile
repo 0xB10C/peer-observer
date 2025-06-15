@@ -19,6 +19,15 @@ RUN apt-get update -y && apt-get install -y \
     pkg-config \
     libbpf-dev
 
+# Install bitcoin runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libevent-dev \
+    libboost-system-dev \
+    libboost-filesystem-dev \
+    libboost-thread-dev \
+    libsqlite3-dev \
+    libzmq3-dev
+
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

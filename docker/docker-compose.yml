@@ -1,5 +1,29 @@
+volumes:
+  bitcoin-data:
+  bitcoin-bin:
+
 
 services:
+  bitcoin-node:
+    image: bitcoin-node
+    build:
+      context: .
+      dockerfile: bitcoin-node.dockerfile
+    command:
+      ["/bin/sh", "-c", "/shared/bitcoind -regtest -printtoconsole"]
+    ports:
+      - "8332:8332"
+      - "8333:8333"
+    volumes:
+      - bitcoin-data:/home/bitcoin/.bitcoin
+      - bitcoin-bin:/shared
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "getblockchaininfo"]
+      interval: 1m
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
   nats:
     image: nats
     build:
@@ -13,6 +37,23 @@ services:
       timeout: 1s
       retries: 3
       start_period: 1s
+
+  peer-extractor:
+    image: peer-base
+    build:
+      context: .
+      dockerfile: peer-base.dockerfile
+    command:
+      ["sudo", "-E", "/usr/local/cargo/bin/cargo", "run", "--bin", "extractor", "--", "--nats-address", "nats://nats:4222", "--bitcoind-path", "/shared/bitcoind"]
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      - bitcoin-bin:/shared
+    depends_on:
+      nats:
+        condition: service_healthy
+      bitcoin-node:
+        condition: service_healthy
 
   peer-logger:
     image: peer-base
