@@ -43,8 +43,8 @@ RUN rustup component add rustfmt
 
 RUN sudo $(which rustup) default stable
 
-# Clone the repository
-RUN git clone https://github.com/0xB10C/peer-observer.git
+# Copy the local repository to the container
+COPY . /home/appuser/peer-observer
 
 # Set working directory to the repository
 WORKDIR /home/appuser/peer-observer
