@@ -35,6 +35,12 @@ RUN apt-get clean && \
 RUN useradd -m -s /bin/bash appuser && \
     echo "appuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/appuser
 
+# Copy the local repository to the container
+COPY . /home/appuser/peer-observer
+
+# Set the correct permissions for the copied files
+RUN chown -R appuser:appuser /home/appuser/peer-observer
+
 # Switch to non-root user
 USER appuser
 WORKDIR /home/appuser
@@ -42,9 +48,6 @@ WORKDIR /home/appuser
 RUN rustup component add rustfmt
 
 RUN sudo $(which rustup) default stable
-
-# Copy the local repository to the container
-COPY . /home/appuser/peer-observer
 
 # Set working directory to the repository
 WORKDIR /home/appuser/peer-observer
