@@ -62,4 +62,5 @@ VOLUME /home/bitcoin/.bitcoin
 VOLUME /shared
 
 # Default command to run bitcoind in regtest mode
-CMD ["bitcoind", "-regtest", "-printtoconsole"]
+ENTRYPOINT ["bitcoind"]
+CMD ["-regtest", "-printtoconsole"]
