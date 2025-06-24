@@ -367,7 +367,7 @@ dependencies = [
  "csv",
  "lazy_static",
  "prometheus",
- "rand 0.8.5",
+ "rand 0.9.1",
  "serde",
  "shared",
 ]
