@@ -21,7 +21,7 @@ and protobuf). They subscribe to the NATS server. For example, the `logger` tool
 simply prints out all messages that it receives, the `metrics` tool produces prometheus
 metrics, and the `addr-connectivity` tool tests received addresses if they are reachable.
 Python tools can make use of the `protobuf/python-types` to deserialize the Protobuf
-messages while Rust tools can use the types from the `shared` Rust module. 
+messages while Rust tools can use the types from the `shared` Rust module.
 
 ```
                                                 ┌──────────────────────┐
@@ -44,6 +44,18 @@ messages while Rust tools can use the types from the `shared` Rust module.
 [libbpf-rs]: https://github.com/libbpf/libbpf-rs
 [rust-bitcoin]: https://github.com/rust-bitcoin/rust-bitcoin
 
+## Tools
+
+Tools connect and subscribe to the NATS server to learn about new events. Each
+tool uses the events differently:
+
+| **tool**              | **description**                                                                  | **language** | **details**                             |
+|-----------------------|----------------------------------------------------------------------------------|--------------|-----------------------------------------|
+| logger                | logs events to stdout. Event type can be filtered.                               | `rust`       | [tools/logger/](tools/logger)           |
+| metrics               | produces prometheus metrics from events.                                         | `rust`       | [tools/metrics/](tools/metrics)         |
+| websocket             | publishes events into a websocket as JSON                                        | `rust`       | [tools/websocket/](tools/websocket)     |
+| connectivity-check    | connects to IP addresses received via `addr(v2)` messages and records the result | `rust`       | [tools/connectivity-check/](tools/connectivity-check)    |
+| record-getblocktxn-py | records sent and received `getblocktxn` messages                                 | `python`     | [tools/record-getblocktxn-py/](tools/record-getblocktxn-py) |
 
 ## Real-world usage
 
