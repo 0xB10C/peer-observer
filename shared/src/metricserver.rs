@@ -1,5 +1,5 @@
+use log;
 use prometheus::Encoder;
-use shared::log;
 use std::error;
 use std::fmt;
 use std::io;

@@ -6,6 +6,7 @@ use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
 use shared::mempool::mempool_event;
+use shared::metricserver;
 use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
@@ -19,7 +20,6 @@ use std::convert::TryFrom;
 use std::time;
 
 mod metrics;
-mod metricserver;
 
 const LOG_TARGET: &str = "main";
 

@@ -366,7 +366,6 @@ dependencies = [
  "crossbeam",
  "csv",
  "lazy_static",
- "prometheus",
  "rand 0.9.1",
  "serde",
  "shared",
@@ -1099,7 +1098,6 @@ name = "metrics"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
- "prometheus",
  "shared",
 ]
 
@@ -1795,6 +1793,7 @@ dependencies = [
  "hex",
  "log",
  "nats",
+ "prometheus",
  "prost 0.14.1",
  "prost-build",
  "serde",
