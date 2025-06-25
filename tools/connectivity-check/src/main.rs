@@ -39,8 +39,9 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 const RECENT_CONNECTION_DURATION: Duration = Duration::from_secs(60 * 60);
 
-/// A peer-observer tool that checks the connectivity of received addr message entries
-/// and offers stats as prometheus metrics
+/// A peer-observer tool that checks the connectivity of received addr(v2) message entries by
+/// connecting to the addresses and trying to do a `version` handshake. The results are recorded
+/// in a CSV file. Additionally, the tool offers prometheus metrics about the connection results.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
