@@ -4,6 +4,7 @@ pub extern crate bitcoin;
 pub extern crate clap;
 pub extern crate log;
 pub extern crate nats;
+pub extern crate prometheus;
 pub extern crate prost;
 pub extern crate simple_logger;
 
@@ -17,6 +18,8 @@ pub mod net_msg;
 pub mod primitive;
 pub mod validation;
 
+/// A minimal HTTP webserver (but not spec compliant) used to serve prometheus metrics via HTTP.
+pub mod metricserver;
 /// Utillity functions shared among peer-observer tools
 pub mod util;
 

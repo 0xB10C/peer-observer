@@ -14,6 +14,7 @@ clap = { version = "4.5.40", features = ["derive"] }
 simple_logger = "5.0.0"
 log = "0.4"
 nats = "0.25.0"
+prometheus = "0.14.0"
 
 [build-dependencies]
 prost-build = "0.10"

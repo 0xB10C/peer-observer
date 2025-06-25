@@ -12,6 +12,7 @@ use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::log;
+use shared::metricserver;
 use shared::net_msg::message::Msg;
 use shared::net_msg::Message as NetMessage;
 use shared::primitive::address::Address as AddressType;
@@ -29,7 +30,6 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 mod metrics;
-mod metricserver;
 
 const WORKERS: usize = 50;
 
