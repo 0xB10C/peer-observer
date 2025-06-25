@@ -1,4 +1,3 @@
-
 # IP lists
 
 ## Tor exit node IPs
@@ -28,9 +27,8 @@ https://web.archive.org/web/20200504061024/https://people.xiph.org/~greg/banlist
 A banlist of IP addresses curated by the monero community. The downloaded list
 needs to be preporcesed:
 
-- replace /24 ranges with the actual IPs
-- sort and deduplicate
-
 ```
-https://gui.xmr.pm/files/block.txt
+wget https://gui.xmr.pm/files/block.txt
+python3 preprocess-monero-block-list.py
+
 ```
