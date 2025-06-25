@@ -129,7 +129,7 @@ mod tests {
         // These are actual IP addresses picked from the list. Some might be
         // removed for that list at some point and need to be changed here.
         assert!(is_tor_exit_node("185.220.100.253")); // tor-exit-2.zbau.f3netze.de
-        assert!(is_tor_exit_node("162.247.72.199")); // jaffer.tor-exit.calyxinstitute.org
-        assert!(is_tor_exit_node("185.220.102.248")); // tor-exit-relay-2.anonymizing-proxy.digitalcourage.de
+        assert!(is_tor_exit_node("204.8.96.150")); // tor61.quintex.com
+        assert!(is_tor_exit_node("185.129.61.5")); // tor-project-exit5.dotsrc.org
     }
 }
