@@ -2,6 +2,7 @@
 
 pub extern crate bitcoin;
 pub extern crate clap;
+pub extern crate lazy_static;
 pub extern crate log;
 pub extern crate nats;
 pub extern crate prometheus;
