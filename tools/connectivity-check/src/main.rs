@@ -126,6 +126,14 @@ struct Row {
     version_services: u64,
     version_start_height: i32,
     version_nonce: u64,
+    version_timestamp: i64,
+    // we don't need to store the receiver address as it's our IP address
+
+    // The docs on this say: https://en.bitcoin.it/wiki/Protocol_documentation#version
+    // Field can be ignored. This used to be the network address of the node emitting this message, but most P2P implementations send 26 dummy bytes.
+    // But we keep it anyway. Maybe some custom/old client fills it in?
+    version_sender_address: String,
+    version_sender_port: u16,
 }
 
 fn worker(
@@ -436,6 +444,17 @@ fn main() {
                 version_services: version_msg.as_ref().map_or(0, |v| v.services.to_u64()),
                 version_start_height: version_msg.as_ref().map_or(-1, |v| v.start_height),
                 version_nonce: version_msg.as_ref().map_or(0, |v| v.nonce),
+                version_timestamp: version_msg.as_ref().map_or(0, |v| v.timestamp),
+                version_sender_address: version_msg.as_ref().map_or(String::default(), |v| match v
+                    .sender
+                    .socket_addr()
+                {
+                    Ok(sa) => sa.ip().to_string(),
+                    Err(_) => String::default(),
+                }),
+                version_sender_port: version_msg
+                    .as_ref()
+                    .map_or(u16::default(), |v| v.sender.port),
             })
             .unwrap();
         }
