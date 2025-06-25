@@ -6,8 +6,6 @@ edition = "2021"
 [dependencies]
 shared = { path = "../../shared" }
 
-lazy_static = "1.5.0"
-
 [features]
 # Treat warnings as a build error.
 strict = []
