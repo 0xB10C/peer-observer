@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 shared = { path = "../../shared" }
 
-crossbeam = { version = "0.8.2", features = ["crossbeam-channel"] }
+crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
 rand = "0.9.1"
 prometheus = "0.13.3"
 lazy_static = "1.5.0"
