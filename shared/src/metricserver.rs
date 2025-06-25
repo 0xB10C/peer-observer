@@ -57,7 +57,7 @@ fn handle_request(mut stream: TcpStream) -> Result<(), RequestHandlingError> {
     output_buffer.clear();
 
     let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
         contents.len(),
         contents
     );
