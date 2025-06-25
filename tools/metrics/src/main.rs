@@ -213,9 +213,9 @@ fn main() {
     fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
         let conn_type = msg.meta.conn_type.to_string();
         let direction = if msg.meta.inbound {
-            "inbound"
+            "inbound".to_string()
         } else {
-            "outbound"
+            "outbound".to_string()
         };
         let ip = util::ip_from_ipport(msg.meta.addr.clone());
         let subnet = util::subnet(ip.clone());
@@ -242,9 +242,9 @@ fn main() {
                     .with_label_values(&[&direction])
                     .observe(addr.addresses.len() as f64);
                 let future_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[&direction, "future"]);
+                    .with_label_values(&[&direction, &"future".to_string()]);
                 let past_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[&direction, "past"]);
+                    .with_label_values(&[&direction, &"past".to_string()]);
                 for address in addr.addresses.iter() {
                     // We substract the timestamp in the address from the time we received the
                     // message. If the remaining offset is larger than or equal to zero, the address
@@ -273,9 +273,9 @@ fn main() {
                     .with_label_values(&[&direction])
                     .observe(addrv2.addresses.len() as f64);
                 let future_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[&direction, "future"]);
+                    .with_label_values(&[&direction, &"future".to_string()]);
                 let past_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
-                    .with_label_values(&[&direction, "past"]);
+                    .with_label_values(&[&direction, &"past".to_string()]);
                 for address in addrv2.addresses.iter() {
                     // We substract the timestamp in the address from the time we received the
                     // message. If the remaining offset is larger than or equal to zero, the address

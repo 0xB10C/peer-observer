@@ -391,8 +391,16 @@ fn main() {
             // timestamp lies in the past. If the offset is smaller than zero, the address
             // timestamp lies in the future.
             let offset = output.input.timestamp as i64 - output.input.address.timestamp as i64;
-            let offset_direction = if offset >= 0 { "past" } else { "future" };
-            let successful = if output.result { "yes" } else { "no" };
+            let offset_direction = if offset >= 0 {
+                "past".to_string()
+            } else {
+                "future".to_string()
+            };
+            let successful = if output.result {
+                "yes".to_string()
+            } else {
+                "no".to_string()
+            };
 
             metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
                 .with_label_values(&[&network, &version, &offset_direction, &successful])
