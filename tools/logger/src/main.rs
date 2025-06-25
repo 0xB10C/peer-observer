@@ -8,11 +8,12 @@ use shared::prost::Message;
 use shared::simple_logger;
 use shared::{clap, nats};
 
+// Note: when modifying this struct, make sure to also update the usage
+// instructions in the README of this tool.
 /// A peer-observer tool that logs all received event messages.
 /// By default, all events are shown. This can be a lot. Events can be
-/// filtered by type. For example, --messages only shows P2P messages.
-/// Using `--messages --connections` together showns both P2P messages
-/// and connections.
+/// filtered by type. For example, `--messages` only shows P2P messages.
+/// Using `--messages --connections` together shows P2P messages and connections.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
