@@ -34,3 +34,54 @@ jobs:
       run: cargo test --verbose --all-features
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
+
+    - name: Check help output of each tool (auto-detected)
+      run: |
+        set -e
+
+        # Extract tool names from Cargo.toml
+        TOOLS=$(grep -oP '(?<=^  ")tools/[^"]+(?=")' Cargo.toml | sed 's|tools/||')
+
+        MISSING=0
+
+        for TOOL in $TOOLS; do
+          MANIFEST="tools/$TOOL/Cargo.toml"
+          README="tools/$TOOL/README.md"
+
+          echo "🔍 Checking tool: $TOOL"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error file=$MANIFEST::Cargo.toml not found for tool $TOOL"
+            MISSING=1
+            continue
+          fi
+
+          if [ ! -f "$README" ]; then
+            echo "::error file=$README::README.md not found for tool $TOOL"
+            MISSING=1
+            continue
+          fi
+
+          HELP_OUTPUT=$(cargo run --quiet --manifest-path "$MANIFEST" -- --help)
+
+          MISSING_LINES=0
+          while IFS= read -r line; do
+            if ! grep -Fq "$line" "$README"; then
+              echo "::warning file=$README::Missing line in README for $TOOL: $line"
+              MISSING_LINES=1
+            fi
+          done <<< "$HELP_OUTPUT"
+
+          if [ "$MISSING_LINES" -ne 0 ]; then
+            echo "::error file=$README::Some help lines for '$TOOL' are missing in its README"
+            echo "📢 Have you forgotten to update the documentation for $TOOL?"
+            MISSING=1
+          fi
+        done
+
+        if [ "$MISSING" -ne 0 ]; then
+          echo "❌ Documentation mismatch detected."
+          exit 1
+        else
+          echo "✅ All help outputs are documented correctly."
+        fi
