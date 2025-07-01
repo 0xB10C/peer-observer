@@ -55,7 +55,7 @@ impl From<p2p::address::Address> for address::Address {
                 }
                 address::Address::Torv2(format!(
                     "{}.onion",
-                    base32::encode(base32::Alphabet::RFC4648 { padding: false }, &addr_vec)
+                    base32::encode(base32::Alphabet::Rfc4648 { padding: false }, &addr_vec)
                         .to_lowercase()
                 ))
             }
@@ -92,15 +92,15 @@ impl From<p2p::address::AddrV2> for address::Address {
             p2p::address::AddrV2::Ipv6(a) => address::Address::Ipv6(a.to_string()),
             p2p::address::AddrV2::TorV2(a) => address::Address::Torv2(format!(
                 "{}.onion",
-                base32::encode(base32::Alphabet::RFC4648 { padding: false }, &a).to_lowercase()
+                base32::encode(base32::Alphabet::Rfc4648 { padding: false }, &a).to_lowercase()
             )),
             p2p::address::AddrV2::TorV3(a) => address::Address::Torv3(format!(
                 "{}.onion",
-                base32::encode(base32::Alphabet::RFC4648 { padding: false }, &a).to_lowercase()
+                base32::encode(base32::Alphabet::Rfc4648 { padding: false }, &a).to_lowercase()
             )),
             p2p::address::AddrV2::I2p(a) => address::Address::I2p(format!(
                 "{}.b32.i2p",
-                base32::encode(base32::Alphabet::RFC4648 { padding: false }, &a).to_lowercase()
+                base32::encode(base32::Alphabet::Rfc4648 { padding: false }, &a).to_lowercase()
             )),
             p2p::address::AddrV2::Cjdns(a) => address::Address::Cjdns(a.to_string()),
             p2p::address::AddrV2::Unknown(id, a) => address::Address::Unknown(UnknownAddress {
