@@ -9,7 +9,7 @@ edition = "2021"
 shared = { path = "../shared" }
 
 prost = "0.14"
-libbpf-rs = "0.24"
+libbpf-rs = "0.25"
 
 [build-dependencies]
 libbpf-cargo = "0.24"

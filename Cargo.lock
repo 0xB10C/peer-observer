@@ -643,7 +643,7 @@ name = "extractor"
 version = "0.1.0"
 dependencies = [
  "libbpf-cargo",
- "libbpf-rs",
+ "libbpf-rs 0.25.0",
  "prost 0.14.1",
  "shared",
 ]
@@ -1004,7 +1004,7 @@ dependencies = [
  "anyhow",
  "cargo_metadata",
  "clap",
- "libbpf-rs",
+ "libbpf-rs 0.24.8",
  "memmap2",
  "regex",
  "semver",
@@ -1015,9 +1015,21 @@ dependencies = [
 
 [[package]]
 name = "libbpf-rs"
-version = "0.24.7"
+version = "0.24.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ca94724a0be3a72789582a9139b2547623b9fc9b40776aba49290303032a285"
+checksum = "93edd9cd673087fa7518fd63ad6c87be2cd9b4e35034b1873f3e3258c018275b"
+dependencies = [
+ "bitflags 2.4.0",
+ "libbpf-sys",
+ "libc",
+ "vsprintf",
+]
+
+[[package]]
+name = "libbpf-rs"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e23d252d93e246c8787198369f06806c99c5077b5295be29505295f4e5426dc4"
 dependencies = [
  "bitflags 2.4.0",
  "libbpf-sys",
