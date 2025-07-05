@@ -17,7 +17,6 @@ use shared::validation::validation_event;
 use shared::{clap, nats};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::time;
 
 mod metrics;
 
@@ -46,12 +45,7 @@ fn main() {
 
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
-    metrics::RUNTIME_START_TIMESTAMP.set(
-        time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64,
-    );
+    metrics::RUNTIME_START_TIMESTAMP.set(util::current_timestamp() as i64);
 
     metricserver::start(&args.metrics_address).unwrap();
     log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
