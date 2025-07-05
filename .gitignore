@@ -9,3 +9,7 @@ target/
 
 # Ignore pycache files
 __pycache__
+
+
+# All csv files
+*.csv
