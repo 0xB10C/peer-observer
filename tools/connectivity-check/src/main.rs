@@ -27,7 +27,7 @@ use std::fs::OpenOptions;
 use std::io::{BufReader, Write};
 use std::net::{IpAddr, Ipv4Addr, Shutdown, SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 mod metrics;
 
@@ -268,14 +268,9 @@ fn build_raw_network_message(payload: message::NetworkMessage) -> message::RawNe
 }
 
 fn build_version_message() -> message::NetworkMessage {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time error")
-        .as_secs();
-
     message::NetworkMessage::Version(message_network::VersionMessage::new(
         ServiceFlags::NONE,
-        timestamp as i64,
+        util::current_timestamp() as i64,
         address::Address::new(
             &SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
             ServiceFlags::NONE,
@@ -354,11 +349,14 @@ fn main() {
         }
 
         let file = OpenOptions::new()
-            .write(true)
             .create(true)
             .append(true)
-            .open("addr-connectivity.csv")
+            .open(format!(
+                "addr-connectivity-{}.csv",
+                util::current_timestamp()
+            ))
             .unwrap();
+
         let mut wtr = csv::Writer::from_writer(file);
 
         for output in output_receiver.iter() {
@@ -419,15 +417,10 @@ fn main() {
                 }
             }
 
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .expect("Time error")
-                .as_secs();
-
             let version_msg = output.version;
 
             wtr.serialize(Row {
-                result_timestamp: timestamp,
+                result_timestamp: util::current_timestamp(),
                 addr_address: output
                     .input
                     .address
