@@ -1,4 +1,5 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // The generation code for the following includes!() can be found in build.rs.
 
@@ -38,6 +39,14 @@ pub fn subnet(ip: String) -> String {
         }
     }
     return ip;
+}
+
+// Return current timestamp in unix format
+pub fn current_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time error")
+        .as_secs()
 }
 
 #[cfg(test)]
