@@ -12,7 +12,7 @@ prost = "0.14"
 libbpf-rs = "0.25"
 
 [build-dependencies]
-libbpf-cargo = "0.24"
+libbpf-cargo = "0.25"
 
 [features]
 # Treat warnings as a build error.
