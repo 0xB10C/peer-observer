@@ -587,6 +587,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ebpf-extractor"
+version = "0.1.0"
+dependencies = [
+ "libbpf-cargo",
+ "libbpf-rs",
+ "prost",
+ "shared",
+]
+
+[[package]]
 name = "ed25519"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -660,16 +670,6 @@ checksum = "0f214dc438f977e6d4e3500aaa277f5ad94ca83fbbd9b1a15713ce2344ccc5a1"
 dependencies = [
  "event-listener",
  "pin-project-lite",
-]
-
-[[package]]
-name = "extractor"
-version = "0.1.0"
-dependencies = [
- "libbpf-cargo",
- "libbpf-rs",
- "prost",
- "shared",
 ]
 
 [[package]]

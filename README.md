@@ -5,13 +5,13 @@ Bitcoin Core honeynodes (honeypot nodes).
 
 ## Components and their interaction
 
-The peer-observer consists of multiple components. Primiarly an `extractor` that
-extracts events from a Bitcoin Core node and multiple `tools` that process the
-extracted data. The `extractor` and `tools` are connected with a [nats.io]-based
+The peer-observer consists of multiple components. One or more `extractors` that
+extract events from a Bitcoin Core node and multiple `tools` that process the
+extracted data. The `extractors` and `tools` are connected with a [nats.io]-based
 PUB-SUB connection via a NATS server. The exchanged messages are serialized
 protobuf structures.
 
-The extractor is written in Rust and uses the Bitcoin Core tracepoints to extract
+The `ebpf-extractor` is written in Rust and uses the Bitcoin Core tracepoints to extract
 events like received and send P2P messages, open and closed P2P connections, mempool
 changes, and more. This is implemented using the USDT capabilites of [libbpf-rs].
 The Bitcoin P2P protocol messages are deserialized using [rust-bitcoin].
@@ -30,9 +30,9 @@ messages while Rust tools can use the types from the `shared` Rust module.
                                          ┌──────┼──►logger             │
               Tracepoints                │      │                      │
 ┌───────────┐ via libbpf                 ├──────┼──►metrics            │
-│  Bitcoin  │          ┌───────────┐     │      │                      │
-│ Core Node ├──────────► extractor ├─────┼──────┼──►archiver           │
-└───────────┘          └───────────┘     │      │                      │
+│  Bitcoin  │       ┌───────────────┐    │      │                      │
+│ Core Node ├───────► ebpf-extractor├────┼──────┼──►archiver           │
+└───────────┘       └───────────────┘    │      │                      │
                                          ├──────┼──►addr-connectivty   │
                                          │      │                      │
                                          └──────┼──►...                │

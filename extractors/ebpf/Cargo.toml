@@ -1,12 +1,12 @@
 [package]
-name = "extractor"
+name = "ebpf-extractor"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-shared = { path = "../shared" }
+shared = { path = "../../shared" }
 
 prost = "0.14"
 libbpf-rs = "0.25"
