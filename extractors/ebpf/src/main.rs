@@ -179,6 +179,12 @@ struct Args {
     /// useful during debugging.
     #[arg(long, default_value_t = false)]
     libbpf_debug: bool,
+
+    // The extractor tool will exit if it doesn't detect activity in the ebpf
+    // buffers for 180 seconds. This flag disables this and only emits warnings
+    // about inactivity. This can be useful during debugging.
+    #[arg(short = 'i', long)]
+    no_idle_exit: bool,
 }
 
 /// Find the BPF program with the given name
@@ -384,8 +390,12 @@ fn run() -> Result<(), RuntimeError> {
                 NO_EVENTS_ERROR_DURATION
             );
             log::warn!("The bitcoind process might be down, has restarted and changed PIDs, or the network might be down.");
-            log::warn!("The extractor will exit. Please restart it");
-            return Ok(());
+            if !args.no_idle_exit {
+                log::warn!("The extractor will exit. Please restart it");
+                return Ok(());
+            }
+            last_event_timestamp = SystemTime::now();
+            has_warned_about_no_events = false;
         } else if duration_since_last_event >= NO_EVENTS_WARN_DURATION
             && !has_warned_about_no_events
         {
