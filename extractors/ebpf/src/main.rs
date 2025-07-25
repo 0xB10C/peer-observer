@@ -3,7 +3,7 @@
 use error::RuntimeError;
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use libbpf_rs::{Map, MapCore, Object, ProgramMut, RingBufferBuilder};
-use prost::Message;
+use shared::prost::Message;
 use shared::clap::Parser;
 use shared::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
