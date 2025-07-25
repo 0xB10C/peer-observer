@@ -1,0 +1,60 @@
+syntax = "proto2";
+
+package rpc;
+
+message RPCEvent {
+  oneof event {
+    PeerInfos peer_infos = 1;
+  }
+}
+
+// A getpeerinfo RPC response from Bitcoin Core.
+message PeerInfos {
+  repeated PeerInfo infos = 1;
+}
+
+// Information about a single peer.
+message PeerInfo {
+  required int32    id                      = 1;  // The peer_id of this peer.
+  required string   address                 = 2;  // The address of this peer (host:port).
+  required string   address_bind            = 3;  // The bind address of the connection to the peer (ip:port).
+  required string   address_local           = 4;  // Local address as reported by the peer (ip:port)
+  required string   network                 = 5;  // Network (ipv4, ipv6, onion, i2p, cjdns, not_publicly_routable, or empty)
+  // "mapped_as" : n,                      (numeric, optional) Mapped AS (Autonomous System) number
+  required string   services                = 7;  // The services offered
+  required bool     relay_transactions      = 8;  // Whether we relay transactions to this peer
+  required int64    last_send               = 9;  // The UNIX epoch time of the last send
+  required int64    last_received           = 10; // The UNIX epoch time of the last receive
+  required int64    last_transaction        = 11; // The UNIX epoch time of the last valid transaction received from this peer
+  required int64    last_block              = 12; // The UNIX epoch time of the last block received from this peer
+  required int64    bytes_sent              = 13; // The total bytes sent
+  required int64    bytes_received          = 14; // The total bytes received
+  required int64    connection_time         = 15; // The UNIX epoch time of the connection
+  required int64    time_offset             = 16; // The time offset in seconds
+  required int64    ping_time               = 17; // The last ping time in milliseconds (ms), if any
+  required int64    minimum_ping            = 18; // The minimum observed ping time in milliseconds (ms), if any
+  required int64    ping_wait               = 19; // The duration in milliseconds (ms) of an outstanding ping (if non-zero)
+  required int32    version                 = 20; // The peer version, such as 70001
+  required string   subversion              = 21; // The string version
+  required bool     inbound                 = 22; // Inbound (true) or Outbound (false)
+  // "bip152_hb_to" : true|false,          (boolean) Whether we selected peer as (compact blocks) high-bandwidth peer
+  // "bip152_hb_from" : true|false,        (boolean) Whether peer selected us as (compact blocks) high-bandwidth peer
+  required int64    starting_height         = 25; // The starting height (block) of the peer
+  required int64    synced_headers          = 26; // The last header we have in common with this peer
+  required int64    synced_blocks           = 27; // The last block we have in common with this peer
+  repeated int64    inflight                = 28; // The heights of blocks we're currently asking from this peer
+  // "addr_relay_enabled" : true|false,    (boolean) Whether we participate in address relay with this peer
+  // "addr_processed" : n,                 (numeric) The total number of addresses processed, excluding those dropped due to rate limiting
+  // "addr_rate_limited" : n,              (numeric) The total number of addresses dropped due to rate limiting
+  // "permissions" : [                     (json array) Any special permissions that have been granted to this peer
+  // "minfeefilter" : n,                   (numeric) The minimum fee rate for transactions this peer accepts
+  // pub bytes_sent_per_message: BTreeMap<String, u64>,
+  // pub bytes_received_per_message: BTreeMap<String, u64>,
+  required string   connection_type         = 36;  // The services offered
+  // pub connection_type: Option<String>,
+  // "transport_protocol_type" : "str",    (string) Type of transport protocol:
+  // "session_id" : "str"                  (string) The session ID for this connection, or "" if there is none ("v2" transport protocol only).
+    // pub whitelisted: Option<bool>,
+    // pub add_node: Option<bool>, ?
+    // pub ban_score: Option<i64>,
+}

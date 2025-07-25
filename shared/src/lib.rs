@@ -17,6 +17,7 @@ pub mod nats_subjects;
 pub mod net_conn;
 pub mod net_msg;
 pub mod primitive;
+pub mod rpc;
 pub mod validation;
 
 /// A minimal HTTP webserver (but not spec compliant) used to serve prometheus metrics via HTTP.
