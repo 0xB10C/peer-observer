@@ -11,10 +11,13 @@ extracted data. The `extractors` and `tools` are connected with a [nats.io]-base
 PUB-SUB connection via a NATS server. The exchanged messages are serialized
 protobuf structures.
 
-The `ebpf-extractor` is written in Rust and uses the Bitcoin Core tracepoints to extract
+The `ebpf` extractor uses the Bitcoin Core tracepoints to extract
 events like received and send P2P messages, open and closed P2P connections, mempool
 changes, and more. This is implemented using the USDT capabilites of [libbpf-rs].
 The Bitcoin P2P protocol messages are deserialized using [rust-bitcoin].
+
+The `rpc` extractor periodically queries the Bitcoin Core RPC interface using
+[corepc]. Results are published to NATS as RPC events.
 
 The tools are written in Python or Rust (or any other language that supports NATS
 and protobuf). They subscribe to the NATS server. For example, the `logger` tool
@@ -24,25 +27,36 @@ Python tools can make use of the `protobuf/python-types` to deserialize the Prot
 messages while Rust tools can use the types from the `shared` Rust module.
 
 ```
-                                                ┌──────────────────────┐
-                                      NATS.io   │ Tools                │
-                                      PUB-SUB   │                      │
-                                         ┌──────┼──►logger             │
-              Tracepoints                │      │                      │
-┌───────────┐ via libbpf                 ├──────┼──►metrics            │
-│  Bitcoin  │       ┌───────────────┐    │      │                      │
-│ Core Node ├───────► ebpf-extractor├────┼──────┼──►archiver           │
-└───────────┘       └───────────────┘    │      │                      │
-                                         ├──────┼──►addr-connectivty   │
-                                         │      │                      │
-                                         └──────┼──►...                │
-                                      protobuf  │                      │
-                                      messages  └──────────────────────┘
+                                                              ┌──────────────────────┐
+                                           protobuf           │ Tools                │
+            Tracepoints                    messages           │                      │
+            via libbpf                   ┌──────────┬─────────┼──►logger             │
+┌─────────────┐    ┌───────────────┐     │          │         │                      │
+│             ├────► ebpf-extractor├─────┤          ├─────────┼──►metrics            │
+│   Bitcoin   │    └───────────────┘     │ NATS.io  │         │                      │
+│  Core Node  │    ┌───────────────┐     │ PUB-SUB  ├─────────┼──►websocket          │
+│             ├────► rpc-extractor ├─────┤          │         │                      │
+└─────────────┘    └───────────────┘     │          ├─────────┼──►addr-connectivty   │
+             RPC via                     │          │         │                      │
+             corepc                      └──────────┴─────────┼──►...                │
+                                                              │                      │
+(edit on asciiflow.com)                                       └──────────────────────┘
 ```
 
 [nats.io]: https://nats.io
 [libbpf-rs]: https://github.com/libbpf/libbpf-rs
 [rust-bitcoin]: https://github.com/rust-bitcoin/rust-bitcoin
+[corepc]: https://github.com/rust-bitcoin/corepc
+
+## Extractors
+
+Extractors extract events from a Bitcoin Core node and publish them to the connected
+NATS server. Each extractor connects to a different interface:
+
+| **extractor** | **description**                       |             **details**             |
+|---------------|---------------------------------------|:-----------------------------------:|
+| ebpf          | uses tracepoints for real-time events | [extractors/ebpf/](extractors/ebpf) |
+| rpc           | periodically fetches RPC for events   | [tools/rpc/](extractors/rpc)        |
 
 ## Tools
 

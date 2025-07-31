@@ -15,6 +15,7 @@ const SUBSYSTEM_CONN: &str = "conn";
 const SUBSYSTEM_ADDRMAN: &str = "addrman";
 const SUBSYSTEM_MEMPOOL: &str = "mempool";
 const SUBSYSTEM_VALIDATION: &str = "validation";
+const SUBSYSTEM_RPC: &str = "rpc";
 
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
@@ -633,4 +634,64 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_VALIDATION)
     ).unwrap();
+
+    // -------------------- RPC
+
+    /// Number of peers connected that are on the 2018 ban list by gmax.
+    pub static ref PEER_INFO_LIST_CONNECTIONS_GMAX_BAN: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_list_peers_gmax_ban", "Number of peers connected to us that are on the 2018 ban list by gmax.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of peers connected to us that are on the monero banlist.
+    pub static ref PEER_INFO_LIST_CONNECTIONS_MONERO_BAN: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_list_peers_monero_ban", "Number of peers connected to us that are on the monero banlist.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of peers connected to us that are on the list of tor exit nodes.
+    pub static ref PEER_INFO_LIST_CONNECTIONS_TOR_EXIT: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_list_peers_tor_exit", "Number of peers connected to us that are on the list of tor exit nodes.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+
+    /// Number of peers connected to us that are known LinkingLion nodes.
+    pub static ref PEER_INFO_LIST_CONNECTIONS_LINKINGLION: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_list_peers_linkinglion", "Number of peers connected to us that are known LinkingLion nodes.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of peers connected to us that had at least one address rate-limited from being processed (see bitcoin/bitcoin #22387).
+    pub static ref PEER_INFO_ADDR_RATELIMITED_PEERS: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_addr_ratelimited_peers", "Number of peers connected to us that had at least one address rate-limited from being processed (see bitcoin/bitcoin #22387)")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of addressed rate-limited across all connected peers (see bitcoin/bitcoin #22387).
+    pub static ref PEER_INFO_ADDR_RATELIMITED_TOTAL: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_addr_ratelimited_total", "Number of addressed rate-limited across all connected peers (see bitcoin/bitcoin #22387).")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of addressed processed across all connected peers (see bitcoin/bitcoin #22387).
+    pub static ref PEER_INFO_ADDR_PROCESSED_TOTAL: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_addr_processed_total", "Number of addressed processed across all connected peers (see bitcoin/bitcoin #22387).")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
 }

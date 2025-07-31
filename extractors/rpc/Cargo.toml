@@ -1,0 +1,11 @@
+[package]
+name = "rpc-extractor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+shared = { path = "../../shared" }
+
+[features]
+# Treat warnings as a build error.
+strict = []

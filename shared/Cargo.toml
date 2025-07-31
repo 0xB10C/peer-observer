@@ -13,9 +13,15 @@ serde = { version = "1.0.219", features = ["derive"] }
 clap = { version = "4.5.41", features = ["derive"] }
 simple_logger = "5.0.0"
 log = "0.4"
+# The non-async NATS crate is deprecated. New tools should use async_nats.
 nats = "0.25.0"
+async-nats = "0.42.0"
 prometheus = "0.14.0"
 lazy_static = "1.5.0"
+# for the rpc exporter
+# TODO: when #310 is merged and 0.9.0 is release, switch to that.
+corepc-client = { git = "https://github.com/0xb10c/corepc.git", branch = "2025-07-peer-observer-rpc-extractor",  features = ["client-sync"]}
+tokio = { version = "1.47.0", features = ["rt-multi-thread"] }
 
 [build-dependencies]
 prost-build = "0.14"
