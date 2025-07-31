@@ -105,7 +105,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "sort_desc(delta(networkobserver_p2p_version_useragent[1d]) > 10)",
+          "expr": "sort_desc(delta(peerobserver_p2p_version_useragent[1d]) > 10)",
           "format": "time_series",
           "instant": true,
           "interval": "1m",
@@ -201,7 +201,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "sort_desc(delta(networkobserver_p2p_version_useragent[1h]) > 10)",
+          "expr": "sort_desc(delta(peerobserver_p2p_version_useragent[1h]) > 10)",
           "format": "time_series",
           "instant": true,
           "interval": "1m",

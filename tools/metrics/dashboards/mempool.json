@@ -105,7 +105,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "increase(networkobserver_mempool_added[1m]) / 60",
+          "expr": "increase(peerobserver_mempool_added[1m]) / 60",
           "legendFormat": "added",
           "range": true,
           "refId": "A"
@@ -198,7 +198,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "increase(networkobserver_mempool_added_vbytes[1m]) / 60",
+          "expr": "increase(peerobserver_mempool_added_vbytes[1m]) / 60",
           "legendFormat": "vbyte added",
           "range": true,
           "refId": "A"
@@ -291,7 +291,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "increase(networkobserver_mempool_replaced[1m])",
+          "expr": "increase(peerobserver_mempool_replaced[1m])",
           "legendFormat": "replaced",
           "range": true,
           "refId": "A"
@@ -384,7 +384,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "builder",
-          "expr": "increase(networkobserver_mempool_replaced_vbytes[1m])",
+          "expr": "increase(peerobserver_mempool_replaced_vbytes[1m])",
           "interval": "1m",
           "legendFormat": "vbyte replaced",
           "range": true,
@@ -477,7 +477,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "builder",
-          "expr": "increase(networkobserver_mempool_rejected[$__rate_interval])",
+          "expr": "increase(peerobserver_mempool_rejected[$__rate_interval])",
           "legendFormat": "{{reason}}",
           "range": true,
           "refId": "A"

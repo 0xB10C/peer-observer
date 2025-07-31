@@ -69,7 +69,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "increase(networkobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
+          "expr": "increase(peerobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
           "format": "heatmap",
           "hide": false,
           "instant": false,
@@ -134,7 +134,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "delta(networkobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
+          "expr": "delta(peerobserver_p2p_addr_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
           "format": "heatmap",
           "hide": false,
           "instant": false,
@@ -200,7 +200,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "increase(networkobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
+          "expr": "increase(peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"past\", direction=\"$connection_direction\"}[1m])",
           "format": "heatmap",
           "hide": false,
           "instant": false,
@@ -264,7 +264,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "delta(networkobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
+          "expr": "delta(peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{timestamp_offset=\"future\", direction=\"$connection_direction\"}[1m])",
           "format": "heatmap",
           "hide": false,
           "instant": false,

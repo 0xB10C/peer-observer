@@ -25,7 +25,7 @@
           "uid": "prometheus"
         },
         "enable": false,
-        "expr": "sum(delta(networkobserver_conn_misbehaving[1m]))",
+        "expr": "sum(delta(peerobserver_conn_misbehaving[1m]))",
         "iconColor": "red",
         "name": "restarts"
       }
@@ -122,7 +122,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum(increase(networkobserver_p2p_message_bytes{message=\"$msg\", direction=\"outbound\"}[1m]))",
+          "expr": "sum(increase(peerobserver_p2p_message_bytes{message=\"$msg\", direction=\"outbound\"}[1m]))",
           "interval": "1m",
           "legendFormat": "outbound",
           "refId": "A"
@@ -133,7 +133,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum(-increase(networkobserver_p2p_message_bytes{message=\"$msg\", direction=\"inbound\"}[1m]))",
+          "expr": "sum(-increase(peerobserver_p2p_message_bytes{message=\"$msg\", direction=\"inbound\"}[1m]))",
           "hide": false,
           "interval": "1m",
           "legendFormat": "inbound",
@@ -226,7 +226,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum(increase(networkobserver_p2p_message_count{message=\"$msg\", direction=\"outbound\"}[1m]))",
+          "expr": "sum(increase(peerobserver_p2p_message_count{message=\"$msg\", direction=\"outbound\"}[1m]))",
           "interval": "1m",
           "legendFormat": "outbound",
           "refId": "A"
@@ -237,7 +237,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum(-increase(networkobserver_p2p_message_count{message=\"$msg\", direction=\"inbound\"}[1m]))",
+          "expr": "sum(-increase(peerobserver_p2p_message_count{message=\"$msg\", direction=\"inbound\"}[1m]))",
           "hide": false,
           "interval": "1m",
           "legendFormat": "inbound",

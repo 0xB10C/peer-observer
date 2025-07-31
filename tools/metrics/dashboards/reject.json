@@ -109,7 +109,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "networkobserver_p2p_reject_addr{rejectcommand!=\"tx\"}",
+          "expr": "peerobserver_p2p_reject_addr{rejectcommand!=\"tx\"}",
           "interval": "",
           "legendFormat": "{{rejectcommand}} {{addr}}",
           "refId": "A"
@@ -194,7 +194,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "sum(networkobserver_p2p_reject_addr) by (addr)",
+          "expr": "sum(peerobserver_p2p_reject_addr) by (addr)",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -281,7 +281,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "sum(networkobserver_p2p_reject_addr{rejectcommand=\"tx\"}) by (rejectreason)",
+          "expr": "sum(peerobserver_p2p_reject_addr{rejectcommand=\"tx\"}) by (rejectreason)",
           "format": "table",
           "instant": true,
           "interval": "1m",
@@ -347,7 +347,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "networkobserver_p2p_reject_addr{rejectreason=\"Invalid\"}",
+          "expr": "peerobserver_p2p_reject_addr{rejectreason=\"Invalid\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "{{addr}} rejected {{rejectcommand}}",
@@ -409,7 +409,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "networkobserver_p2p_reject_addr{rejectreason=\"NonStandard\"}",
+          "expr": "peerobserver_p2p_reject_addr{rejectreason=\"NonStandard\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "{{addr}} rejected {{rejectcommand}}",
@@ -474,7 +474,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "networkobserver_p2p_reject_message",
+          "expr": "peerobserver_p2p_reject_message",
           "interval": "",
           "legendFormat": "{{rejectcommand}} - reason={{rejectreason}} - message={{rejectmessage}}",
           "refId": "A"
