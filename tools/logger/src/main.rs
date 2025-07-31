@@ -45,11 +45,20 @@ struct Args {
     /// If passed, show validation events
     #[arg(long)]
     validation: bool,
+
+    /// If passed, show RPC events
+    #[arg(long)]
+    rpc: bool,
 }
 
 impl Args {
     fn should_show_all(&self) -> bool {
-        !(self.messages || self.connections || self.addrman || self.mempool || self.validation)
+        !(self.messages
+            || self.connections
+            || self.addrman
+            || self.mempool
+            || self.validation
+            || self.rpc)
     }
 }
 
@@ -62,6 +71,7 @@ fn main() {
     let addrman = args.addrman;
     let mempool = args.mempool;
     let validation = args.validation;
+    let rpc = args.rpc;
     simple_logger::init_with_level(args.log_level).unwrap();
 
     // TODO: handle unwraps
@@ -101,6 +111,11 @@ fn main() {
                     Event::Validation(v) => {
                         if should_show_all || validation {
                             log::info!("+Validation {}", v.event.unwrap());
+                        }
+                    }
+                    Event::Rpc(r) => {
+                        if should_show_all || rpc {
+                            log::info!("!RPC {}", r.event.unwrap());
                         }
                     }
                 }

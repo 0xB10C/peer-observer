@@ -3,7 +3,6 @@
 use error::RuntimeError;
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use libbpf_rs::{Map, MapCore, Object, ProgramMut, RingBufferBuilder};
-use shared::prost::Message;
 use shared::clap::Parser;
 use shared::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
@@ -13,6 +12,7 @@ use shared::ctypes::{
 use shared::event_msg::event_msg::Event;
 use shared::event_msg::EventMsg;
 use shared::log::{self, error};
+use shared::prost::Message;
 use shared::simple_logger;
 use shared::{addrman, mempool, nats_subjects::Subject, net_conn, net_msg, validation};
 use shared::{clap, nats};

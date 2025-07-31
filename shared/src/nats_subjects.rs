@@ -5,6 +5,7 @@ const NATS_SUBJECT_MEMPOOL: &str = "mempool";
 const NATS_SUBJECT_NETMSG: &str = "netmsg";
 const NATS_SUBJECT_NETCONN: &str = "netconn";
 const NATS_SUBJECT_VALIDATION: &str = "validation";
+const NATS_SUBJECT_RPC: &str = "rpc";
 
 pub enum Subject {
     Addrman,
@@ -12,6 +13,7 @@ pub enum Subject {
     NetMsg,
     NetConn,
     Validation,
+    Rpc,
 }
 
 impl fmt::Display for Subject {
@@ -22,6 +24,7 @@ impl fmt::Display for Subject {
             Subject::NetConn => write!(f, "{}", NATS_SUBJECT_NETCONN),
             Subject::NetMsg => write!(f, "{}", NATS_SUBJECT_NETMSG),
             Subject::Validation => write!(f, "{}", NATS_SUBJECT_VALIDATION),
+            Subject::Rpc => write!(f, "{}", NATS_SUBJECT_RPC),
         }
     }
 }

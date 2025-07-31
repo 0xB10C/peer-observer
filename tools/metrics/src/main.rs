@@ -1,4 +1,6 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
+// Allow for more metric macros in metrics.rs
+#![recursion_limit = "256"]
 
 use shared::addrman::addrman_event;
 use shared::clap::Parser;
@@ -11,6 +13,7 @@ use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
+use shared::rpc::rpc_event;
 use shared::simple_logger;
 use shared::util;
 use shared::validation::validation_event;
@@ -70,6 +73,51 @@ fn main() {
                     handle_mempool_event(&m.event.unwrap());
                 }
                 Event::Validation(v) => handle_validation_event(&v.event.unwrap()),
+                Event::Rpc(r) => handle_rpc_event(&r.event.unwrap()),
+            }
+        }
+    }
+
+    fn handle_rpc_event(e: &rpc_event::Event) {
+        match e {
+            rpc_event::Event::PeerInfos(info) => {
+                let mut on_gmax_banlist = 0;
+                let mut on_monero_banlist = 0;
+                let mut on_tor_exit_list = 0;
+                let mut on_linkinglion_list = 0;
+                let mut addr_rate_limited_peers = 0; // number of peers that had at least one address rate limited.
+                let mut addr_rate_limited_total: u64 = 0; // total number of rate-limited addresses
+                let mut addr_processed_total: u64 = 0; // total number of processed addresses
+                for peer in info.infos.iter() {
+                    let ip = util::ip_from_ipport(peer.address.clone());
+                    if util::is_on_gmax_banlist(&ip) {
+                        on_gmax_banlist += 1;
+                    }
+                    if util::is_on_monero_banlist(&ip) {
+                        on_monero_banlist += 1;
+                    }
+                    if util::is_tor_exit_node(&ip) {
+                        on_tor_exit_list += 1;
+                    }
+                    if util::is_on_linkinglion_banlist(&ip) {
+                        on_linkinglion_list += 1;
+                    }
+
+                    if peer.addr_rate_limited > 0 {
+                        addr_rate_limited_peers += 1;
+                    }
+
+                    addr_rate_limited_total += peer.addr_rate_limited;
+                    addr_processed_total += peer.addr_processed;
+                }
+
+                metrics::PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
+                metrics::PEER_INFO_LIST_CONNECTIONS_MONERO_BAN.set(on_monero_banlist);
+                metrics::PEER_INFO_LIST_CONNECTIONS_TOR_EXIT.set(on_tor_exit_list);
+                metrics::PEER_INFO_LIST_CONNECTIONS_LINKINGLION.set(on_linkinglion_list);
+                metrics::PEER_INFO_ADDR_RATELIMITED_PEERS.set(addr_rate_limited_peers);
+                metrics::PEER_INFO_ADDR_RATELIMITED_TOTAL.set(addr_rate_limited_total as i64);
+                metrics::PEER_INFO_ADDR_PROCESSED_TOTAL.set(addr_processed_total as i64);
             }
         }
     }

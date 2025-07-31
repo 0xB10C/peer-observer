@@ -1,0 +1,56 @@
+syntax = "proto2";
+
+package rpc;
+
+message RPCEvent {
+  oneof event {
+    PeerInfos peer_infos = 1;
+  }
+}
+
+// A getpeerinfo RPC response from Bitcoin Core.
+message PeerInfos {
+  repeated PeerInfo infos = 1;
+}
+
+// Information about a single peer.
+message PeerInfo {
+  required uint32   id                      = 1;  // The peer_id of this peer.
+  required string   address                 = 2;  // The address of this peer (host:port).
+  required string   address_bind            = 3;  // The bind address of the connection to the peer (ip:port).
+  required string   address_local           = 4;  // Local address as reported by the peer (ip:port)
+  required string   network                 = 5;  // Network (ipv4, ipv6, onion, i2p, cjdns, not_publicly_routable, or empty)
+  required uint32   mapped_as               = 6;  // Mapped AS (Autonomous System) number
+  required string   services                = 7;  // The services offered
+  required bool     relay_transactions      = 8;  // Whether we relay transactions to this peer
+  required int64    last_send               = 9;  // The UNIX epoch time of the last send
+  required int64    last_received           = 10; // The UNIX epoch time of the last receive
+  required int64    last_transaction        = 11; // The UNIX epoch time of the last valid transaction received from this peer
+  required int64    last_block              = 12; // The UNIX epoch time of the last block received from this peer
+  required uint64   bytes_sent              = 13; // The total bytes sent
+  required uint64   bytes_received          = 14; // The total bytes received
+  required int64    connection_time         = 15; // The UNIX epoch time of the connection
+  required int64    time_offset             = 16; // The time offset in seconds
+  required double   ping_time               = 17; // The last ping time in milliseconds (ms), if any
+  required double   minimum_ping            = 18; // The minimum observed ping time in milliseconds (ms), if any
+  required double   ping_wait               = 19; // The duration in milliseconds (ms) of an outstanding ping (if non-zero)
+  required uint32   version                 = 20; // The peer version, such as 70001
+  required string   subversion              = 21; // The string version
+  required bool     inbound                 = 22; // Inbound (true) or Outbound (false)
+  required bool     bip152_hb_to            = 23; // Whether we selected peer as (compact blocks) high-bandwidth peer
+  required bool     bip152_hb_from          = 24; // Whether peer selected us as (compact blocks) high-bandwidth peer
+  required int64    starting_height         = 25; // The starting height (block) of the peer
+  required int64    synced_headers          = 26; // The last header we have in common with this peer
+  required int64    synced_blocks           = 27; // The last block we have in common with this peer
+  repeated uint64   inflight                = 28; // The heights of blocks we're currently asking from this peer
+  required bool     addr_relay_enabled      = 29; // Whether we participate in address relay with this peer
+  required uint64   addr_processed          = 30; // The total number of addresses processed, excluding those dropped due to rate limiting
+  required uint64   addr_rate_limited       = 31; // The total number of addresses dropped due to rate limiting
+  repeated string   permissions             = 32; // Any special permissions that have been granted to this peer
+  required double   minfeefilter            = 33; // The minimum fee rate for transactions this peer accepts
+  map<string, uint64> bytes_sent_per_message = 34; // The total bytes sent aggregated by message type.
+  map<string, uint64> bytes_received_per_message = 35; // The total bytes received aggregated by message type.
+  required string   connection_type         = 36; // Type of connection: e.g. outbound-full-relay, block-relay-only, inbound, manual, addr-fetch, feeler
+  required string   transport_protocol_type = 37; // Type of transport protocol (v1, v2)
+  // session ID is not implemented, since I'm not sure we need them?
+}

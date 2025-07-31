@@ -49,6 +49,7 @@ pub fn current_timestamp() -> u64 {
         .as_secs()
 }
 
+/// Checks if the IP belongs to the LinkingLion entity.
 pub fn is_on_linkinglion_banlist(ip: &str) -> bool {
     // Since this list is rather small and doesn't update frequently,
     // but includes a /64 IPv6 address, we don't keep a separate list file for it. The matching is implemented with
