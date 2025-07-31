@@ -32,3 +32,16 @@ wget https://gui.xmr.pm/files/block.txt
 python3 preprocess-monero-block-list.py
 
 ```
+
+## LinkingLion banlist
+
+A banlist of IP addresses for LinkingLion. Since this list is rather small and doesn't update frequently,
+but includes a /64 IPv6 address, we don't keep a separate list file for it. The matching is implemented with
+a `ip.starts_with()`, to avoid having to check all possibilities of the /64. 
+
+```
+162.218.65.0/24
+209.222.252.0/24
+91.198.115.0/24
+2604:d500:4:1::/64
+```

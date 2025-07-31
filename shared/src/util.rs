@@ -49,6 +49,16 @@ pub fn current_timestamp() -> u64 {
         .as_secs()
 }
 
+pub fn is_on_linkinglion_banlist(ip: &str) -> bool {
+    // Since this list is rather small and doesn't update frequently,
+    // but includes a /64 IPv6 address, we don't keep a separate list file for it. The matching is implemented with
+    // a `ip.starts_with()`, to avoid having to check all possibilities of the /64.
+    ip.starts_with("162.218.65")
+        || ip.starts_with("209.222.252")
+        || ip.starts_with("91.198.115")
+        || ip.starts_with("2604:d500:4:")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,5 +150,25 @@ mod tests {
         assert!(is_tor_exit_node("185.220.100.253")); // tor-exit-2.zbau.f3netze.de
         assert!(is_tor_exit_node("204.8.96.150")); // tor61.quintex.com
         assert!(is_tor_exit_node("185.129.61.5")); // tor-project-exit5.dotsrc.org
+    }
+
+    #[test]
+    fn test_linkinglion() {
+        assert!(!is_on_linkinglion_banlist(
+            "this is probably not an ip of a tor exit node"
+        ));
+
+        // The IP addresses defined in RFC5737 for use in documentation are not on a LinkingLion banlist.
+        //
+        // https://www.rfc-editor.org/rfc/rfc5737
+        assert!(!is_on_linkinglion_banlist("192.0.2.222")); // TEST-NET-1
+        assert!(!is_on_linkinglion_banlist("198.51.100.111")); // TEST-NET-2
+        assert!(!is_on_linkinglion_banlist("203.0.113.123")); // TEST-NET-3
+
+        // These are actual IP addresses LinkingLion uses.
+        assert!(is_on_linkinglion_banlist("162.218.65.254"));
+        assert!(is_on_linkinglion_banlist("209.222.252.254"));
+        assert!(is_on_linkinglion_banlist("91.198.115.62"));
+        assert!(is_on_linkinglion_banlist("2604:d500:4:1::3:fe"));
     }
 }
