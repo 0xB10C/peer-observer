@@ -145,7 +145,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "increase(networkobserver_p2p_ping_address[1m]) > 5",
+          "expr": "increase(peerobserver_p2p_ping_address[1m]) > 5",
           "interval": "1m",
           "legendFormat": "{{addr}}",
           "refId": "A"
@@ -210,7 +210,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "increase(networkobserver_p2p_ping_address[1m]) > 10 ",
+          "expr": "increase(peerobserver_p2p_ping_address[1m]) > 10 ",
           "interval": "1m",
           "legendFormat": "{{addr}}",
           "refId": "A"
@@ -275,7 +275,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "increase(networkobserver_p2p_ping_address[4h]) > 300",
+          "expr": "increase(peerobserver_p2p_ping_address[4h]) > 300",
           "instant": false,
           "interval": "",
           "legendFormat": "{{addr}}",
@@ -365,7 +365,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "idelta(networkobserver_p2p_ping_address[1m]) > 0",
+          "expr": "idelta(peerobserver_p2p_ping_address[1m]) > 0",
           "interval": "1m",
           "legendFormat": "{{addr}}",
           "refId": "A"
@@ -454,7 +454,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum(idelta(networkobserver_p2p_message_count{message=\"ping\", direction=\"inbound\"}[1m]))",
+          "expr": "sum(idelta(peerobserver_p2p_message_count{message=\"ping\", direction=\"inbound\"}[1m]))",
           "interval": "1m",
           "legendFormat": "",
           "refId": "A"
@@ -541,7 +541,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "irate(networkobserver_p2p_ping_address{addr=\"35.215.2.174\"}[60s]) > 5",
+          "expr": "irate(peerobserver_p2p_ping_address{addr=\"35.215.2.174\"}[60s]) > 5",
           "interval": "15s",
           "legendFormat": "{{addr}}",
           "refId": "A"
@@ -628,7 +628,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum(delta(networkobserver_p2p_message_count{message=\"ping\", direction=\"inbound\"}[1m])) / on() group_right() (networkobserver_conn_inbound_current + networkobserver_conn_outbound_current)",
+          "expr": "sum(delta(peerobserver_p2p_message_count{message=\"ping\", direction=\"inbound\"}[1m])) / on() group_right() (peerobserver_conn_inbound_current + peerobserver_conn_outbound_current)",
           "interval": "1m",
           "legendFormat": "",
           "refId": "A"

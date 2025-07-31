@@ -80,7 +80,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "networkobserver_p2p_feefilter_feerate{direction=\"inbound\"}",
+          "expr": "peerobserver_p2p_feefilter_feerate{direction=\"inbound\"}",
           "format": "time_series",
           "instant": false,
           "interval": "1m",
@@ -173,7 +173,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "increase(networkobserver_p2p_feefilter_feerate{direction=\"inbound\"}[1m])",
+          "expr": "increase(peerobserver_p2p_feefilter_feerate{direction=\"inbound\"}[1m])",
           "hide": false,
           "instant": false,
           "interval": "1m",
@@ -265,7 +265,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "increase(networkobserver_p2p_feefilter_feerate{direction=\"outbound\"}[1m])",
+          "expr": "increase(peerobserver_p2p_feefilter_feerate{direction=\"outbound\"}[1m])",
           "hide": false,
           "instant": false,
           "interval": "1m",

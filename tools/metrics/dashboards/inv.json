@@ -108,7 +108,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "idelta(networkobserver_p2p_inv_entries{direction=\"inbound\"}[1m])",
+          "expr": "idelta(peerobserver_p2p_inv_entries{direction=\"inbound\"}[1m])",
           "instant": false,
           "interval": "1m",
           "intervalFactor": 1,
@@ -199,7 +199,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "idelta(networkobserver_p2p_inv_entries{direction=\"outbound\"}[1m])",
+          "expr": "idelta(peerobserver_p2p_inv_entries{direction=\"outbound\"}[1m])",
           "instant": false,
           "interval": "1m",
           "intervalFactor": 1,
@@ -290,7 +290,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "irate(networkobserver_p2p_invs_homogeneous[1m])",
+          "expr": "irate(peerobserver_p2p_invs_homogeneous[1m])",
           "interval": "1m",
           "intervalFactor": 1,
           "legendFormat": "homogeneous {{direction}}",
@@ -368,7 +368,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "networkobserver_p2p_invs_heterogeneous",
+          "expr": "peerobserver_p2p_invs_heterogeneous",
           "interval": "1m",
           "intervalFactor": 1,
           "legendFormat": "heterogeneous {{direction}}",
@@ -413,7 +413,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "increase(networkobserver_p2p_inv_entries_histogram_bucket{direction=\"inbound\"}[3m])",
+          "expr": "increase(peerobserver_p2p_inv_entries_histogram_bucket{direction=\"inbound\"}[3m])",
           "format": "heatmap",
           "instant": false,
           "interval": "3m",
@@ -472,7 +472,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "increase(networkobserver_p2p_inv_entries_histogram_bucket{direction=\"outbound\"}[3m])",
+          "expr": "increase(peerobserver_p2p_inv_entries_histogram_bucket{direction=\"outbound\"}[3m])",
           "format": "heatmap",
           "instant": false,
           "interval": "3m",
