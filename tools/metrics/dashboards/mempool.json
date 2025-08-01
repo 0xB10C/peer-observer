@@ -18,14 +18,13 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 82,
+  "id": 12,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
+        "uid": "fetjtg0ozx98ge"
       },
       "fieldConfig": {
         "defaults": {
@@ -33,11 +32,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -46,6 +47,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -68,7 +70,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -94,10 +96,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.1.0",
       "targets": [
         {
           "datasource": {
@@ -117,7 +121,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
+        "uid": "fetjtg0ozx98ge"
       },
       "fieldConfig": {
         "defaults": {
@@ -125,11 +129,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -138,6 +144,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -160,7 +167,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -187,10 +194,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.1.0",
       "targets": [
         {
           "datasource": {
@@ -210,7 +219,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
+        "uid": "fetjtg0ozx98ge"
       },
       "fieldConfig": {
         "defaults": {
@@ -218,11 +227,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -231,6 +242,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -253,7 +265,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -280,10 +292,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.1.0",
       "targets": [
         {
           "datasource": {
@@ -303,7 +317,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
+        "uid": "fetjtg0ozx98ge"
       },
       "fieldConfig": {
         "defaults": {
@@ -311,11 +325,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -324,6 +340,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -346,7 +363,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -373,10 +390,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.1.0",
       "targets": [
         {
           "datasource": {
@@ -397,7 +416,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P1809F7CD0C75ACF3"
+        "uid": "fetjtg0ozx98ge"
       },
       "fieldConfig": {
         "defaults": {
@@ -405,11 +424,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -418,6 +439,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -440,7 +462,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -466,10 +488,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.1.0",
       "targets": [
         {
           "datasource": {
@@ -487,9 +511,9 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 41,
   "tags": [],
   "templating": {
     "list": []
@@ -502,6 +526,5 @@
   "timezone": "",
   "title": "Mempool",
   "uid": "b8589f07-7756-441b-bb33-a320db5331fe",
-  "version": 5,
-  "weekStart": ""
+  "version": 6
 }
