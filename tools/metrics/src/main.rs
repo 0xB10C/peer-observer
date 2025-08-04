@@ -111,13 +111,13 @@ fn main() {
                     addr_processed_total += peer.addr_processed;
                 }
 
-                metrics::PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
-                metrics::PEER_INFO_LIST_CONNECTIONS_MONERO_BAN.set(on_monero_banlist);
-                metrics::PEER_INFO_LIST_CONNECTIONS_TOR_EXIT.set(on_tor_exit_list);
-                metrics::PEER_INFO_LIST_CONNECTIONS_LINKINGLION.set(on_linkinglion_list);
-                metrics::PEER_INFO_ADDR_RATELIMITED_PEERS.set(addr_rate_limited_peers);
-                metrics::PEER_INFO_ADDR_RATELIMITED_TOTAL.set(addr_rate_limited_total as i64);
-                metrics::PEER_INFO_ADDR_PROCESSED_TOTAL.set(addr_processed_total as i64);
+                metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
+                metrics::RPC_PEER_INFO_LIST_CONNECTIONS_MONERO_BAN.set(on_monero_banlist);
+                metrics::RPC_PEER_INFO_LIST_CONNECTIONS_TOR_EXIT.set(on_tor_exit_list);
+                metrics::RPC_PEER_INFO_LIST_CONNECTIONS_LINKINGLION.set(on_linkinglion_list);
+                metrics::RPC_PEER_INFO_ADDR_RATELIMITED_PEERS.set(addr_rate_limited_peers);
+                metrics::RPC_PEER_INFO_ADDR_RATELIMITED_TOTAL.set(addr_rate_limited_total as i64);
+                metrics::RPC_PEER_INFO_ADDR_PROCESSED_TOTAL.set(addr_processed_total as i64);
             }
         }
     }
