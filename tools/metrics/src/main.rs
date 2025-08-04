@@ -22,6 +22,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 mod metrics;
+mod stat_util;
 
 const LOG_TARGET: &str = "main";
 
@@ -88,6 +89,8 @@ fn main() {
                 let mut addr_rate_limited_peers = 0; // number of peers that had at least one address rate limited.
                 let mut addr_rate_limited_total: u64 = 0; // total number of rate-limited addresses
                 let mut addr_processed_total: u64 = 0; // total number of processed addresses
+                let mut pings = vec![];
+                let mut min_pings = vec![];
                 for peer in info.infos.iter() {
                     let ip = util::ip_from_ipport(peer.address.clone());
                     if util::is_on_gmax_banlist(&ip) {
@@ -109,6 +112,15 @@ fn main() {
 
                     addr_rate_limited_total += peer.addr_rate_limited;
                     addr_processed_total += peer.addr_processed;
+
+                    // Ping times are in seconds, but we want to have them as milliseconds.
+                    // Also, if the ping is 0, it means we don't have a ping. So don't report it.
+                    if peer.ping_time > 0.0 {
+                        pings.push(peer.ping_time * 1000.0);
+                    }
+                    if peer.minimum_ping > 0.0 {
+                        min_pings.push(peer.minimum_ping * 1000.0);
+                    }
                 }
 
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
@@ -118,6 +130,11 @@ fn main() {
                 metrics::RPC_PEER_INFO_ADDR_RATELIMITED_PEERS.set(addr_rate_limited_peers);
                 metrics::RPC_PEER_INFO_ADDR_RATELIMITED_TOTAL.set(addr_rate_limited_total as i64);
                 metrics::RPC_PEER_INFO_ADDR_PROCESSED_TOTAL.set(addr_processed_total as i64);
+
+                metrics::RPC_PEER_INFO_PING_MEAN.set(stat_util::mean_f64(&pings));
+                metrics::RPC_PEER_INFO_PING_MEDIAN.set(stat_util::median_f64(&pings));
+                metrics::RPC_PEER_INFO_MINPING_MEAN.set(stat_util::mean_f64(&min_pings));
+                metrics::RPC_PEER_INFO_MINPING_MEDIAN.set(stat_util::median_f64(&min_pings));
             }
         }
     }

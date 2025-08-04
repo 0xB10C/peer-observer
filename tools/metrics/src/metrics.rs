@@ -1,9 +1,9 @@
 use shared::lazy_static::lazy_static;
 use shared::prometheus::{
-    register_histogram_vec, register_int_counter, register_int_counter_vec, register_int_gauge,
-    HistogramOpts, Opts,
+    register_gauge, register_histogram_vec, register_int_counter, register_int_counter_vec,
+    register_int_gauge, HistogramOpts, Opts,
 };
-use shared::prometheus::{HistogramVec, IntCounter, IntCounterVec, IntGauge};
+use shared::prometheus::{Gauge, HistogramVec, IntCounter, IntCounterVec, IntGauge};
 
 // Prometheus Metrics
 
@@ -690,6 +690,38 @@ lazy_static! {
     pub static ref RPC_PEER_INFO_ADDR_PROCESSED_TOTAL: IntGauge =
     register_int_gauge!(
         Opts::new("peer_info_addr_processed_total", "Number of addressed processed across all connected peers (see bitcoin/bitcoin #22387).")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Median ping of all connected peers.
+    pub static ref RPC_PEER_INFO_PING_MEDIAN: Gauge =
+    register_gauge!(
+        Opts::new("peer_info_ping_median", "Median ping (in milliseconds) of all connected peers.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Mean ping of all connected peers.
+    pub static ref RPC_PEER_INFO_PING_MEAN: Gauge =
+    register_gauge!(
+        Opts::new("peer_info_ping_mean", "Mean ping (in milliseconds) of all connected peers.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Median min_ping of all connected peers.
+    pub static ref RPC_PEER_INFO_MINPING_MEDIAN: Gauge =
+    register_gauge!(
+        Opts::new("peer_info_minping_median", "Median min_ping (in milliseconds) of all connected peers.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Mean min_ping of all connected peers.
+    pub static ref RPC_PEER_INFO_MINPING_MEAN: Gauge =
+    register_gauge!(
+        Opts::new("peer_info_minping_mean", "Mean min_ping (in milliseconds) of all connected peers.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_RPC)
     ).unwrap();
