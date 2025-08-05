@@ -21,7 +21,7 @@ lazy_static = "1.5.0"
 # for the rpc exporter
 # TODO: when #310 is merged and 0.9.0 is release, switch to that.
 corepc-client = { git = "https://github.com/0xb10c/corepc.git", branch = "2025-07-peer-observer-rpc-extractor",  features = ["client-sync"]}
-tokio = { version = "1.47.0", features = ["rt-multi-thread"] }
+tokio = { version = "1.47.1", features = ["rt-multi-thread"] }
 
 [build-dependencies]
 prost-build = "0.14"
