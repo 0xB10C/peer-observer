@@ -15,6 +15,6 @@ message BlockConnected {
   required int64    transactions            = 3;  // Number of transactions in the connected block.
   required int32    inputs                  = 4;  // Number of inputs in the connected block.
   required int64    sigops                  = 5;  // Number of sigops in the connected block.
-  required int64    connection_time         = 6;  // Time it took to connect the block in microseconds (µs).
+  required uint64   connection_time         = 6;  // Time it took to connect the block in nanoseconds (ns).
 }
 
