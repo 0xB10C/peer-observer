@@ -13,7 +13,7 @@ impl From<ctypes::ValidationBlockConnected> for BlockConnected {
             transactions: connected.transactions as i64,
             inputs: connected.inputs,
             sigops: connected.sigops as i64,
-            connection_time: connected.connection_time as i64,
+            connection_time: connected.connection_time,
         }
     }
 }
@@ -22,7 +22,7 @@ impl fmt::Display for BlockConnected {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "BlockConnected(hash={}, height={}, transactions={}, inputs={}, sigops={}, time={}µs)",
+            "BlockConnected(hash={}, height={}, transactions={}, inputs={}, sigops={}, time={}ns)",
             bitcoin::BlockHash::from_slice(&self.hash).unwrap(),
             self.height,
             self.transactions,
