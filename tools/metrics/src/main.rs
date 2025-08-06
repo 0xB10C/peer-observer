@@ -21,6 +21,7 @@ use shared::{clap, nats};
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::collections::BTreeSet;
 
 mod metrics;
 mod stat_util;
@@ -108,6 +109,12 @@ fn main() {
                 let mut peers_by_transport_protocol_type: BTreeMap<&str, i64> = BTreeMap::new();
                 let mut peers_by_network: BTreeMap<&str, i64> = BTreeMap::new();
 
+                // When we requested a block, but a peer hasn't yet sent us the block,
+                // the block is considered inflight. If a peer doesn't send us a block at all,
+                // it might be stalling us.
+                let mut peers_with_inflight_blocks = 0;
+                let mut distinct_inflight_block_heights = BTreeSet::new();
+
                 for peer in info.infos.iter() {
                     let ip = util::ip_from_ipport(peer.address.clone());
                     if util::is_on_gmax_banlist(&ip) {
@@ -156,6 +163,13 @@ fn main() {
                         bip152_highbandwidth_from += 1;
                     }
 
+                    if !peer.inflight.is_empty() {
+                        peers_with_inflight_blocks += 1;
+                        for inflight in peer.inflight.iter() {
+                            distinct_inflight_block_heights.insert(*inflight);
+                        }
+                    }
+
                     peers_by_transport_protocol_type
                         .entry(&peer.transport_protocol_type)
                         .and_modify(|e| *e += 1)
@@ -189,6 +203,10 @@ fn main() {
                 metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_FROM.set(bip152_highbandwidth_from);
 
                 metrics::RPC_PEER_INFO_NUM_PEERS.set(info.infos.len() as i64);
+
+                metrics::RPC_PEER_INFO_INFLIGHT_BLOCK_PEERS.set(peers_with_inflight_blocks);
+                metrics::RPC_PEER_INFO_INFLIGHT_DISTINCT_BLOCK_HEIGHTS
+                    .set(distinct_inflight_block_heights.len() as i64);
 
                 metrics::RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS.reset();
                 for (k, v) in peers_by_transport_protocol_type.iter() {
