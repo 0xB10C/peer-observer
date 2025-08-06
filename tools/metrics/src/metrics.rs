@@ -786,4 +786,21 @@ lazy_static! {
         &[LABEL_RPC_NETWORK_TYPE]
     ).unwrap();
 
+    /// Number of peers that have inflight blocks for us
+    pub static ref RPC_PEER_INFO_INFLIGHT_BLOCK_PEERS: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_inflight_block_peers", "Number of peers that have inflight blocks for us.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of distinct inflight blocks heights that peers are sending us
+    pub static ref RPC_PEER_INFO_INFLIGHT_DISTINCT_BLOCK_HEIGHTS: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_inflight_distinct_blocks_heights", "Number of distinct inflight blocks heights that peers are sending us.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+
 }
