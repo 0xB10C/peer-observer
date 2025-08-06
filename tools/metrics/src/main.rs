@@ -91,6 +91,11 @@ fn main() {
                 let mut timeoffset_plus10s = 0;
                 let mut timeoffset_minus10s = 0;
 
+                // track how many peers we consider high bandwidth compact block peers
+                // and how many consider us to be a high bandwidth peer
+                let mut bip152_highbandwidth_to = 0;
+                let mut bip152_highbandwidth_from = 0;
+
                 let mut addr_rate_limited_peers = 0; // number of peers that had at least one address rate limited.
                 let mut addr_rate_limited_total: u64 = 0; // total number of rate-limited addresses
                 let mut addr_processed_total: u64 = 0; // total number of processed addresses
@@ -134,6 +139,14 @@ fn main() {
                     if peer.minimum_ping > 0.0 {
                         min_pings.push(peer.minimum_ping * 1000.0);
                     }
+
+                    if peer.bip152_hb_to {
+                        bip152_highbandwidth_to += 1;
+                    }
+
+                    if peer.bip152_hb_from {
+                        bip152_highbandwidth_from += 1;
+                    }
                 }
 
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
@@ -151,6 +164,9 @@ fn main() {
 
                 metrics::RPC_PEER_INFO_TIMEOFFSET_PLUS10S.set(timeoffset_plus10s);
                 metrics::RPC_PEER_INFO_TIMEOFFSET_MINUS10S.set(timeoffset_minus10s);
+
+                metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_TO.set(bip152_highbandwidth_to);
+                metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_FROM.set(bip152_highbandwidth_from);
             }
         }
     }
