@@ -109,6 +109,7 @@ fn main() {
                 let mut peers_by_transport_protocol_type: BTreeMap<&str, i64> = BTreeMap::new();
                 let mut peers_by_network: BTreeMap<&str, i64> = BTreeMap::new();
                 let mut peers_by_connection_type: BTreeMap<&str, i64> = BTreeMap::new();
+                let mut peers_by_protocol_version: BTreeMap<u32, i64> = BTreeMap::new();
 
                 // When we requested a block, but a peer hasn't yet sent us the block,
                 // the block is considered inflight. If a peer doesn't send us a block at all,
@@ -185,6 +186,11 @@ fn main() {
                         .entry(&peer.connection_type)
                         .and_modify(|e| *e += 1)
                         .or_insert(1);
+
+                    peers_by_protocol_version
+                        .entry(peer.version)
+                        .and_modify(|e| *e += 1)
+                        .or_insert(1);
                 }
 
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
@@ -232,6 +238,13 @@ fn main() {
                 for (k, v) in peers_by_connection_type.iter() {
                     metrics::RPC_PEER_INFO_CONNECTION_TYPE_PEERS
                         .with_label_values(&[k])
+                        .set(*v);
+                }
+
+                metrics::RPC_PEER_INFO_PROTOCOL_VERSION_PEERS.reset();
+                for (k, v) in peers_by_protocol_version.iter() {
+                    metrics::RPC_PEER_INFO_PROTOCOL_VERSION_PEERS
+                        .with_label_values(&[k.to_string()])
                         .set(*v);
                 }
             }
