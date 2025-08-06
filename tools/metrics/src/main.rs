@@ -86,11 +86,18 @@ fn main() {
                 let mut on_monero_banlist = 0;
                 let mut on_tor_exit_list = 0;
                 let mut on_linkinglion_list = 0;
+
+                // track how many peers have a time offset > 10s and < -10s
+                let mut timeoffset_plus10s = 0;
+                let mut timeoffset_minus10s = 0;
+
                 let mut addr_rate_limited_peers = 0; // number of peers that had at least one address rate limited.
                 let mut addr_rate_limited_total: u64 = 0; // total number of rate-limited addresses
                 let mut addr_processed_total: u64 = 0; // total number of processed addresses
+
                 let mut pings = vec![];
                 let mut min_pings = vec![];
+
                 for peer in info.infos.iter() {
                     let ip = util::ip_from_ipport(peer.address.clone());
                     if util::is_on_gmax_banlist(&ip) {
@@ -112,6 +119,12 @@ fn main() {
 
                     addr_rate_limited_total += peer.addr_rate_limited;
                     addr_processed_total += peer.addr_processed;
+
+                    if peer.time_offset < -10 {
+                        timeoffset_minus10s += 1;
+                    } else if peer.time_offset > 10 {
+                        timeoffset_plus10s += 1;
+                    }
 
                     // Ping times are in seconds, but we want to have them as milliseconds.
                     // Also, if the ping is 0, it means we don't have a ping. So don't report it.
@@ -135,6 +148,9 @@ fn main() {
                 metrics::RPC_PEER_INFO_PING_MEDIAN.set(stat_util::median_f64(&pings));
                 metrics::RPC_PEER_INFO_MINPING_MEAN.set(stat_util::mean_f64(&min_pings));
                 metrics::RPC_PEER_INFO_MINPING_MEDIAN.set(stat_util::median_f64(&min_pings));
+
+                metrics::RPC_PEER_INFO_TIMEOFFSET_PLUS10S.set(timeoffset_plus10s);
+                metrics::RPC_PEER_INFO_TIMEOFFSET_MINUS10S.set(timeoffset_minus10s);
             }
         }
     }
