@@ -105,6 +105,9 @@ fn main() {
 
                 let mut pings = vec![];
                 let mut min_pings = vec![];
+                // Count the number of peers that have a ping_wait larger than 5 seconds.
+                // These are good candidates for dropping connections due to network issues.
+                let mut ping_wait_larger_5s = 0;
 
                 let mut peers_by_transport_protocol_type: BTreeMap<&str, i64> = BTreeMap::new();
                 let mut peers_by_network: BTreeMap<&str, i64> = BTreeMap::new();
@@ -157,6 +160,9 @@ fn main() {
                     }
                     if peer.minimum_ping > 0.0 {
                         min_pings.push(peer.minimum_ping * 1000.0);
+                    }
+                    if peer.ping_wait > 5.0 {
+                        ping_wait_larger_5s += 1;
                     }
 
                     if peer.bip152_hb_to {
@@ -217,6 +223,7 @@ fn main() {
                 metrics::RPC_PEER_INFO_PING_MEDIAN.set(stat_util::median_f64(&pings));
                 metrics::RPC_PEER_INFO_MINPING_MEAN.set(stat_util::mean_f64(&min_pings));
                 metrics::RPC_PEER_INFO_MINPING_MEDIAN.set(stat_util::median_f64(&min_pings));
+                metrics::RPC_PEER_INFO_PING_WAIT_LARGER_5_SECONDS_PEERS.set(ping_wait_larger_5s);
 
                 metrics::RPC_PEER_INFO_TIMEOFFSET_PLUS10S.set(timeoffset_plus10s);
                 metrics::RPC_PEER_INFO_TIMEOFFSET_MINUS10S.set(timeoffset_minus10s);
