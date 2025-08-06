@@ -749,4 +749,12 @@ lazy_static! {
             .subsystem(SUBSYSTEM_RPC)
     ).unwrap();
 
+    /// Number of peers we are connected to
+    pub static ref RPC_PEER_INFO_NUM_PEERS: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_num_peers", "Number of peers we are connected to.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
 }
