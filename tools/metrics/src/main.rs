@@ -167,6 +167,8 @@ fn main() {
 
                 metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_TO.set(bip152_highbandwidth_to);
                 metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_FROM.set(bip152_highbandwidth_from);
+
+                metrics::RPC_PEER_INFO_NUM_PEERS.set(info.infos.len() as i64);
             }
         }
     }
