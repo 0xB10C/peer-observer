@@ -106,6 +106,7 @@ fn main() {
                 let mut min_pings = vec![];
 
                 let mut peers_by_transport_protocol_type: BTreeMap<&str, i64> = BTreeMap::new();
+                let mut peers_by_network: BTreeMap<&str, i64> = BTreeMap::new();
 
                 for peer in info.infos.iter() {
                     let ip = util::ip_from_ipport(peer.address.clone());
@@ -159,6 +160,11 @@ fn main() {
                         .entry(&peer.transport_protocol_type)
                         .and_modify(|e| *e += 1)
                         .or_insert(1);
+
+                    peers_by_network
+                        .entry(&peer.network)
+                        .and_modify(|e| *e += 1)
+                        .or_insert(1);
                 }
 
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
@@ -187,6 +193,13 @@ fn main() {
                 metrics::RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS.reset();
                 for (k, v) in peers_by_transport_protocol_type.iter() {
                     metrics::RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS
+                        .with_label_values(&[k])
+                        .set(*v);
+                }
+
+                metrics::RPC_PEER_INFO_NETWORK_PEERS.reset();
+                for (k, v) in peers_by_network.iter() {
+                    metrics::RPC_PEER_INFO_NETWORK_PEERS
                         .with_label_values(&[k])
                         .set(*v);
                 }

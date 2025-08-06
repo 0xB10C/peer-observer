@@ -38,6 +38,7 @@ pub const LABEL_ADDRMAN_NEW_INSERT_SUCCESS: &str = "inserted";
 pub const LABEL_MEMPOOL_REASON: &str = "reason";
 
 pub const LABEL_RPC_TRANSPORT_PROTOCOL_TYPE: &str = "transport_protocol_type";
+pub const LABEL_RPC_NETWORK_TYPE: &str = "network";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
@@ -774,6 +775,15 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_RPC),
         &[LABEL_RPC_TRANSPORT_PROTOCOL_TYPE]
+    ).unwrap();
+
+    /// Number of peers by network
+    pub static ref RPC_PEER_INFO_NETWORK_PEERS: IntGaugeVec =
+    register_int_gauge_vec!(
+        Opts::new("peer_info_network_peers", "Number of peers by network.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC),
+        &[LABEL_RPC_NETWORK_TYPE]
     ).unwrap();
 
 }
