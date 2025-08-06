@@ -1,9 +1,9 @@
 use shared::lazy_static::lazy_static;
 use shared::prometheus::{
     register_gauge, register_histogram_vec, register_int_counter, register_int_counter_vec,
-    register_int_gauge, HistogramOpts, Opts,
+    register_int_gauge, register_int_gauge_vec, HistogramOpts, Opts,
 };
-use shared::prometheus::{Gauge, HistogramVec, IntCounter, IntCounterVec, IntGauge};
+use shared::prometheus::{Gauge, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
 // Prometheus Metrics
 
@@ -37,6 +37,8 @@ pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "misbehavingmessage";
 pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
 pub const LABEL_ADDRMAN_NEW_INSERT_SUCCESS: &str = "inserted";
 pub const LABEL_MEMPOOL_REASON: &str = "reason";
+
+pub const LABEL_RPC_TRANSPORT_PROTOCOL_TYPE: &str = "transport_protocol_type";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
@@ -772,6 +774,15 @@ lazy_static! {
         Opts::new("peer_info_addr_relay_enabled_peers", "Number of peers we particiate in addr relay with (addr_relay_enabled).")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of peers by transport_protocol_type (usually v1 and v2)
+    pub static ref RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS: IntGaugeVec =
+    register_int_gauge_vec!(
+        Opts::new("peer_info_transport_protocol_type_peers", "Number of peers by transport_protocol_type (usually v1 and v2).")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC),
+        &[LABEL_RPC_TRANSPORT_PROTOCOL_TYPE]
     ).unwrap();
 
 }
