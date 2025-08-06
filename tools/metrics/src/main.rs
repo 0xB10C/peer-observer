@@ -99,6 +99,7 @@ fn main() {
                 let mut addr_rate_limited_peers = 0; // number of peers that had at least one address rate limited.
                 let mut addr_rate_limited_total: u64 = 0; // total number of rate-limited addresses
                 let mut addr_processed_total: u64 = 0; // total number of processed addresses
+                let mut addr_relay_enabled_peers = 0; // nmber of peers we participate in address relay with
 
                 let mut pings = vec![];
                 let mut min_pings = vec![];
@@ -124,6 +125,10 @@ fn main() {
 
                     addr_rate_limited_total += peer.addr_rate_limited;
                     addr_processed_total += peer.addr_processed;
+
+                    if peer.addr_relay_enabled {
+                        addr_relay_enabled_peers += 1;
+                    }
 
                     if peer.time_offset < -10 {
                         timeoffset_minus10s += 1;
@@ -153,9 +158,11 @@ fn main() {
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_MONERO_BAN.set(on_monero_banlist);
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_TOR_EXIT.set(on_tor_exit_list);
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_LINKINGLION.set(on_linkinglion_list);
+
                 metrics::RPC_PEER_INFO_ADDR_RATELIMITED_PEERS.set(addr_rate_limited_peers);
                 metrics::RPC_PEER_INFO_ADDR_RATELIMITED_TOTAL.set(addr_rate_limited_total as i64);
                 metrics::RPC_PEER_INFO_ADDR_PROCESSED_TOTAL.set(addr_processed_total as i64);
+                metrics::RPC_PEER_INFO_ADDR_RELAY_ENABLED_PEERS.set(addr_relay_enabled_peers);
 
                 metrics::RPC_PEER_INFO_PING_MEAN.set(stat_util::mean_f64(&pings));
                 metrics::RPC_PEER_INFO_PING_MEDIAN.set(stat_util::median_f64(&pings));

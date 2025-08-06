@@ -766,4 +766,12 @@ lazy_static! {
             .subsystem(SUBSYSTEM_RPC)
     ).unwrap();
 
+    /// Number of peers we particiate in addr relay with (addr_relay_enabled)
+    pub static ref RPC_PEER_INFO_ADDR_RELAY_ENABLED_PEERS: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_addr_relay_enabled_peers", "Number of peers we particiate in addr relay with (addr_relay_enabled).")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
 }
