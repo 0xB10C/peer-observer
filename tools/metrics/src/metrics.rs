@@ -742,4 +742,20 @@ lazy_static! {
             .subsystem(SUBSYSTEM_RPC)
     ).unwrap();
 
+    /// Number of peers we selected peer as (compact blocks) high-bandwidth peer
+    pub static ref RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_TO: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_bip152_highbandwidth_to", "Number of peers we selected peer as (compact blocks) high-bandwidth peer.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of peers that selected us as (compact blocks) high-bandwidth peer
+    pub static ref RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_FROM: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_bip152_highbandwidth_from", "Number of peers that selected us as (compact blocks) high-bandwidth peer.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
 }
