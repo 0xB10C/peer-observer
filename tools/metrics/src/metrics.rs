@@ -39,6 +39,7 @@ pub const LABEL_MEMPOOL_REASON: &str = "reason";
 
 pub const LABEL_RPC_TRANSPORT_PROTOCOL_TYPE: &str = "transport_protocol_type";
 pub const LABEL_RPC_NETWORK_TYPE: &str = "network";
+pub const LABEL_RPC_CONNECTION_TYPE: &str = "connection_type";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
     0f64, 1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64, 9f64, 10f64, 15f64, 20f64, 25f64, 30f64,
@@ -786,6 +787,15 @@ lazy_static! {
         &[LABEL_RPC_NETWORK_TYPE]
     ).unwrap();
 
+    /// Number of peers by connection_type
+    pub static ref RPC_PEER_INFO_CONNECTION_TYPE_PEERS: IntGaugeVec =
+    register_int_gauge_vec!(
+        Opts::new("peer_info_connection_type_peers", "Number of peers by connection_type")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC),
+        &[LABEL_RPC_CONNECTION_TYPE]
+    ).unwrap();
+
     /// Number of peers that have inflight blocks for us
     pub static ref RPC_PEER_INFO_INFLIGHT_BLOCK_PEERS: IntGauge =
     register_int_gauge!(
@@ -801,6 +811,7 @@ lazy_static! {
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_RPC)
     ).unwrap();
+
 
 
 }

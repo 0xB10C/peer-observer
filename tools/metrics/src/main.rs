@@ -19,9 +19,9 @@ use shared::util;
 use shared::validation::validation_event;
 use shared::{clap, nats};
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::collections::BTreeSet;
 
 mod metrics;
 mod stat_util;
@@ -108,6 +108,7 @@ fn main() {
 
                 let mut peers_by_transport_protocol_type: BTreeMap<&str, i64> = BTreeMap::new();
                 let mut peers_by_network: BTreeMap<&str, i64> = BTreeMap::new();
+                let mut peers_by_connection_type: BTreeMap<&str, i64> = BTreeMap::new();
 
                 // When we requested a block, but a peer hasn't yet sent us the block,
                 // the block is considered inflight. If a peer doesn't send us a block at all,
@@ -179,6 +180,11 @@ fn main() {
                         .entry(&peer.network)
                         .and_modify(|e| *e += 1)
                         .or_insert(1);
+
+                    peers_by_connection_type
+                        .entry(&peer.connection_type)
+                        .and_modify(|e| *e += 1)
+                        .or_insert(1);
                 }
 
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
@@ -218,6 +224,13 @@ fn main() {
                 metrics::RPC_PEER_INFO_NETWORK_PEERS.reset();
                 for (k, v) in peers_by_network.iter() {
                     metrics::RPC_PEER_INFO_NETWORK_PEERS
+                        .with_label_values(&[k])
+                        .set(*v);
+                }
+
+                metrics::RPC_PEER_INFO_CONNECTION_TYPE_PEERS.reset();
+                for (k, v) in peers_by_connection_type.iter() {
+                    metrics::RPC_PEER_INFO_CONNECTION_TYPE_PEERS
                         .with_label_values(&[k])
                         .set(*v);
                 }
