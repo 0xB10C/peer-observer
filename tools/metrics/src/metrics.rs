@@ -832,6 +832,12 @@ lazy_static! {
             .subsystem(SUBSYSTEM_RPC)
     ).unwrap();
 
-
+    /// Number of peers that have a ping_wait larger than 5 seconds.
+    pub static ref RPC_PEER_INFO_PING_WAIT_LARGER_5_SECONDS_PEERS: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_ping_wait_larger_5_seconds_block_peers", "Number of peers that have a ping_wait larger than 5 seconds.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
 
 }
