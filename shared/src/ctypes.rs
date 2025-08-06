@@ -324,12 +324,14 @@ pub struct MempoolReplaced {
     pub replaced_fee: i64,
     /// Mempool entry time of the replaced transaction.
     pub replaced_entry_time: u64,
-    /// Txid of the replacement transaction
-    pub replacement_txid: [u8; TXID_LENGTH],
+    /// Txid of the replacement transaction or package (as determined by replaced_by_transaction)
+    pub replacement_id: [u8; TXID_LENGTH],
     /// Virtual size of the replacement transaction
     pub replacement_vsize: i32,
     /// Fee of the replaced transaction
     pub replacement_fee: i64,
+    /// Boolean indicating if replacement_id is a transaction ID (true) or package hash (false)
+    pub replaced_by_transaction: bool,
 }
 
 impl MempoolReplaced {
@@ -340,14 +342,25 @@ impl MempoolReplaced {
 
 impl fmt::Display for MempoolReplaced {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let replacement_id = if self.replaced_by_transaction {
+            format!(
+                "txid={}",
+                bitcoin::Txid::from_slice(&self.replacement_id).unwrap()
+            )
+        } else {
+            format!(
+                "package_hash={}",
+                bitcoin::Txid::from_slice(&self.replacement_id).unwrap()
+            )
+        };
         write!(
             f,
-            "MempoolReplaced(old(txid={}, vsize={}, fee={}, entry_time={}), new(txid={}, vsize={}, fee={}))",
+            "MempoolReplaced(old(txid={}, vsize={}, fee={}, entry_time={}), new({}, vsize={}, fee={}))",
             bitcoin::Txid::from_slice(&self.replaced_txid).unwrap(),
             self.replaced_vsize,
             self.replaced_fee,
             self.replaced_entry_time,
-            bitcoin::Txid::from_slice(&self.replacement_txid).unwrap(),
+            replacement_id,
             self.replacement_vsize,
             self.replacement_fee,
         )
