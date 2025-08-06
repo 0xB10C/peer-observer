@@ -18,6 +18,7 @@ use shared::simple_logger;
 use shared::util;
 use shared::validation::validation_event;
 use shared::{clap, nats};
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -104,6 +105,8 @@ fn main() {
                 let mut pings = vec![];
                 let mut min_pings = vec![];
 
+                let mut peers_by_transport_protocol_type: BTreeMap<&str, i64> = BTreeMap::new();
+
                 for peer in info.infos.iter() {
                     let ip = util::ip_from_ipport(peer.address.clone());
                     if util::is_on_gmax_banlist(&ip) {
@@ -148,10 +151,14 @@ fn main() {
                     if peer.bip152_hb_to {
                         bip152_highbandwidth_to += 1;
                     }
-
                     if peer.bip152_hb_from {
                         bip152_highbandwidth_from += 1;
                     }
+
+                    peers_by_transport_protocol_type
+                        .entry(&peer.transport_protocol_type)
+                        .and_modify(|e| *e += 1)
+                        .or_insert(1);
                 }
 
                 metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
@@ -176,6 +183,13 @@ fn main() {
                 metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_FROM.set(bip152_highbandwidth_from);
 
                 metrics::RPC_PEER_INFO_NUM_PEERS.set(info.infos.len() as i64);
+
+                metrics::RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS.reset();
+                for (k, v) in peers_by_transport_protocol_type.iter() {
+                    metrics::RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS
+                        .with_label_values(&[k])
+                        .set(*v);
+                }
             }
         }
     }
