@@ -717,4 +717,20 @@ lazy_static! {
             .subsystem(SUBSYSTEM_RPC)
     ).unwrap();
 
+    /// Number of peers with a time offset greater than 10s.
+    pub static ref RPC_PEER_INFO_TIMEOFFSET_PLUS10S: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_timeoffset_plus10s", "Number of peers with a time offset greater than 10s.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
+    /// Number of peers with a time offset smaller than -10s.
+    pub static ref RPC_PEER_INFO_TIMEOFFSET_MINUS10S: IntGauge =
+    register_int_gauge!(
+        Opts::new("peer_info_timeoffset_minus10s", "Number of peers with a time offset smaller than -10s.")
+            .namespace(NAMESPACE)
+            .subsystem(SUBSYSTEM_RPC)
+    ).unwrap();
+
 }
