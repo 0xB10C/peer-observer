@@ -39,7 +39,8 @@ message Replaced {
   required int32    replaced_vsize        = 2;  // The vsize of the replaced transaction.
   required int64    replaced_fee          = 3;  // The fee of the replaced transaction.
   required uint64   replaced_entry_time   = 4;  // The entry_time of the replaced transaction.
-  required bytes    replacement_txid      = 5;  // The txid of the replacement transaction.
+  required bytes    replacement_id        = 5;  // The replacement transaction ID or package hash.
   required int32    replacement_vsize     = 6;  // The vsize of the replacement transaction.
   required int64    replacement_fee       = 7;  // The fee of the replacement transaction.
+  required bool     replaced_by_transaction = 8;  // Boolean indicating if replacement_id is a transaction ID (true) or package hash (false).
 }

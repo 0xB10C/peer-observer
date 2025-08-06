@@ -75,14 +75,25 @@ impl fmt::Display for Rejected {
 
 impl fmt::Display for Replaced {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let replacement_id = if self.replaced_by_transaction {
+            format!(
+                "txid={}",
+                bitcoin::Txid::from_slice(&self.replacement_id).unwrap()
+            )
+        } else {
+            format!(
+                "package_hash={}",
+                bitcoin::Txid::from_slice(&self.replacement_id).unwrap()
+            )
+        };
         write!(
             f,
-            "Replaced(old=({}, vsize={}, fee={}, entry_time={}) new=({}, vsize={}, fee={}))",
+            "Replaced(old=(txid={}, vsize={}, fee={}, entry_time={}) new=({}, vsize={}, fee={}))",
             bitcoin::Txid::from_slice(&self.replaced_txid).unwrap(),
             self.replaced_vsize,
             self.replaced_fee,
             self.replaced_entry_time,
-            bitcoin::Txid::from_slice(&self.replacement_txid).unwrap(),
+            replacement_id,
             self.replacement_vsize,
             self.replacement_fee,
         )
@@ -96,9 +107,10 @@ impl From<ctypes::MempoolReplaced> for Replaced {
             replaced_vsize: replaced.replaced_vsize,
             replaced_fee: replaced.replaced_fee,
             replaced_entry_time: replaced.replaced_entry_time,
-            replacement_txid: replaced.replacement_txid.to_vec(),
+            replacement_id: replaced.replacement_id.to_vec(),
             replacement_vsize: replaced.replacement_vsize,
             replacement_fee: replaced.replacement_fee,
+            replaced_by_transaction: replaced.replaced_by_transaction,
         }
     }
 }

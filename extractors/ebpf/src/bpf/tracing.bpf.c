@@ -368,9 +368,10 @@ struct MempoolReplaced {
     s32     replaced_vsize;
     s64     replaced_fee;
     u64     replaced_entry_time;
-    u8      replacement_txid[TXID_LENGHT];
+    u8      replacement_id[TXID_LENGHT];
     s32     replacement_vsize;
     s64     replacement_fee;
+    bool    replaced_by_transaction;
 };
 
 struct MempoolRejected {
@@ -401,16 +402,17 @@ int BPF_USDT(handle_mempool_removed, void *txid, void *reason, s32 vsize, s64 fe
 SEC("usdt")
 int BPF_USDT(handle_mempool_replaced,
     void *replaced_txid, s32 replaced_vsize, s64 replaced_fee, u64 replaced_entry_time,
-    void *replacement_txid, s32 replacement_vsize, s64 replacement_fee
+    void *replacement_id, s32 replacement_vsize, s64 replacement_fee, bool replaced_by_transaction
 ) {
     struct MempoolReplaced replaced = {};
     bpf_probe_read_user(&replaced.replaced_txid, sizeof(replaced.replaced_txid), replaced_txid);
     replaced.replaced_vsize = replaced_vsize;
     replaced.replaced_fee = replaced_fee;
     replaced.replaced_entry_time = replaced_entry_time;
-    bpf_probe_read_user(&replaced.replacement_txid, sizeof(replaced.replacement_txid), replacement_txid);
+    bpf_probe_read_user(&replaced.replacement_id, sizeof(replaced.replacement_id), replacement_id);
     replaced.replacement_vsize = replacement_vsize;
     replaced.replacement_fee = replacement_fee;
+    replaced.replaced_by_transaction = replaced_by_transaction;
     return bpf_ringbuf_output(&mempool_replaced, &replaced, sizeof(replaced), 0);
 };
 
