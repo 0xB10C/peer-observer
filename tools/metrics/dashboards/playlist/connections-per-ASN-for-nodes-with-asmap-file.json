@@ -1,0 +1,266 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 649,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS14061"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS14061 – DigitalOcean, LLC"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS24940"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS24940 – Hetzner Online GmbH"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS34878"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS34878 – Karlsruhe Institute of Technology"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS54098"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS54098 – LIONLINK NETWORKS"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS197451"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS197451 – Brno University of Technology"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS210644"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS210644 – AEZA INTERNATIONAL LTD"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS559"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS559 – SWITCH.ch"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS214503"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS214503 – QuxLabs AB"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS209"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS209 – CenturyLink Communications, LLC"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "AS3209"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "AS3209 – Vodafone GmbH"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 19,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.0.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P1809F7CD0C75ACF3"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "expr": "sum by(ASN) (avg_over_time(peerobserver_rpc_peer_info_asn_peers[10m])) > 3",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "legendFormat": "AS{{ASN}}",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "connections per ASN (with more than 3 connections) across all nodes with an ASMap file",
+      "type": "timeseries"
+    }
+  ],
+  "preload": false,
+  "schemaVersion": 41,
+  "tags": [
+    "connections",
+    "big-playlist",
+    "asmap"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "[connections] connections by ASN across all nodes (if ASMap file is used)",
+  "uid": "c3417231-6511-445e-ab1b-d892c34cac3d",
+  "version": 14
+}
