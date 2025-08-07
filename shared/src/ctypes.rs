@@ -35,19 +35,19 @@ pub struct P2PMessageMetadata {
 }
 
 impl P2PMessageMetadata {
-    // TODO: comment
+    /// Extracts the IP address of the peer as a string from the addr bytes.
     pub fn peer_addr(&self) -> String {
         String::from_utf8_lossy(&self.peer_addr.split(|c| *c == 0x00u8).next().unwrap())
             .into_owned()
     }
 
-    // TODO: comment
+    /// Extracts the connection type of the peer as a string from the peer_conn_type bytes.
     pub fn peer_conn_type(&self) -> String {
         String::from_utf8_lossy(&self.peer_conn_type.split(|c| *c == 0x00u8).next().unwrap())
             .into_owned()
     }
 
-    // TODO: comment
+    /// Extracts the type (i.e. command) of the message  as a string from the msg_type bytes.
     pub fn msg_type(&self) -> String {
         String::from_utf8_lossy(&self.msg_type.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
@@ -116,12 +116,12 @@ pub struct Connection {
 }
 
 impl Connection {
-    // TODO: comment
+    /// Extracts the IP address of the peer as a string from the addr bytes.
     pub fn addr(&self) -> String {
         String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
 
-    // TODO: comment
+    /// Extracts the connection type of the peer as a string from the conn_type bytes.
     pub fn conn_type(&self) -> String {
         String::from_utf8_lossy(&self.conn_type.split(|c| *c == 0x00u8).next().unwrap())
             .into_owned()
@@ -224,7 +224,7 @@ impl MisbehavingConnection {
         unsafe { ptr::read_unaligned(x.as_ptr() as *const MisbehavingConnection) }
     }
 
-    // TODO: comment
+    /// Extracts the misbehavior message as a string from the message bytes.
     pub fn message(&self) -> String {
         String::from_utf8_lossy(&self.message.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
@@ -528,12 +528,12 @@ pub struct AddrmanInsertNew {
 }
 
 impl AddrmanInsertNew {
-    // TODO: comment
+    /// Extracts the IP address as a string from the addr bytes.
     pub fn addr(&self) -> String {
         String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
 
-    // TODO: comment
+    /// Extracts the source IP address as a string from the source bytes.
     pub fn source(&self) -> String {
         String::from_utf8_lossy(&self.source.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
@@ -570,12 +570,12 @@ pub struct AddrmanInsertTried {
 }
 
 impl AddrmanInsertTried {
-    // TODO: comment
+    /// Extracts the IP address as a string from the addr bytes.
     pub fn addr(&self) -> String {
         String::from_utf8_lossy(&self.addr.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
 
-    // TODO: comment
+    /// Extracts the source IP address as a string from the source bytes.
     pub fn source(&self) -> String {
         String::from_utf8_lossy(&self.source.split(|c| *c == 0x00u8).next().unwrap()).into_owned()
     }
