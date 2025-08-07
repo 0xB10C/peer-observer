@@ -32,7 +32,6 @@ pub const LABEL_P2P_REJECT_COMMAND: &str = "rejectcommand";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_ADDR: &str = "addr";
-pub const LABEL_CONN_MISBEHAVING_SCORE_INC: &str = "score_inc";
 pub const LABEL_CONN_MISBEHAVING_MESSAGE: &str = "misbehavingmessage";
 pub const LABEL_CONN_MISBEHAVING_ID: &str = "id";
 pub const LABEL_ADDRMAN_NEW_INSERT_SUCCESS: &str = "inserted";
@@ -391,17 +390,9 @@ lazy_static! {
         Opts::new("misbehaving", "Number of misbehaving connections.")
             .namespace(NAMESPACE)
             .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_SCORE_INC, LABEL_CONN_MISBEHAVING_MESSAGE]
-    ).unwrap();
-
-    /// Score increase for misbehaving connections.
-    pub static ref CONN_MISBEHAVING_SCORE_INC: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("misbehaving_score_increase", "Misbehaving score increase.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
         &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_MESSAGE]
     ).unwrap();
+
 
     // Occurences of misbehavior by reasons.
     pub static ref CONN_MISBEHAVING_REASON: IntCounterVec =

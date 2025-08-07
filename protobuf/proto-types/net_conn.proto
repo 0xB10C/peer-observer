@@ -48,9 +48,6 @@ message OutboundConnection {
 
 // A connection that Bitcoin Core thinks is misbehaving.
 message MisbehavingConnection {
-  required uint64 id = 1;
-  required int32 score_before = 2;
-  required int32 score_increase = 3;
-  required string xmessage = 4;
-  required bool threshold_exceeded = 5;
+  required uint64 id = 1;       // Peer ID assigned by Bitcoin Core
+  required string message = 2;  // Description of misbehavior reason
 }
