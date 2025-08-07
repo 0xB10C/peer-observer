@@ -106,7 +106,11 @@ impl From<ctypes::OutboundConnection> for OutboundConnection {
 
 impl fmt::Display for MisbehavingConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MisbehavingConnection(id={}, score_before={}, score_increase={}, message={}, threshold_exceeded={})", self.id, self.score_before, self.score_increase, self.xmessage, self.threshold_exceeded)
+        write!(
+            f,
+            "MisbehavingConnection(id={}, message={})",
+            self.id, self.message
+        )
     }
 }
 
@@ -114,10 +118,7 @@ impl From<ctypes::MisbehavingConnection> for MisbehavingConnection {
     fn from(mconn: ctypes::MisbehavingConnection) -> Self {
         MisbehavingConnection {
             id: mconn.id,
-            score_before: mconn.score_before,
-            score_increase: mconn.score_increase,
-            xmessage: mconn.message(),
-            threshold_exceeded: mconn.threshold_exceeded,
+            message: mconn.message(),
         }
     }
 }

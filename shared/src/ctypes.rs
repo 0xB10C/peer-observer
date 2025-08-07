@@ -216,10 +216,7 @@ impl fmt::Display for OutboundConnection {
 #[repr(C)]
 pub struct MisbehavingConnection {
     pub id: u64,
-    pub score_before: i32,
-    pub score_increase: i32,
     pub message: [u8; MAX_MISBEHAVING_MESSAGE_LENGTH],
-    pub threshold_exceeded: bool,
 }
 
 impl MisbehavingConnection {
@@ -237,12 +234,9 @@ impl fmt::Display for MisbehavingConnection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "MisbehavingConnection(id={}, score_before={}, score_increase={}, message={}, threshold_exceeded={})",
+            "MisbehavingConnection(id={}, message={})",
             self.id,
-            self.score_before,
-            self.score_increase,
             self.message(),
-            self.threshold_exceeded,
         )
     }
 }

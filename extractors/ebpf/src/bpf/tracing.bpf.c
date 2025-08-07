@@ -220,10 +220,7 @@ struct OutboundConnection
 struct MisbehavingConnection
 {
     u64     id;
-    s32     score_before;
-    s32     howmuch;
     char    message[MAX_MISBEHAVING_MESSAGE_LENGTH];
-    bool    threshold_exceeded;
 };
 
 // Helper function to set some of the tracepoint arguments to Connection.
@@ -275,13 +272,10 @@ int BPF_USDT(handle_net_conn_inbound_evicted, u64 id, void *addr, void *type, u6
 };
 
 SEC("usdt")
-int BPF_USDT(handle_net_conn_misbehaving, u64 id, s32 score_before, s32 howmuch, void *message, bool threshold_exceeded) {
+int BPF_USDT(handle_net_conn_misbehaving, u64 id, void *message) {
     struct MisbehavingConnection misbehaving = {};
     misbehaving.id = id;
-    misbehaving.score_before = score_before;
-    misbehaving.howmuch = howmuch;
     bpf_probe_read_user_str(&misbehaving.message, sizeof(misbehaving.message), message);
-    misbehaving.threshold_exceeded = threshold_exceeded;
     return bpf_ringbuf_output(&net_conn_misbehaving, &misbehaving, sizeof(misbehaving), 0);
 };
 

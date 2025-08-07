@@ -223,18 +223,11 @@ fn main() {
             }
             connection_event::Event::Misbehaving(m) => {
                 metrics::CONN_MISBEHAVING
-                    .with_label_values(&[
-                        &m.id.to_string(),
-                        &m.score_increase.to_string(),
-                        &m.xmessage,
-                    ])
+                    .with_label_values(&[&m.id.to_string(), &m.message])
                     .inc();
                 metrics::CONN_MISBEHAVING_REASON
-                    .with_label_values(&[&m.xmessage])
+                    .with_label_values(&[&m.message])
                     .inc();
-                metrics::CONN_MISBEHAVING_SCORE_INC
-                    .with_label_values(&[&m.id.to_string(), &m.xmessage])
-                    .inc_by(m.score_increase as u64);
             }
         }
     }

@@ -1027,7 +1027,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "last_over_time(peerobserver_conn_misbehaving_score_increase[1h])",
+          "expr": "last_over_time(peerobserver_conn_misbehaving[1h])",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1050,7 +1050,7 @@
             "indexByName": {},
             "renameByName": {
               "Time": "",
-              "Value": "score_increase"
+              "Value": "count"
             }
           }
         }
