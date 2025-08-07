@@ -34,8 +34,6 @@ const RINGBUFF_CALLBACK_UNABLE_TO_PARSE_P2P_MSG: i32 = -20;
 const NO_EVENTS_ERROR_DURATION: Duration = Duration::from_secs(60 * 3);
 const NO_EVENTS_WARN_DURATION: Duration = Duration::from_secs(60 * 1);
 
-const DEFAULT_PID: i32 = -1;
-
 struct Tracepoint<'a> {
     pub context: &'a str,
     pub name: &'a str,
@@ -128,6 +126,12 @@ const TRACEPOINTS_VALIDATION: [Tracepoint; 1] = [Tracepoint {
 /// The peer-observer extractor hooks into a Bitcoin Core binary with
 /// tracepoints and publishes events into a NATS pub-sub queue.
 #[derive(Parser, Debug)]
+#[clap(group(
+    clap::ArgGroup::new("pid")
+        .required(true)
+        .multiple(false)
+        .args(&["bitcoind_pid", "bitcoind_pid_file"])
+))]
 #[command(version, about, long_about = None)]
 struct Args {
     /// Address of the NATS server where the extractor will publish messages to.
@@ -139,15 +143,14 @@ struct Args {
     bitcoind_path: String,
 
     /// PID (Process ID) of the Bitcoin Core (bitcoind) binary that should be hooked into.
-    /// If this is set, the --bitcoind-pid-file argument isn't used.
-    // TODO: remove the default value once https://github.com/bitcoin/bitcoin/pull/26593 is merged
-    #[arg(long, default_value_t = DEFAULT_PID)]
-    bitcoind_pid: i32,
+    /// Either this or --bitcoind-pid-file must be set.
+    #[arg(long)]
+    bitcoind_pid: Option<i32>,
 
     /// File containing the PID (Process ID) of the Bitcoin Core (bitcoind) binary that should be hooked into.
-    /// If --bitcoind-pid is set, this flag is ignored.
-    #[arg(long, default_value = "")]
-    bitcoind_pid_file: String,
+    /// Either this or --bitcoind-pid must be set.
+    #[arg(long)]
+    bitcoind_pid_file: Option<String>,
 
     // Default tracepoints
     /// Controls if the p2p message tracepoints should be hooked into.
@@ -207,31 +210,33 @@ pub fn find_map<'obj>(object: &'obj Object, name: &str) -> Result<Map<'obj>, Run
 }
 
 fn bitcoind_pid(args: &Args) -> Result<i32, RuntimeError> {
-    if args.bitcoind_pid != -1 {
+    // The clap arg group "pid" takes care that one of bitcoind_pid or
+    // bitcoind_pid_file is set
+    if let Some(pid) = args.bitcoind_pid {
         log::info!(
             "Using bitcoind PID={} specified via command line option",
-            args.bitcoind_pid
-        );
-        return Ok(args.bitcoind_pid);
-    } else if args.bitcoind_pid_file != "" {
-        log::info!(
-            "Reading bitcoind PID file '{}' specified via command line option",
-            args.bitcoind_pid_file
-        );
-        let file = File::open(&args.bitcoind_pid_file)?;
-        let mut reader = BufReader::new(file);
-        let mut content = String::new();
-        reader.read_to_string(&mut content)?;
-        let pid: i32 = content.trim().parse()?;
-        log::info!(
-            "Using bitcoind PID={} read from {}",
-            pid,
-            args.bitcoind_pid_file
+            pid
         );
         return Ok(pid);
     }
-    // TODO: this won't work once https://github.com/bitcoin/bitcoin/pull/26593 is merged
-    return Ok(DEFAULT_PID);
+    // so if we haven't returned here, we can be sure that the pid
+    // file is set.
+    let path = args
+        .bitcoind_pid_file
+        .clone()
+        .expect("pid file path should be set");
+    log::info!(
+        "Reading bitcoind PID file '{}' specified via command line option",
+        path
+    );
+
+    let file = File::open(&path)?;
+    let mut reader = BufReader::new(file);
+    let mut content = String::new();
+    reader.read_to_string(&mut content)?;
+    let pid: i32 = content.trim().parse()?;
+    log::info!("Using bitcoind PID={} read from {}", pid, path);
+    Ok(pid)
 }
 
 fn main() {
