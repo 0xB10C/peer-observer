@@ -62,7 +62,36 @@ peerobserver_mempool_added_vbytes 14807
 ...
 ```
 
-The dashboards in ./dashboards can be used in Grafana. However, they might be a bit outdated.
+## Grafana Dashboards
+
+The `dashboards` directory of this tool contains a set of Grafana dashboards that can
+be used together with the `metrics` tool. They are intened for a multi-node setup where
+each node is labeled with a `host` name. This can be done by scraping the metrics in
+Prometheus with a configuration similar to:
+
+```yaml
+scrape_configs:
+- job_name: peer-observer-metrics
+  scrape_interval: 15s
+  static_configs:
+  - labels:
+      host: alice
+    targets:
+    - [ip-of-alice]:[metrics-tool-port]
+  - labels:
+      host: bob
+    targets:
+    - [ip-of-bob]:[metrics-tool-port]
+...
+```
+
+Grafana Dashboard provisioning is documented [here](https://grafana.com/docs/grafana/latest/administration/provisioning/#dashboards).
+Alternativly, the dashboards can be manually imported into Grafana too.
+
+The dashboards are tagged with, for example, tags like: `connections`, `mempool`, `addr`, ...
+
+Addtionally, dashboards intended for usage in a big monitoring playlist are tagged with `big-playlist`.
+Recent versions of Grafana allow to add dashboards to playlists by tags.
 
 ## Usage
 
