@@ -264,6 +264,18 @@ fn main() {
             .with(&labels)
             .inc_by(msg.meta.size);
 
+        if util::is_on_linkinglion_banlist(&ip) {
+            let mut labels_ll = HashMap::<&str, &str>::new();
+            labels_ll.insert(metrics::LABEL_P2P_MSG_TYPE, &msg.meta.command);
+            labels_ll.insert(metrics::LABEL_P2P_DIRECTION, &direction);
+            metrics::P2P_MESSAGE_COUNT_LINKINGLION
+                .with(&labels_ll)
+                .inc();
+            metrics::P2P_MESSAGE_BYTES_LINKINGLION
+                .with(&labels_ll)
+                .inc_by(msg.meta.size);
+        }
+
         metrics::P2P_MESSAGE_BYTES_BY_SUBNET
             .with_label_values(&[&direction, &subnet])
             .inc_by(msg.meta.size);
