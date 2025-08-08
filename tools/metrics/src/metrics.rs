@@ -155,6 +155,24 @@ lazy_static! {
         &[LABEL_P2P_DIRECTION, LABEL_P2P_SUBNET]
     ).unwrap();
 
+    /// Number of P2P network messages bytes send or received by LinkingLion peers.
+    pub static ref P2P_MESSAGE_BYTES_LINKINGLION: IntCounterVec =
+        register_int_counter_vec!(
+            Opts::new("message_bytes_linkinglion", "Number of P2P network messages bytes send or received by LinkingLion peers.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_P2P),
+            &[LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION]
+        ).unwrap();
+
+    /// Number of P2P network messages send or received by LinkingLion peers.
+    pub static ref P2P_MESSAGE_COUNT_LINKINGLION: IntCounterVec =
+        register_int_counter_vec!(
+            Opts::new("message_count_linkinglion", "Number of P2P network messages send or received by LinkingLion peers.")
+                .namespace(NAMESPACE)
+                .subsystem(SUBSYSTEM_P2P),
+            &[LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION]
+        ).unwrap();
+
     // -------------------- Addr
 
     /// Histogram of the number of addresses contained in an "addr" message.
