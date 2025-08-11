@@ -85,3 +85,55 @@ jobs:
         else
           echo "✅ All help outputs are documented correctly."
         fi
+
+
+    - name: Check help output of each extractor (auto-detected)
+      run: |
+        set -e
+
+        # Extract "extractor" names from Cargo.toml
+        EXTRACTORS=$(grep -oP '(?<=^  ")extractors/[^"]+(?=")' Cargo.toml | sed 's|extractors/||')
+
+        MISSING=0
+
+        for EXTRACTOR in $EXTRACTORS; do
+          MANIFEST="extractors/$EXTRACTOR/Cargo.toml"
+          README="extractors/$EXTRACTOR/README.md"
+
+          echo "🔍 Checking extractor: $EXTRACTOR"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error file=$MANIFEST::Cargo.toml not found for extractor $EXTRACTOR"
+            MISSING=1
+            continue
+          fi
+
+          if [ ! -f "$README" ]; then
+            echo "::error file=$README::README.md not found for extractor $EXTRACTOR"
+            MISSING=1
+            continue
+          fi
+
+          HELP_OUTPUT=$(cargo run --quiet --manifest-path "$MANIFEST" -- --help)
+
+          MISSING_LINES=0
+          while IFS= read -r line; do
+            if ! grep -Fq "$line" "$README"; then
+              echo "::warning file=$README::Missing line in README for $EXTRACTOR: $line"
+              MISSING_LINES=1
+            fi
+          done <<< "$HELP_OUTPUT"
+
+          if [ "$MISSING_LINES" -ne 0 ]; then
+            echo "::error file=$README::Some help lines for '$EXTRACTOR' are missing in its README"
+            echo "📢 Have you forgotten to update the documentation for $extractor?"
+            MISSING=1
+          fi
+        done
+
+        if [ "$MISSING" -ne 0 ]; then
+          echo "❌ Documentation mismatch detected."
+          exit 1
+        else
+          echo "✅ All help outputs are documented correctly."
+        fi
