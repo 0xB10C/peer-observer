@@ -92,8 +92,20 @@ fn handle_client(stream: TcpStream, clients: Arc<Mutex<Vec<TcpStream>>>) {
     );
     loop {
         match websocket.read() {
-            Ok(_) => {
-                // We ignore all messages a client sends us.
+            Ok(m) => {
+                match m {
+                    TungsteniteMessage::Close(_) => {
+                        // Remove the client from the shared list if the connection is closed
+                        let mut clients_guard = clients.lock().unwrap();
+                        clients_guard.retain(|client| {
+                            client.peer_addr().ok().map_or(false, |addr| {
+                                addr != websocket.get_ref().peer_addr().unwrap()
+                            })
+                        });
+                        break;
+                    }
+                    _ => (), // We ignore all other messages a client sends us.
+                }
             }
             Err(_) => {
                 log::info!(
