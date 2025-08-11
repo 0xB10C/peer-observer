@@ -40,6 +40,7 @@ struct Tracepoint<'a> {
     pub function: &'a str,
 }
 
+// Update the ebpf-extractor docs in the README.md when editing these.
 const TRACEPOINTS_NET_MESSAGE: [Tracepoint; 2] = [
     Tracepoint {
         context: "net",
@@ -53,6 +54,7 @@ const TRACEPOINTS_NET_MESSAGE: [Tracepoint; 2] = [
     },
 ];
 
+// Update the ebpf-extractor docs in the README.md when editing these.
 const TRACEPOINTS_NET_CONN: [Tracepoint; 5] = [
     Tracepoint {
         context: "net",
@@ -81,6 +83,7 @@ const TRACEPOINTS_NET_CONN: [Tracepoint; 5] = [
     },
 ];
 
+// Update the ebpf-extractor docs in the README.md when editing these.
 const TRACEPOINTS_MEMPOOL: [Tracepoint; 4] = [
     Tracepoint {
         context: "mempool",
@@ -104,6 +107,7 @@ const TRACEPOINTS_MEMPOOL: [Tracepoint; 4] = [
     },
 ];
 
+// Update the ebpf-extractor docs in the README.md when editing these.
 const TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
     Tracepoint {
         context: "addrman",
@@ -117,6 +121,7 @@ const TRACEPOINTS_ADDRMAN: [Tracepoint; 2] = [
     },
 ];
 
+// Update the ebpf-extractor docs in the README.md when editing these.
 const TRACEPOINTS_VALIDATION: [Tracepoint; 1] = [Tracepoint {
     context: "validation",
     name: "block_connected",
@@ -266,6 +271,7 @@ fn run() -> Result<(), RuntimeError> {
     let nc = nats::connect(&args.nats_address)?;
     log::info!("Connected to NATS server at {}", &args.nats_address);
 
+    // Update the ebpf-extractor docs in the README.md when editing the active_tracepoints.
     let mut active_tracepoints = vec![];
     let mut ringbuff_builder = RingBufferBuilder::new();
 
