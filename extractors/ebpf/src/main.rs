@@ -188,9 +188,9 @@ struct Args {
     #[arg(long, default_value_t = false)]
     libbpf_debug: bool,
 
-    // The extractor tool will exit if it doesn't detect activity in the ebpf
-    // buffers for 180 seconds. This flag disables this and only emits warnings
-    // about inactivity. This can be useful during debugging.
+    /// The ebpf-extractor will exit if it doesn't detect activity in the ebpf
+    /// buffers for 180 seconds. This flag disables this and only emits warnings
+    /// about inactivity. This can be useful during debugging.
     #[arg(short = 'i', long)]
     no_idle_exit: bool,
 }
