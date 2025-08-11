@@ -104,7 +104,7 @@ Options:
       --libbpf-debug
           If used, libbpf will print debug information about the BPF maps, programs, and tracepoints during extractor startup. This can be useful during debugging
   -i, --no-idle-exit
-          
+          The ebpf-extractor will exit if it doesn't detect activity in the ebpf buffers for 180 seconds. This flag disables this and only emits warnings about inactivity. This can be useful during debugging
   -h, --help
           Print help
   -V, --version
