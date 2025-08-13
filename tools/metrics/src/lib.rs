@@ -23,6 +23,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+pub mod error;
 mod metrics;
 mod stat_util;
 
@@ -54,40 +55,54 @@ impl Args {
     }
 }
 
-pub fn run(args: Args) {
-    simple_logger::init_with_level(args.log_level).unwrap();
+pub fn run(args: Args) -> Result<(), error::RuntimeError> {
+    simple_logger::init_with_level(args.log_level)?;
 
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
     metrics::RUNTIME_START_TIMESTAMP.set(util::current_timestamp() as i64);
 
-    metricserver::start(&args.metrics_address).unwrap();
+    metricserver::start(&args.metrics_address)?;
     log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
 
-    let nc = nats::connect(args.nats_address).expect("should be able to connect to NATS server");
-    let sub = nc.subscribe("*").expect("could not subscribe to topic '*'");
+    let nc = nats::connect(args.nats_address)?;
+    let sub = nc.subscribe("*")?;
     for msg in sub.messages() {
-        let unwrapped = event_msg::EventMsg::decode(msg.data.as_slice()).unwrap();
-
+        let unwrapped = event_msg::EventMsg::decode(msg.data.as_slice())?;
         if let Some(event) = unwrapped.event {
             match event {
                 Event::Msg(msg) => {
                     handle_p2p_message(&msg, unwrapped.timestamp);
                 }
                 Event::Conn(c) => {
-                    handle_connection_event(c.event.unwrap(), unwrapped.timestamp);
+                    if let Some(e) = c.event {
+                        handle_connection_event(&e, unwrapped.timestamp);
+                    }
                 }
                 Event::Addrman(a) => {
-                    handle_addrman_event(&a.event.unwrap());
+                    if let Some(e) = a.event {
+                        handle_addrman_event(&e);
+                    }
                 }
                 Event::Mempool(m) => {
-                    handle_mempool_event(&m.event.unwrap());
+                    if let Some(e) = m.event {
+                        handle_mempool_event(&e);
+                    }
                 }
-                Event::Validation(v) => handle_validation_event(&v.event.unwrap()),
-                Event::Rpc(r) => handle_rpc_event(&r.event.unwrap()),
+                Event::Validation(v) => {
+                    if let Some(e) = v.event {
+                        handle_validation_event(&e);
+                    }
+                }
+                Event::Rpc(r) => {
+                    if let Some(e) = r.event {
+                        handle_rpc_event(&e);
+                    }
+                }
             }
         }
     }
+    Ok(())
 }
 
 fn handle_rpc_event(e: &rpc_event::Event) {
@@ -326,10 +341,10 @@ fn handle_validation_event(e: &validation_event::Event) {
     }
 }
 
-fn handle_connection_event(cevent: connection_event::Event, timestamp: u64) {
+fn handle_connection_event(cevent: &connection_event::Event, timestamp: u64) {
     match cevent {
         connection_event::Event::Inbound(i) => {
-            let ip = util::ip_from_ipport(i.conn.addr);
+            let ip = util::ip_from_ipport(i.conn.addr.clone());
             metrics::CONN_INBOUND.inc();
             if util::is_tor_exit_node(&ip) {
                 metrics::CONN_INBOUND_TOR_EXIT.inc();
@@ -353,7 +368,7 @@ fn handle_connection_event(cevent: connection_event::Event, timestamp: u64) {
             metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64);
         }
         connection_event::Event::Outbound(o) => {
-            let ip = util::ip_from_ipport(o.conn.addr);
+            let ip = util::ip_from_ipport(o.conn.addr.clone());
             metrics::CONN_OUTBOUND.inc();
             metrics::CONN_OUTBOUND_NETWORK
                 .with_label_values(&[&o.conn.network.to_string()])
@@ -364,7 +379,7 @@ fn handle_connection_event(cevent: connection_event::Event, timestamp: u64) {
             metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64);
         }
         connection_event::Event::Closed(c) => {
-            let ip = util::ip_from_ipport(c.conn.addr);
+            let ip = util::ip_from_ipport(c.conn.addr.clone());
             metrics::CONN_CLOSED.inc();
             metrics::CONN_CLOSED_AGE.inc_by(timestamp - c.time_established);
             metrics::CONN_CLOSED_NETWORK
@@ -378,7 +393,7 @@ fn handle_connection_event(cevent: connection_event::Event, timestamp: u64) {
             metrics::CONN_EVICTED.inc();
             metrics::CONN_EVICTED_WITHINFO
                 .with_label_values(&[
-                    &util::ip_from_ipport(e.conn.addr),
+                    &util::ip_from_ipport(e.conn.addr.clone()),
                     &e.conn.network.to_string(),
                 ])
                 .inc();
@@ -445,138 +460,141 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
         .with_label_values(&[&direction, &subnet])
         .inc();
 
-    match msg.msg.as_ref().unwrap() {
-        Msg::Addr(addr) => {
-            metrics::P2P_ADDR_ADDRESS_HISTOGRAM
-                .with_label_values(&[&direction])
-                .observe(addr.addresses.len() as f64);
-            let future_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
-                .with_label_values(&[&direction, &"future".to_string()]);
-            let past_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
-                .with_label_values(&[&direction, &"past".to_string()]);
-            for address in addr.addresses.iter() {
-                // We substract the timestamp in the address from the time we received the
-                // message. If the remaining offset is larger than or equal to zero, the address
-                // timestamp lies in the past. If the offset is smaller than zero, the address
-                // timestamp lies in the future.
-                let offset = timestamp as i64 - address.timestamp as i64;
-                if offset >= 0 {
-                    past_offset.observe(offset as f64);
-                } else {
-                    future_offset.observe((offset * -1) as f64);
-                }
-                for i in 0..32 {
-                    if (1 << i) & address.services > 0 {
-                        metrics::P2P_ADDR_SERVICES_HISTOGRAM
-                            .with_label_values(&[&direction])
-                            .observe(i as f64)
+    if let Some(msg_ref) = msg.msg.as_ref() {
+        match msg_ref {
+            Msg::Addr(addr) => {
+                metrics::P2P_ADDR_ADDRESS_HISTOGRAM
+                    .with_label_values(&[&direction])
+                    .observe(addr.addresses.len() as f64);
+                let future_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
+                    .with_label_values(&[&direction, &"future".to_string()]);
+                let past_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
+                    .with_label_values(&[&direction, &"past".to_string()]);
+                for address in addr.addresses.iter() {
+                    // We substract the timestamp in the address from the time we received the
+                    // message. If the remaining offset is larger than or equal to zero, the address
+                    // timestamp lies in the past. If the offset is smaller than zero, the address
+                    // timestamp lies in the future.
+                    let offset = timestamp as i64 - address.timestamp as i64;
+                    if offset >= 0 {
+                        past_offset.observe(offset as f64);
+                    } else {
+                        future_offset.observe((offset * -1) as f64);
                     }
+                    for i in 0..32 {
+                        if (1 << i) & address.services > 0 {
+                            metrics::P2P_ADDR_SERVICES_HISTOGRAM
+                                .with_label_values(&[&direction])
+                                .observe(i as f64)
+                        }
+                    }
+                    metrics::P2P_ADDR_SERVICES
+                        .with_label_values(&[&direction, &address.services.to_string()])
+                        .inc();
                 }
-                metrics::P2P_ADDR_SERVICES
-                    .with_label_values(&[&direction, &address.services.to_string()])
-                    .inc();
             }
-        }
-        Msg::Addrv2(addrv2) => {
-            metrics::P2P_ADDRV2_ADDRESS_HISTOGRAM
-                .with_label_values(&[&direction])
-                .observe(addrv2.addresses.len() as f64);
-            let future_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
-                .with_label_values(&[&direction, &"future".to_string()]);
-            let past_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
-                .with_label_values(&[&direction, &"past".to_string()]);
-            for address in addrv2.addresses.iter() {
-                // We substract the timestamp in the address from the time we received the
-                // message. If the remaining offset is larger than or equal to zero, the address
-                // timestamp lies in the past. If the offset is smaller than zero, the address
-                // timestamp lies in the future.
-                let offset = timestamp as i64 - address.timestamp as i64;
-                if offset >= 0 {
-                    past_offset.observe(offset as f64);
-                } else {
-                    future_offset.observe((offset * -1) as f64);
-                }
+            Msg::Addrv2(addrv2) => {
+                metrics::P2P_ADDRV2_ADDRESS_HISTOGRAM
+                    .with_label_values(&[&direction])
+                    .observe(addrv2.addresses.len() as f64);
+                let future_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
+                    .with_label_values(&[&direction, &"future".to_string()]);
+                let past_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
+                    .with_label_values(&[&direction, &"past".to_string()]);
+                for address in addrv2.addresses.iter() {
+                    // We substract the timestamp in the address from the time we received the
+                    // message. If the remaining offset is larger than or equal to zero, the address
+                    // timestamp lies in the past. If the offset is smaller than zero, the address
+                    // timestamp lies in the future.
+                    let offset = timestamp as i64 - address.timestamp as i64;
+                    if offset >= 0 {
+                        past_offset.observe(offset as f64);
+                    } else {
+                        future_offset.observe((offset * -1) as f64);
+                    }
 
-                for i in 0..32 {
-                    if (1 << i) & address.services > 0 {
-                        metrics::P2P_ADDRV2_SERVICES_HISTOGRAM
-                            .with_label_values(&[&direction])
-                            .observe(i as f64)
+                    for i in 0..32 {
+                        if (1 << i) & address.services > 0 {
+                            metrics::P2P_ADDRV2_SERVICES_HISTOGRAM
+                                .with_label_values(&[&direction])
+                                .observe(i as f64)
+                        }
                     }
+                    metrics::P2P_ADDRV2_SERVICES
+                        .with_label_values(&[&direction, &address.services.to_string()])
+                        .inc();
                 }
-                metrics::P2P_ADDRV2_SERVICES
-                    .with_label_values(&[&direction, &address.services.to_string()])
+            }
+            Msg::Emptyaddrv2(_) => {
+                metrics::P2P_EMPTYADDRV2
+                    .with_label_values(&[&direction, &ip])
                     .inc();
             }
-        }
-        Msg::Emptyaddrv2(_) => {
-            metrics::P2P_EMPTYADDRV2
-                .with_label_values(&[&direction, &ip])
-                .inc();
-        }
-        Msg::Inv(inv) => {
-            let mut count_by_invtype: HashMap<String, u64> = HashMap::new();
-            for item in inv.items.iter() {
-                let count = count_by_invtype
-                    .entry(String::from((*item).inv_type()))
-                    .or_insert(0);
-                *count += 1;
-            }
-            for (inv_type, count) in &count_by_invtype {
-                metrics::P2P_INV_ENTRIES
-                    .with_label_values(&[&direction, inv_type])
-                    .inc_by(*count);
-            }
-            metrics::P2P_INV_ENTRIES_HISTOGRAM
-                .with_label_values(&[&direction])
-                .observe(inv.items.len() as f64);
-            if count_by_invtype.len() == 1 {
-                metrics::P2P_INV_ENTRIES_HOMOGENOUS
+            Msg::Inv(inv) => {
+                let mut count_by_invtype: HashMap<String, u64> = HashMap::new();
+                for item in inv.items.iter() {
+                    let count = count_by_invtype
+                        .entry(String::from((*item).inv_type()))
+                        .or_insert(0);
+                    *count += 1;
+                }
+                for (inv_type, count) in &count_by_invtype {
+                    metrics::P2P_INV_ENTRIES
+                        .with_label_values(&[&direction, inv_type])
+                        .inc_by(*count);
+                }
+                metrics::P2P_INV_ENTRIES_HISTOGRAM
                     .with_label_values(&[&direction])
-                    .inc();
-            } else {
-                metrics::P2P_INV_ENTRIES_HETEROGENEOUS
-                    .with_label_values(&[&direction])
+                    .observe(inv.items.len() as f64);
+                if count_by_invtype.len() == 1 {
+                    metrics::P2P_INV_ENTRIES_HOMOGENOUS
+                        .with_label_values(&[&direction])
+                        .inc();
+                } else {
+                    metrics::P2P_INV_ENTRIES_HETEROGENEOUS
+                        .with_label_values(&[&direction])
+                        .inc();
+                }
+            }
+            Msg::Ping(_) => {
+                if msg.meta.inbound {
+                    metrics::P2P_PING_SUBNET.with_label_values(&[&subnet]).inc();
+                }
+            }
+            Msg::Oldping(_) => {
+                if msg.meta.inbound {
+                    metrics::P2P_OLDPING_SUBNET
+                        .with_label_values(&[&subnet])
+                        .inc();
+                }
+            }
+            Msg::Version(v) => {
+                if msg.meta.inbound {
+                    metrics::P2P_VERSION_SUBNET
+                        .with_label_values(&[&subnet])
+                        .inc();
+                    metrics::P2P_VERSION_USERAGENT
+                        .with_label_values(&[&v.user_agent])
+                        .inc();
+                }
+            }
+            Msg::Feefilter(f) => {
+                metrics::P2P_FEEFILTER_FEERATE
+                    .with_label_values(&[&direction, &f.fee.to_string()])
                     .inc();
             }
-        }
-        Msg::Ping(_) => {
-            if msg.meta.inbound {
-                metrics::P2P_PING_SUBNET.with_label_values(&[&subnet]).inc();
+            Msg::Reject(r) => {
+                if msg.meta.inbound {
+                    let reason = match RejectReason::try_from(r.reason) {
+                        Ok(r) => r.to_string(),
+                        Err(_) => "unknown".to_string(),
+                    };
+                    metrics::P2P_REJECT_MESSAGE
+                        .with_label_values(&[&r.rejected_command, &reason])
+                        .inc();
+                }
             }
+            _ => (),
         }
-        Msg::Oldping(_) => {
-            if msg.meta.inbound {
-                metrics::P2P_OLDPING_SUBNET
-                    .with_label_values(&[&subnet])
-                    .inc();
-            }
-        }
-        Msg::Version(v) => {
-            if msg.meta.inbound {
-                metrics::P2P_VERSION_SUBNET
-                    .with_label_values(&[&subnet])
-                    .inc();
-                metrics::P2P_VERSION_USERAGENT
-                    .with_label_values(&[&v.user_agent])
-                    .inc();
-            }
-        }
-        Msg::Feefilter(f) => {
-            metrics::P2P_FEEFILTER_FEERATE
-                .with_label_values(&[&direction, &f.fee.to_string()])
-                .inc();
-        }
-        Msg::Reject(r) => {
-            if msg.meta.inbound {
-                metrics::P2P_REJECT_MESSAGE
-                    .with_label_values(&[
-                        &r.rejected_command,
-                        &RejectReason::try_from(r.reason).unwrap().to_string(),
-                    ])
-                    .inc();
-            }
-        }
-        _ => (),
     }
 }
