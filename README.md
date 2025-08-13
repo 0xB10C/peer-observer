@@ -82,3 +82,25 @@ Core tracepoints requires elevated system privileges. Additionally, a few not-ye
 patches to Bitcoin Core are required at the moment. Documentation is sparse
 or non-existent. Feel free to open an issue if you still want to set up an instance and
 I'll do my best to add more documentation.
+
+
+## Development
+
+### Integration tests
+
+To run the integration tests, run with the feature `nats_integration_tests`:
+
+```bash
+$ cargo test --features nats_integration_tests
+```
+
+If you are not using the nix-shell, you need to set the `NATS_SERVER_BINARY` to the path
+to your `nats-server` binary.
+
+Test coverage can be generated with:
+
+```bash
+$ cargo tarpaulin --out Html --features nats_integration_tests
+```
+
+This generates a `tarpaulin-report.html` file which can be viewed in the browser.

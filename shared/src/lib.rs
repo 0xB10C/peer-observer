@@ -10,6 +10,7 @@ pub extern crate log;
 pub extern crate nats;
 pub extern crate prometheus;
 pub extern crate prost;
+pub extern crate rand;
 pub extern crate simple_logger;
 pub extern crate tokio;
 
@@ -26,6 +27,10 @@ pub mod validation;
 
 /// A minimal HTTP webserver (but not spec compliant) used to serve prometheus metrics via HTTP.
 pub mod metricserver;
+/// A NATS publisher to be used in integration tests.
+pub mod nats_publisher_for_testing;
+/// A NATS server runnner to be used in integration tests.
+pub mod nats_server_for_testing;
 /// Utillity functions shared among peer-observer tools
 pub mod util;
 
