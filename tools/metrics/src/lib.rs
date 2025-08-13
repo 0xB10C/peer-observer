@@ -44,6 +44,16 @@ pub struct Args {
     log_level: log::Level,
 }
 
+impl Args {
+    pub fn new(nats_address: String, metrics_address: String, log_level: log::Level) -> Self {
+        Self {
+            nats_address,
+            metrics_address,
+            log_level,
+        }
+    }
+}
+
 pub fn run(args: Args) {
     simple_logger::init_with_level(args.log_level).unwrap();
 
