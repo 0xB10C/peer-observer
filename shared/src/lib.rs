@@ -4,6 +4,7 @@ pub extern crate async_nats;
 pub extern crate bitcoin;
 pub extern crate clap;
 pub extern crate corepc_client;
+pub extern crate futures;
 pub extern crate lazy_static;
 pub extern crate log;
 pub extern crate nats;
