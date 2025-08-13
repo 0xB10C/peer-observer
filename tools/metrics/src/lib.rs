@@ -6,6 +6,7 @@ use shared::addrman::addrman_event;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
+use shared::futures::StreamExt;
 use shared::log;
 use shared::mempool::mempool_event;
 use shared::metricserver;
@@ -16,7 +17,7 @@ use shared::prost::Message;
 use shared::rpc::rpc_event;
 use shared::util;
 use shared::validation::validation_event;
-use shared::{clap, nats};
+use shared::{async_nats, clap};
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -56,7 +57,7 @@ impl Args {
 
 /// runs the metrics tool
 /// Expects that a logger has been initialized already.
-pub fn run(args: Args) -> Result<(), error::RuntimeError> {
+pub async fn run(args: Args) -> Result<(), error::RuntimeError> {
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
     metrics::RUNTIME_START_TIMESTAMP.set(util::current_timestamp() as i64);
@@ -64,10 +65,10 @@ pub fn run(args: Args) -> Result<(), error::RuntimeError> {
     metricserver::start(&args.metrics_address)?;
     log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
 
-    let nc = nats::connect(args.nats_address)?;
-    let sub = nc.subscribe("*")?;
-    for msg in sub.messages() {
-        let unwrapped = event_msg::EventMsg::decode(msg.data.as_slice())?;
+    let nc = async_nats::connect(args.nats_address).await?;
+    let mut sub = nc.subscribe("*").await?;
+    while let Some(msg) = sub.next().await {
+        let unwrapped = event_msg::EventMsg::decode(msg.payload)?;
         if let Some(event) = unwrapped.event {
             match event {
                 Event::Msg(msg) => {
