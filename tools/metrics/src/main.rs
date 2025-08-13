@@ -3,5 +3,7 @@ use shared::clap::Parser;
 
 fn main() {
     let args = Args::parse();
-    metrics::run(args);
+    if let Err(e) = metrics::run(args) {
+        eprintln!("metrics tool error: {}", e);
+    };
 }
