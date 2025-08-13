@@ -24,4 +24,7 @@ pkgs.mkShell {
       pkgs.pkg-config
       pkgs.which
     ];
+
+    # Use for running integration tests
+    NATS_SERVER_BINARY = "${pkgs.nats-server}/bin/nats-server";
 }
