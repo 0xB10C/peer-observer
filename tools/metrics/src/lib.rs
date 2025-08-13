@@ -14,7 +14,6 @@ use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::rpc::rpc_event;
-use shared::simple_logger;
 use shared::util;
 use shared::validation::validation_event;
 use shared::{clap, nats};
@@ -42,7 +41,7 @@ pub struct Args {
     /// The log level the tool should run with. Valid log levels
     /// are "trace", "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
     #[arg(short, long, default_value_t = log::Level::Debug)]
-    log_level: log::Level,
+    pub log_level: log::Level,
 }
 
 impl Args {
@@ -55,9 +54,9 @@ impl Args {
     }
 }
 
+/// runs the metrics tool
+/// Expects that a logger has been initialized already.
 pub fn run(args: Args) -> Result<(), error::RuntimeError> {
-    simple_logger::init_with_level(args.log_level)?;
-
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
     metrics::RUNTIME_START_TIMESTAMP.set(util::current_timestamp() as i64);
