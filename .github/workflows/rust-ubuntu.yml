@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Install dependecies
+    - name: Install build dependecies
       run: |
         sudo apt update -y
         sudo apt-get install -y \
@@ -26,12 +26,16 @@ jobs:
           zstd \
           binutils-dev \
           elfutils \
-          gcc-multilib
-    - uses: actions/checkout@v4
+          gcc-multilib \
+    - name: Install integration test dependecies
+      run: |
+        sudo apt-get install -y \
+          nats-server
+    - uses: actions/checkout@v5
     - name: Build
       run: cargo build --verbose --all-features
-    - name: Run tests
-      run: cargo test --verbose --all-features
+    - name: Run tests and integration tests
+      run: NATS_SERVER_BINARY=$(which nats-server) cargo test --verbose --all-features
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
 
