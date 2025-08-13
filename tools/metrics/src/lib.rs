@@ -15,6 +15,10 @@ use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::rpc::rpc_event;
+use shared::tokio::{
+    sync::watch,
+    time::{sleep, Duration},
+};
 use shared::util;
 use shared::validation::validation_event;
 use shared::{async_nats, clap};
@@ -57,51 +61,79 @@ impl Args {
 
 /// runs the metrics tool
 /// Expects that a logger has been initialized already.
-pub async fn run(args: Args) -> Result<(), error::RuntimeError> {
+pub async fn run(
+    args: Args,
+    mut shutdown_rx: watch::Receiver<bool>,
+) -> Result<(), error::RuntimeError> {
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
-
-    metrics::RUNTIME_START_TIMESTAMP.set(util::current_timestamp() as i64);
 
     metricserver::start(&args.metrics_address)?;
     log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
 
     let nc = async_nats::connect(args.nats_address).await?;
     let mut sub = nc.subscribe("*").await?;
-    while let Some(msg) = sub.next().await {
-        let unwrapped = event_msg::EventMsg::decode(msg.payload)?;
-        if let Some(event) = unwrapped.event {
-            match event {
-                Event::Msg(msg) => {
-                    handle_p2p_message(&msg, unwrapped.timestamp);
+
+    metrics::RUNTIME_START_TIMESTAMP.set(util::current_timestamp() as i64);
+
+    loop {
+        shared::tokio::select! {
+            maybe_msg = sub.next() => {
+                if let Some(msg) = maybe_msg {
+                    handle_event(msg)?;
+                    // directly process next event if available
+                    continue
+                } else {
+                    break; // subscription ended
                 }
-                Event::Conn(c) => {
-                    if let Some(e) = c.event {
-                        handle_connection_event(&e, unwrapped.timestamp);
-                    }
+            }
+            _ = shutdown_rx.changed() => {
+                if *shutdown_rx.borrow() {
+                    log::info!("metrics tool received shutdown signal.");
+                    break;
                 }
-                Event::Addrman(a) => {
-                    if let Some(e) = a.event {
-                        handle_addrman_event(&e);
-                    }
+            }
+        }
+        // Prevent busy loop if we don't have events
+        sleep(Duration::from_millis(50)).await;
+    }
+    Ok(())
+}
+
+fn handle_event(msg: async_nats::Message) -> Result<(), error::RuntimeError> {
+    let unwrapped = event_msg::EventMsg::decode(msg.payload)?;
+    if let Some(event) = unwrapped.event {
+        match event {
+            Event::Msg(msg) => {
+                handle_p2p_message(&msg, unwrapped.timestamp);
+            }
+            Event::Conn(c) => {
+                if let Some(e) = c.event {
+                    handle_connection_event(&e, unwrapped.timestamp);
                 }
-                Event::Mempool(m) => {
-                    if let Some(e) = m.event {
-                        handle_mempool_event(&e);
-                    }
+            }
+            Event::Addrman(a) => {
+                if let Some(e) = a.event {
+                    handle_addrman_event(&e);
                 }
-                Event::Validation(v) => {
-                    if let Some(e) = v.event {
-                        handle_validation_event(&e);
-                    }
+            }
+            Event::Mempool(m) => {
+                if let Some(e) = m.event {
+                    handle_mempool_event(&e);
                 }
-                Event::Rpc(r) => {
-                    if let Some(e) = r.event {
-                        handle_rpc_event(&e);
-                    }
+            }
+            Event::Validation(v) => {
+                if let Some(e) = v.event {
+                    handle_validation_event(&e);
+                }
+            }
+            Event::Rpc(r) => {
+                if let Some(e) = r.event {
+                    handle_rpc_event(&e);
                 }
             }
         }
     }
+
     Ok(())
 }
 
