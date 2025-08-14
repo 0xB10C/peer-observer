@@ -67,19 +67,23 @@ pub async fn run(
 ) -> Result<(), error::RuntimeError> {
     log::info!(target: LOG_TARGET, "Starting metrics-server...",);
 
-    metricserver::start(&args.metrics_address)?;
+    let metrics = metrics::Metrics::new();
+
+    metricserver::start(&args.metrics_address, Some(metrics.registry.clone()))?;
     log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
 
     let nc = async_nats::connect(args.nats_address).await?;
     let mut sub = nc.subscribe("*").await?;
 
-    metrics::RUNTIME_START_TIMESTAMP.set(util::current_timestamp() as i64);
+    metrics
+        .runtime_start_timestamp
+        .set(util::current_timestamp() as i64);
 
     loop {
         shared::tokio::select! {
             maybe_msg = sub.next() => {
                 if let Some(msg) = maybe_msg {
-                    handle_event(msg)?;
+                    handle_event(msg, metrics.clone())?;
                     // directly process next event if available
                     continue
                 } else {
@@ -99,36 +103,39 @@ pub async fn run(
     Ok(())
 }
 
-fn handle_event(msg: async_nats::Message) -> Result<(), error::RuntimeError> {
+fn handle_event(
+    msg: async_nats::Message,
+    metrics: metrics::Metrics,
+) -> Result<(), error::RuntimeError> {
     let unwrapped = event_msg::EventMsg::decode(msg.payload)?;
     if let Some(event) = unwrapped.event {
         match event {
             Event::Msg(msg) => {
-                handle_p2p_message(&msg, unwrapped.timestamp);
+                handle_p2p_message(&msg, unwrapped.timestamp, metrics);
             }
             Event::Conn(c) => {
                 if let Some(e) = c.event {
-                    handle_connection_event(&e, unwrapped.timestamp);
+                    handle_connection_event(&e, unwrapped.timestamp, metrics);
                 }
             }
             Event::Addrman(a) => {
                 if let Some(e) = a.event {
-                    handle_addrman_event(&e);
+                    handle_addrman_event(&e, metrics);
                 }
             }
             Event::Mempool(m) => {
                 if let Some(e) = m.event {
-                    handle_mempool_event(&e);
+                    handle_mempool_event(&e, metrics);
                 }
             }
             Event::Validation(v) => {
                 if let Some(e) = v.event {
-                    handle_validation_event(&e);
+                    handle_validation_event(&e, metrics);
                 }
             }
             Event::Rpc(r) => {
                 if let Some(e) = r.event {
-                    handle_rpc_event(&e);
+                    handle_rpc_event(&e, metrics);
                 }
             }
         }
@@ -137,7 +144,7 @@ fn handle_event(msg: async_nats::Message) -> Result<(), error::RuntimeError> {
     Ok(())
 }
 
-fn handle_rpc_event(e: &rpc_event::Event) {
+fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
     match e {
         rpc_event::Event::PeerInfos(info) => {
             let mut on_gmax_banlist = 0;
@@ -265,65 +272,107 @@ fn handle_rpc_event(e: &rpc_event::Event) {
                 }
             }
 
-            metrics::RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN.set(on_gmax_banlist);
-            metrics::RPC_PEER_INFO_LIST_CONNECTIONS_MONERO_BAN.set(on_monero_banlist);
-            metrics::RPC_PEER_INFO_LIST_CONNECTIONS_TOR_EXIT.set(on_tor_exit_list);
-            metrics::RPC_PEER_INFO_LIST_CONNECTIONS_LINKINGLION.set(on_linkinglion_list);
+            metrics
+                .rpc_peer_info_list_peers_gmax_ban
+                .set(on_gmax_banlist);
+            metrics
+                .rpc_peer_info_list_peers_monero_ban
+                .set(on_monero_banlist);
+            metrics
+                .rpc_peer_info_list_peers_tor_exit
+                .set(on_tor_exit_list);
+            metrics
+                .rpc_peer_info_list_peers_linkinglion
+                .set(on_linkinglion_list);
 
-            metrics::RPC_PEER_INFO_ADDR_RATELIMITED_PEERS.set(addr_rate_limited_peers);
-            metrics::RPC_PEER_INFO_ADDR_RATELIMITED_TOTAL.set(addr_rate_limited_total as i64);
-            metrics::RPC_PEER_INFO_ADDR_PROCESSED_TOTAL.set(addr_processed_total as i64);
-            metrics::RPC_PEER_INFO_ADDR_RELAY_ENABLED_PEERS.set(addr_relay_enabled_peers);
+            metrics
+                .rpc_peer_info_addr_ratelimited_peers
+                .set(addr_rate_limited_peers);
+            metrics
+                .rpc_peer_info_addr_ratelimited_total
+                .set(addr_rate_limited_total as i64);
+            metrics
+                .rpc_peer_info_addr_processed_total
+                .set(addr_processed_total as i64);
+            metrics
+                .rpc_peer_info_addr_relay_enabled_peers
+                .set(addr_relay_enabled_peers);
 
-            metrics::RPC_PEER_INFO_PING_MEAN.set(stat_util::mean_f64(&pings));
-            metrics::RPC_PEER_INFO_PING_MEDIAN.set(stat_util::median_f64(&pings));
-            metrics::RPC_PEER_INFO_MINPING_MEAN.set(stat_util::mean_f64(&min_pings));
-            metrics::RPC_PEER_INFO_MINPING_MEDIAN.set(stat_util::median_f64(&min_pings));
-            metrics::RPC_PEER_INFO_PING_WAIT_LARGER_5_SECONDS_PEERS.set(ping_wait_larger_5s);
+            metrics
+                .rpc_peer_info_ping_mean
+                .set(stat_util::mean_f64(&pings));
+            metrics
+                .rpc_peer_info_ping_median
+                .set(stat_util::median_f64(&pings));
+            metrics
+                .rpc_peer_info_minping_mean
+                .set(stat_util::mean_f64(&min_pings));
+            metrics
+                .rpc_peer_info_minping_median
+                .set(stat_util::median_f64(&min_pings));
+            metrics
+                .rpc_peer_info_ping_wait_larger_5_seconds_block_peers
+                .set(ping_wait_larger_5s);
 
-            metrics::RPC_PEER_INFO_TIMEOFFSET_PLUS10S.set(timeoffset_plus10s);
-            metrics::RPC_PEER_INFO_TIMEOFFSET_MINUS10S.set(timeoffset_minus10s);
+            metrics
+                .rpc_peer_info_timeoffset_plus10s
+                .set(timeoffset_plus10s);
+            metrics
+                .rpc_peer_info_timeoffset_minus10s
+                .set(timeoffset_minus10s);
 
-            metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_TO.set(bip152_highbandwidth_to);
-            metrics::RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_FROM.set(bip152_highbandwidth_from);
+            metrics
+                .rpc_peer_info_bip152_highbandwidth_to
+                .set(bip152_highbandwidth_to);
+            metrics
+                .rpc_peer_info_bip152_highbandwidth_from
+                .set(bip152_highbandwidth_from);
 
-            metrics::RPC_PEER_INFO_NUM_PEERS.set(info.infos.len() as i64);
+            metrics.rpc_peer_info_num_peers.set(info.infos.len() as i64);
 
-            metrics::RPC_PEER_INFO_INFLIGHT_BLOCK_PEERS.set(peers_with_inflight_blocks);
-            metrics::RPC_PEER_INFO_INFLIGHT_DISTINCT_BLOCK_HEIGHTS
+            metrics
+                .rpc_peer_info_inflight_block_peers
+                .set(peers_with_inflight_blocks);
+            metrics
+                .rpc_peer_info_inflight_distinct_blocks_heights
                 .set(distinct_inflight_block_heights.len() as i64);
 
-            metrics::RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS.reset();
+            metrics.rpc_peer_info_transport_protocol_type_peers.reset();
             for (k, v) in peers_by_transport_protocol_type.iter() {
-                metrics::RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS
+                metrics
+                    .rpc_peer_info_transport_protocol_type_peers
                     .with_label_values(&[k])
                     .set(*v);
             }
 
-            metrics::RPC_PEER_INFO_NETWORK_PEERS.reset();
+            metrics.rpc_peer_info_network_peers.reset();
             for (k, v) in peers_by_network.iter() {
-                metrics::RPC_PEER_INFO_NETWORK_PEERS
+                metrics
+                    .rpc_peer_info_network_peers
                     .with_label_values(&[k])
                     .set(*v);
             }
 
-            metrics::RPC_PEER_INFO_CONNECTION_TYPE_PEERS.reset();
+            metrics.rpc_peer_info_connection_type_peers.reset();
             for (k, v) in peers_by_connection_type.iter() {
-                metrics::RPC_PEER_INFO_CONNECTION_TYPE_PEERS
+                metrics
+                    .rpc_peer_info_connection_type_peers
                     .with_label_values(&[k])
                     .set(*v);
             }
 
-            metrics::RPC_PEER_INFO_PROTOCOL_VERSION_PEERS.reset();
+            metrics.rpc_peer_info_protocol_version_peers.reset();
             for (k, v) in peers_by_protocol_version.iter() {
-                metrics::RPC_PEER_INFO_PROTOCOL_VERSION_PEERS
+                metrics
+                    .rpc_peer_info_protocol_version_peers
                     .with_label_values(&[k.to_string()])
                     .set(*v);
             }
 
-            metrics::RPC_PEER_INFO_ASN_PEERS.reset();
+            metrics.rpc_peer_info_asn_peers.reset();
             for (k, v) in peers_by_asn.iter() {
-                metrics::RPC_PEER_INFO_ASN_PEERS
+                metrics
+                    .rpc_peer_info_asn_peers
                     .with_label_values(&[k.to_string()])
                     .set(*v);
             }
@@ -331,30 +380,34 @@ fn handle_rpc_event(e: &rpc_event::Event) {
     }
 }
 
-fn handle_mempool_event(e: &mempool_event::Event) {
+fn handle_mempool_event(e: &mempool_event::Event, metrics: metrics::Metrics) {
     match e {
         mempool_event::Event::Added(a) => {
-            metrics::MEMPOOL_ADDED.inc();
-            metrics::MEMPOOL_ADDED_VBYTES.inc_by(a.vsize as u64);
+            metrics.mempool_added.inc();
+            metrics.mempool_added_vbytes.inc_by(a.vsize as u64);
         }
         mempool_event::Event::Removed(r) => {
-            metrics::MEMPOOL_REMOVED
+            metrics
+                .mempool_removed
                 .with_label_values(&[&r.reason])
                 .inc();
         }
         mempool_event::Event::Replaced(r) => {
-            metrics::MEMPOOL_REPLACED.inc();
-            metrics::MEMPOOL_REPLACED_VBYTES.inc_by(r.replaced_vsize as u64);
+            metrics.mempool_replaced.inc();
+            metrics
+                .mempool_replaced_vbytes
+                .inc_by(r.replaced_vsize as u64);
         }
         mempool_event::Event::Rejected(r) => {
-            metrics::MEMPOOL_REJECTED
+            metrics
+                .mempool_rejected
                 .with_label_values(&[&r.reason])
                 .inc();
         }
     }
 }
 
-fn handle_validation_event(e: &validation_event::Event) {
+fn handle_validation_event(e: &validation_event::Event, metrics: metrics::Metrics) {
     match e {
         validation_event::Event::BlockConnected(v) => {
             // Due to an undetected API break, 23.x and 24.x used microseconds, while
@@ -363,67 +416,98 @@ fn handle_validation_event(e: &validation_event::Event) {
             // Assume the tracepoint passed nanoseconds here, but we don't need the
             // nanosecond precision and already have metrics recorded as microseconds.
             let duration_microseconds = (v.connection_time / 1000) as u64;
-            metrics::VALIDATION_BLOCK_CONNECTED_LATEST_HEIGHT.set(v.height as i64);
-            metrics::VALIDATION_BLOCK_CONNECTED_LATEST_TIME.set(duration_microseconds as i64);
-            metrics::VALIDATION_BLOCK_CONNECTED_DURATION.inc_by(duration_microseconds);
-            metrics::VALIDATION_BLOCK_CONNECTED_LATEST_SIGOPS.set(v.sigops);
-            metrics::VALIDATION_BLOCK_CONNECTED_LATEST_INPUTS.set(v.inputs.into());
-            metrics::VALIDATION_BLOCK_CONNECTED_LATEST_TRANSACTIONS.set(v.transactions);
+            metrics
+                .validation_block_connected_latest_height
+                .set(v.height as i64);
+            metrics
+                .validation_block_connected_latest_connection_time
+                .set(duration_microseconds as i64);
+            metrics
+                .validation_block_connected_connection_time
+                .inc_by(duration_microseconds);
+            metrics
+                .validation_block_connected_latest_sigops
+                .set(v.sigops);
+            metrics
+                .validation_block_connected_latest_inputs
+                .set(v.inputs.into());
+            metrics
+                .validation_block_connected_latest_transactions
+                .set(v.transactions);
         }
     }
 }
 
-fn handle_connection_event(cevent: &connection_event::Event, timestamp: u64) {
+fn handle_connection_event(
+    cevent: &connection_event::Event,
+    timestamp: u64,
+    metrics: metrics::Metrics,
+) {
     match cevent {
         connection_event::Event::Inbound(i) => {
             let ip = util::ip_from_ipport(i.conn.addr.clone());
-            metrics::CONN_INBOUND.inc();
+            metrics.conn_inbound.inc();
             if util::is_tor_exit_node(&ip) {
-                metrics::CONN_INBOUND_TOR_EXIT.inc();
+                metrics.conn_inbound_tor_exit.inc();
             }
             if util::is_on_gmax_banlist(&ip) {
-                metrics::CONN_INBOUND_BANLIST_GMAX
+                metrics
+                    .conn_inbound_banlist_gmax
                     .with_label_values(&[&ip])
                     .inc();
             }
             if util::is_on_monero_banlist(&ip) {
-                metrics::CONN_INBOUND_BANLIST_MONERO
+                metrics
+                    .conn_inbound_banlist_monero
                     .with_label_values(&[&ip])
                     .inc();
             }
-            metrics::CONN_INBOUND_SUBNET
+            metrics
+                .conn_inbound_subnet
                 .with_label_values(&[&util::subnet(ip)])
                 .inc();
-            metrics::CONN_INBOUND_NETWORK
+            metrics
+                .conn_inbound_network
                 .with_label_values(&[&i.conn.network.to_string()])
                 .inc();
-            metrics::CONN_INBOUND_CURRENT.set(i.existing_connections as i64);
+            metrics
+                .conn_inbound_current
+                .set(i.existing_connections as i64);
         }
         connection_event::Event::Outbound(o) => {
             let ip = util::ip_from_ipport(o.conn.addr.clone());
-            metrics::CONN_OUTBOUND.inc();
-            metrics::CONN_OUTBOUND_NETWORK
+            metrics.conn_outbound.inc();
+            metrics
+                .conn_outbound_network
                 .with_label_values(&[&o.conn.network.to_string()])
                 .inc();
-            metrics::CONN_OUTBOUND_SUBNET
+            metrics
+                .conn_outbound_subnet
                 .with_label_values(&[&util::subnet(ip)])
                 .inc();
-            metrics::CONN_OUTBOUND_CURRENT.set(o.existing_connections as i64);
+            metrics
+                .conn_outbound_current
+                .set(o.existing_connections as i64);
         }
         connection_event::Event::Closed(c) => {
             let ip = util::ip_from_ipport(c.conn.addr.clone());
-            metrics::CONN_CLOSED.inc();
-            metrics::CONN_CLOSED_AGE.inc_by(timestamp - c.time_established);
-            metrics::CONN_CLOSED_NETWORK
+            metrics.conn_closed.inc();
+            metrics
+                .conn_closed_age
+                .inc_by(timestamp - c.time_established);
+            metrics
+                .conn_closed_network
                 .with_label_values(&[&c.conn.network.to_string()])
                 .inc();
-            metrics::CONN_CLOSED_SUBNET
+            metrics
+                .conn_closed_subnet
                 .with_label_values(&[&util::subnet(ip)])
                 .inc();
         }
         connection_event::Event::InboundEvicted(e) => {
-            metrics::CONN_EVICTED.inc();
-            metrics::CONN_EVICTED_WITHINFO
+            metrics.conn_evicted_inbound.inc();
+            metrics
+                .conn_evicted_inbound_withinfo
                 .with_label_values(&[
                     &util::ip_from_ipport(e.conn.addr.clone()),
                     &e.conn.network.to_string(),
@@ -431,30 +515,33 @@ fn handle_connection_event(cevent: &connection_event::Event, timestamp: u64) {
                 .inc();
         }
         connection_event::Event::Misbehaving(m) => {
-            metrics::CONN_MISBEHAVING
+            metrics
+                .conn_misbehaving
                 .with_label_values(&[&m.id.to_string(), &m.message])
                 .inc();
-            metrics::CONN_MISBEHAVING_REASON
+            metrics
+                .conn_misbehaving_reason
                 .with_label_values(&[&m.message])
                 .inc();
         }
     }
 }
 
-fn handle_addrman_event(aevent: &addrman_event::Event) {
+fn handle_addrman_event(aevent: &addrman_event::Event, metrics: metrics::Metrics) {
     match aevent {
         addrman_event::Event::New(new) => {
-            metrics::ADDRMAN_NEW_INSERT
+            metrics
+                .addrman_new_insert
                 .with_label_values(&[&new.inserted.to_string()])
                 .inc();
         }
         addrman_event::Event::Tried(_) => {
-            metrics::ADDRMAN_TRIED_INSERT.inc();
+            metrics.addrman_tried_insert.inc();
         }
     }
 }
 
-fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
+fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::Metrics) {
     let conn_type = msg.meta.conn_type.to_string();
     let direction = if msg.meta.inbound {
         "inbound".to_string()
@@ -468,8 +555,9 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
     labels.insert(metrics::LABEL_P2P_CONNECTION_TYPE, &conn_type);
     labels.insert(metrics::LABEL_P2P_DIRECTION, &direction);
 
-    metrics::P2P_MESSAGE_COUNT.with(&labels).inc();
-    metrics::P2P_MESSAGE_BYTES
+    metrics.p2p_message_count.with(&labels).inc();
+    metrics
+        .p2p_message_bytes
         .with(&labels)
         .inc_by(msg.meta.size);
 
@@ -477,30 +565,34 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
         let mut labels_ll = HashMap::<&str, &str>::new();
         labels_ll.insert(metrics::LABEL_P2P_MSG_TYPE, &msg.meta.command);
         labels_ll.insert(metrics::LABEL_P2P_DIRECTION, &direction);
-        metrics::P2P_MESSAGE_COUNT_LINKINGLION
-            .with(&labels_ll)
-            .inc();
-        metrics::P2P_MESSAGE_BYTES_LINKINGLION
+        metrics.p2p_message_count_linkinglion.with(&labels_ll).inc();
+        metrics
+            .p2p_message_bytes_linkinglion
             .with(&labels_ll)
             .inc_by(msg.meta.size);
     }
 
-    metrics::P2P_MESSAGE_BYTES_BY_SUBNET
+    metrics
+        .p2p_message_bytes_by_subnet
         .with_label_values(&[&direction, &subnet])
         .inc_by(msg.meta.size);
-    metrics::P2P_MESSAGE_COUNT_BY_SUBNET
+    metrics
+        .p2p_message_count_by_subnet
         .with_label_values(&[&direction, &subnet])
         .inc();
 
     if let Some(msg_ref) = msg.msg.as_ref() {
         match msg_ref {
             Msg::Addr(addr) => {
-                metrics::P2P_ADDR_ADDRESS_HISTOGRAM
+                metrics
+                    .p2p_addr_addresses
                     .with_label_values(&[&direction])
                     .observe(addr.addresses.len() as f64);
-                let future_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
+                let future_offset = metrics
+                    .p2p_addr_timestamp_offset_seconds
                     .with_label_values(&[&direction, &"future".to_string()]);
-                let past_offset = metrics::P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM
+                let past_offset = metrics
+                    .p2p_addr_timestamp_offset_seconds
                     .with_label_values(&[&direction, &"past".to_string()]);
                 for address in addr.addresses.iter() {
                     // We substract the timestamp in the address from the time we received the
@@ -515,23 +607,28 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
                     }
                     for i in 0..32 {
                         if (1 << i) & address.services > 0 {
-                            metrics::P2P_ADDR_SERVICES_HISTOGRAM
+                            metrics
+                                .p2p_addr_services_bits
                                 .with_label_values(&[&direction])
                                 .observe(i as f64)
                         }
                     }
-                    metrics::P2P_ADDR_SERVICES
+                    metrics
+                        .p2p_addr_services
                         .with_label_values(&[&direction, &address.services.to_string()])
                         .inc();
                 }
             }
             Msg::Addrv2(addrv2) => {
-                metrics::P2P_ADDRV2_ADDRESS_HISTOGRAM
+                metrics
+                    .p2p_addrv2_addresses
                     .with_label_values(&[&direction])
                     .observe(addrv2.addresses.len() as f64);
-                let future_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
+                let future_offset = metrics
+                    .p2p_addrv2_timestamp_offset_seconds
                     .with_label_values(&[&direction, &"future".to_string()]);
-                let past_offset = metrics::P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM
+                let past_offset = metrics
+                    .p2p_addrv2_timestamp_offset_seconds
                     .with_label_values(&[&direction, &"past".to_string()]);
                 for address in addrv2.addresses.iter() {
                     // We substract the timestamp in the address from the time we received the
@@ -547,18 +644,21 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
 
                     for i in 0..32 {
                         if (1 << i) & address.services > 0 {
-                            metrics::P2P_ADDRV2_SERVICES_HISTOGRAM
+                            metrics
+                                .p2p_addrv2_services_bits
                                 .with_label_values(&[&direction])
                                 .observe(i as f64)
                         }
                     }
-                    metrics::P2P_ADDRV2_SERVICES
+                    metrics
+                        .p2p_addrv2_services
                         .with_label_values(&[&direction, &address.services.to_string()])
                         .inc();
                 }
             }
             Msg::Emptyaddrv2(_) => {
-                metrics::P2P_EMPTYADDRV2
+                metrics
+                    .p2p_addrv2_empty
                     .with_label_values(&[&direction, &ip])
                     .inc();
             }
@@ -571,47 +671,55 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
                     *count += 1;
                 }
                 for (inv_type, count) in &count_by_invtype {
-                    metrics::P2P_INV_ENTRIES
+                    metrics
+                        .p2p_inv_entries
                         .with_label_values(&[&direction, inv_type])
                         .inc_by(*count);
                 }
-                metrics::P2P_INV_ENTRIES_HISTOGRAM
+                metrics
+                    .p2p_inv_entries_histogram
                     .with_label_values(&[&direction])
                     .observe(inv.items.len() as f64);
                 if count_by_invtype.len() == 1 {
-                    metrics::P2P_INV_ENTRIES_HOMOGENOUS
+                    metrics
+                        .p2p_invs_homogeneous
                         .with_label_values(&[&direction])
                         .inc();
                 } else {
-                    metrics::P2P_INV_ENTRIES_HETEROGENEOUS
+                    metrics
+                        .p2p_invs_heterogeneous
                         .with_label_values(&[&direction])
                         .inc();
                 }
             }
             Msg::Ping(_) => {
                 if msg.meta.inbound {
-                    metrics::P2P_PING_SUBNET.with_label_values(&[&subnet]).inc();
+                    metrics.p2p_ping_subnet.with_label_values(&[&subnet]).inc();
                 }
             }
             Msg::Oldping(_) => {
                 if msg.meta.inbound {
-                    metrics::P2P_OLDPING_SUBNET
+                    metrics
+                        .p2p_oldping_subnet
                         .with_label_values(&[&subnet])
                         .inc();
                 }
             }
             Msg::Version(v) => {
                 if msg.meta.inbound {
-                    metrics::P2P_VERSION_SUBNET
+                    metrics
+                        .p2p_version_subnet
                         .with_label_values(&[&subnet])
                         .inc();
-                    metrics::P2P_VERSION_USERAGENT
+                    metrics
+                        .p2p_version_useragent
                         .with_label_values(&[&v.user_agent])
                         .inc();
                 }
             }
             Msg::Feefilter(f) => {
-                metrics::P2P_FEEFILTER_FEERATE
+                metrics
+                    .p2p_feefilter_feerate
                     .with_label_values(&[&direction, &f.fee.to_string()])
                     .inc();
             }
@@ -621,7 +729,8 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64) {
                         Ok(r) => r.to_string(),
                         Err(_) => "unknown".to_string(),
                     };
-                    metrics::P2P_REJECT_MESSAGE
+                    metrics
+                        .p2p_reject_message
                         .with_label_values(&[&r.rejected_command, &reason])
                         .inc();
                 }

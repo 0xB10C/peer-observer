@@ -1,21 +1,12 @@
-use shared::lazy_static::lazy_static;
 use shared::prometheus::{
-    register_gauge, register_histogram_vec, register_int_counter, register_int_counter_vec,
-    register_int_gauge, register_int_gauge_vec, HistogramOpts, Opts,
+    register_gauge_with_registry, register_histogram_vec_with_registry,
+    register_int_counter_vec_with_registry, register_int_counter_with_registry,
+    register_int_gauge_vec_with_registry, register_int_gauge_with_registry, HistogramOpts, Opts,
+    Registry,
 };
 use shared::prometheus::{Gauge, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
 
-// Prometheus Metrics
-
 const NAMESPACE: &str = "peerobserver";
-
-const SUBSYSTEM_RUNTIME: &str = "runtime";
-const SUBSYSTEM_P2P: &str = "p2p";
-const SUBSYSTEM_CONN: &str = "conn";
-const SUBSYSTEM_ADDRMAN: &str = "addrman";
-const SUBSYSTEM_MEMPOOL: &str = "mempool";
-const SUBSYSTEM_VALIDATION: &str = "validation";
-const SUBSYSTEM_RPC: &str = "rpc";
 
 pub const LABEL_P2P_MSG_TYPE: &str = "message";
 pub const LABEL_P2P_CONNECTION_TYPE: &str = "connection_type";
@@ -104,758 +95,329 @@ pub const BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET: [f64; 26] = [
     16777216f64,
 ];
 
-lazy_static! {
-
-    // -------------------- Runtime
-
-    /// UNIX epoch timestamp of bitcoind-observer start. Can be used to alert on
-    /// bitcoind-observer restarts.
-    pub static ref RUNTIME_START_TIMESTAMP: IntGauge =
-        register_int_gauge!(
-            Opts::new("start_timestamp", "UNIX epoch timestamp of bitcoind-observer start")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_RUNTIME)
-        ).unwrap();
-
-    // -------------------- General
-
-    /// Number of P2P network messages send or received.
-    pub static ref P2P_MESSAGE_COUNT: IntCounterVec =
-        register_int_counter_vec!(
-            Opts::new("message_count", "Number of P2P network messages send or received.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P),
-            &[LABEL_P2P_MSG_TYPE, LABEL_P2P_CONNECTION_TYPE, LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    /// Number of P2P network messages send or received by subnet.
-    pub static ref P2P_MESSAGE_COUNT_BY_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("message_count_by_subnet", "Number of P2P network messages send or received by subnet.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION, LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    /// Number of P2P network message bytes send or received.
-    pub static ref P2P_MESSAGE_BYTES: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("message_bytes", "Number of P2P network messages bytes send or received.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_MSG_TYPE, LABEL_P2P_CONNECTION_TYPE, LABEL_P2P_DIRECTION]
-    ).unwrap();
-
-    /// Number of P2P network message bytes send or received by SUBNET.
-    pub static ref P2P_MESSAGE_BYTES_BY_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("message_bytes_by_subnet", "Number of P2P network messages bytes send or received by SUBNET.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION, LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    /// Number of P2P network messages bytes send or received by LinkingLion peers.
-    pub static ref P2P_MESSAGE_BYTES_LINKINGLION: IntCounterVec =
-        register_int_counter_vec!(
-            Opts::new("message_bytes_linkinglion", "Number of P2P network messages bytes send or received by LinkingLion peers.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P),
-            &[LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    /// Number of P2P network messages send or received by LinkingLion peers.
-    pub static ref P2P_MESSAGE_COUNT_LINKINGLION: IntCounterVec =
-        register_int_counter_vec!(
-            Opts::new("message_count_linkinglion", "Number of P2P network messages send or received by LinkingLion peers.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P),
-            &[LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    // -------------------- Addr
-
-    /// Histogram of the number of addresses contained in an "addr" message.
-    pub static ref P2P_ADDR_ADDRESS_HISTOGRAM: HistogramVec =
-        register_histogram_vec!(
-            HistogramOpts::new("addr_addresses", "Histogram of the number of addresses contained in an outbound 'addr' message.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_ADDRESS_COUNT.to_vec()),
-            &[LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    /// Histogram of the timestamp offset (in seconds) of addresses contained in an "addr" message.
-    pub static ref P2P_ADDR_TIMESTAMP_OFFSET_HISTOGRAM: HistogramVec =
-        register_histogram_vec!(
-            HistogramOpts::new("addr_timestamp_offset_seconds", "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addr' message.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
-            &[LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET]
-        ).unwrap();
-
-    /// Histogram of the service flags (per bit) of addresses contained in an "addr" message.
-    pub static ref P2P_ADDR_SERVICES_HISTOGRAM: HistogramVec =
-        register_histogram_vec!(
-            HistogramOpts::new("addr_services_bits", "Histogram of the service flags (per bit) of addresses contained in an 'addr' message.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_SERVICE_BITS.to_vec()),
-            &[LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    /// Histogram of the service flags (per bit) of addresses contained in an "addrv2" message.
-    pub static ref P2P_ADDRV2_SERVICES_HISTOGRAM: HistogramVec =
-        register_histogram_vec!(
-            HistogramOpts::new("addrv2_services_bits", "Histogram of the service flags (per bit) of addresses contained in an 'addrv2' message.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_SERVICE_BITS.to_vec()),
-            &[LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    /// Number of addresses with these service bits cointained in an 'addr' message.
-    pub static ref P2P_ADDR_SERVICES: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("addr_services", "Number of addresses with these service bits cointained in an 'addr' message.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION, LABEL_P2P_SERVICES]
-    ).unwrap();
-
-    /// Number of addresses with these service bits cointained in an 'addrv2' message.
-    pub static ref P2P_ADDRV2_SERVICES: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("addrv2_services", "Number of addresses with these service bits cointained in an 'addrv2' message.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION, LABEL_P2P_SERVICES]
-    ).unwrap();
-
-    /// Histogram of the number of addresses contained in an "addrv2" message.
-    pub static ref P2P_ADDRV2_ADDRESS_HISTOGRAM: HistogramVec =
-        register_histogram_vec!(
-            HistogramOpts::new("addrv2_addresses", "Histogram of the number of addresses contained in an 'addrv2' message.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_ADDRESS_COUNT.to_vec()),
-            &[LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    /// Histogram of the timestamp offset (in seconds) of addresses contained in an "addrv2" message.
-    pub static ref P2P_ADDRV2_TIMESTAMP_OFFSET_HISTOGRAM: HistogramVec =
-        register_histogram_vec!(
-            HistogramOpts::new("addrv2_timestamp_offset_seconds", "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addrv2' message.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET.to_vec()),
-            &[LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET]
-        ).unwrap();
-
-    /// Number of empty addrv2 messages received and send (by address).
-    pub static ref P2P_EMPTYADDRV2: IntCounterVec =
-        register_int_counter_vec!(
-            Opts::new("addrv2_empty", "Number of empty addrv2 messages received and send (by address).")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P),
-            &[LABEL_P2P_DIRECTION, LABEL_CONN_ADDR]
-        ).unwrap();
-
-    // -------------------- Connections
-
-    /// Number of inbound connections.
-    pub static ref CONN_INBOUND: IntCounter =
-    register_int_counter!(
-        Opts::new("inbound", "Number of inbound connections.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Number of inbound connections by subnet (where applicable).
-    pub static ref CONN_INBOUND_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inbound_subnet", "Number of inbound connections by subnet (where applicable).")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    /// Number of inbound connections by network.
-    pub static ref CONN_INBOUND_NETWORK: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inbound_network", "Number of inbound connections by network.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_NETWORK]
-    ).unwrap();
-
-    /// Number of inbound connections from Tor exit nodes.
-    pub static ref CONN_INBOUND_TOR_EXIT: IntCounter =
-    register_int_counter!(
-        Opts::new("inbound_tor_exit", "Number of inbound connections from Tor exit nodes.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Number of inbound connections from IPs on the Monero banlist.
-    pub static ref CONN_INBOUND_BANLIST_MONERO: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inbound_banlist_monero", "Number of inbound connections from IPs on the Monero banlist.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR]
-    ).unwrap();
-
-    /// Number of inbound connections from IPs on the GMax banlist.
-    pub static ref CONN_INBOUND_BANLIST_GMAX: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inbound_banlist_gmax", "Number of inbound connections from IPs on the gmax banlist.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR]
-    ).unwrap();
-
-    /// Number of currently open inbound connections.
-    pub static ref CONN_INBOUND_CURRENT: IntGauge =
-    register_int_gauge!(
-        Opts::new("inbound_current", "Number of currently open inbound connections.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Number of outbound connections.
-    pub static ref CONN_OUTBOUND: IntCounter =
-    register_int_counter!(
-        Opts::new("outbound", "Number of opened outbound connections.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Number of currently open outbound connections.
-    pub static ref CONN_OUTBOUND_CURRENT: IntGauge =
-    register_int_gauge!(
-        Opts::new("outbound_current", "Number of currently open outbound connections.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Number of outbound connections by network.
-    pub static ref CONN_OUTBOUND_NETWORK: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("outbound_network", "Number of opened outbound connections by network.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_NETWORK]
-    ).unwrap();
-
-    pub static ref CONN_OUTBOUND_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("outbound_subnet", "Number of opened outbound connections by subnet.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    /// Number of closed connections.
-    pub static ref CONN_CLOSED: IntCounter =
-    register_int_counter!(
-        Opts::new("closed", "Number of closed connections.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Age (in seconds) of closed connections.
-    pub static ref CONN_CLOSED_AGE: IntCounter =
-    register_int_counter!(
-        Opts::new("closed_age_seconds", "Age (in seconds) of closed connections. The age of each closed connection is added to the metric.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-    ).unwrap();
-
-    /// Number of closed connections by network.
-    pub static ref CONN_CLOSED_NETWORK: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("closed_network", "Number of closed connections by network.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_NETWORK]
-    ).unwrap();
-
-    /// Number of closed connections by subnet.
-    pub static ref CONN_CLOSED_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("closed_subnet", "Number of closed connections by subnet.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    /// Number of evicted connections.
-    pub static ref CONN_EVICTED: IntCounter =
-    register_int_counter!(
-        Opts::new("evicted_inbound", "Number of evicted inbund connections.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN)
-    ).unwrap();
-
-    /// Number of evicted connections with information about their address and network.
-    pub static ref CONN_EVICTED_WITHINFO: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("evicted_inbound_withinfo", "Number of evicted inbound connections with information about their address and network.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_ADDR, LABEL_CONN_NETWORK]
-    ).unwrap();
-
-    /// Number of misbehaving connections.
-    pub static ref CONN_MISBEHAVING: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("misbehaving", "Number of misbehaving connections.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_MESSAGE]
-    ).unwrap();
-
-
-    // Occurences of misbehavior by reasons.
-    pub static ref CONN_MISBEHAVING_REASON: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("misbehaving_reason", "Occurences of misbehavior by reasons")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_CONN),
-        &[LABEL_CONN_MISBEHAVING_MESSAGE]
-    ).unwrap();
-
-    // -------------------- INVs
-
-    /// Number of INV entries send and received with INV type.
-    pub static ref P2P_INV_ENTRIES: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("inv_entries", "Number of INV entries send and received with INV type.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION, LABEL_P2P_INV_TYPE]
-    ).unwrap();
-
-    /// Histogram of the service flags (per bit) of addresses contained in an "addr" message.
-    pub static ref P2P_INV_ENTRIES_HISTOGRAM: HistogramVec =
-        register_histogram_vec!(
-            HistogramOpts::new("inv_entries_histogram", "Histogram number of entries contained in an INV message.")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_P2P)
-                .buckets(BUCKETS_INV_SIZE.to_vec()),
-            &[LABEL_P2P_DIRECTION]
-        ).unwrap();
-
-    /// Number of homogenous INV entries send and received with INV type.
-    pub static ref P2P_INV_ENTRIES_HOMOGENOUS: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("invs_homogeneous", "Number of homogenous INV entries send and received.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION]
-    ).unwrap();
-
-    /// Number of heterogeneous INV entries send and received with INV type.
-    pub static ref P2P_INV_ENTRIES_HETEROGENEOUS: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("invs_heterogeneous", "Number of heterogenous INVs send and received.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION]
-    ).unwrap();
-
-    // -------------------- Pings
-
-    /// Number of Pings received by subnet (where applicable)
-    pub static ref P2P_PING_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("ping_subnet", "Number of Pings received by subnet (where applicable).")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    /// Number of "old" pings (without a value) received by address
-    pub static ref P2P_OLDPING_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("oldping_subnet", "Number of 'old' Pings (without a value) received by subnet.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    // -------------------- Version
-
-    /// Number of version messages received by subnet
-    pub static ref P2P_VERSION_SUBNET: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("version_subnet", "Number of version messages received by subnet.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_SUBNET]
-    ).unwrap();
-
-    /// Number of version messages received by user_agent
-    pub static ref P2P_VERSION_USERAGENT: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("version_useragent", "Number of version messages received by useragent.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_VERSION_USERAGENT]
-    ).unwrap();
-
-    // -------------------- Feefilter
-
-    /// Number of feefilter messages received and sent by feerate
-    pub static ref P2P_FEEFILTER_FEERATE: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("feefilter_feerate", "Number of feefilter messages received and sent by feerate.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_DIRECTION, LABEL_P2P_FEEFILTER_FEERATE]
-    ).unwrap();
-
-    // -------------------- Reject
-
-
-    /// Number of reject messages received by command and reason
-    pub static ref P2P_REJECT_MESSAGE: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("reject_message", "Number of reject messages received by command and reason")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_P2P),
-        &[LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON]
-    ).unwrap();
-
-    // -------------------- Addrman
-
-    /// Number of attempted inserts into the addrman new table with their success as label.
-    pub static ref ADDRMAN_NEW_INSERT: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("new_insert", "Number of attempted inserts into the addrman new table with their success as label.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_ADDRMAN),
-        &[LABEL_ADDRMAN_NEW_INSERT_SUCCESS]
-    ).unwrap();
-
-    /// Number of inserts into the addrman tried table.
-    pub static ref ADDRMAN_TRIED_INSERT: IntCounter =
-    register_int_counter!(
-        Opts::new("tried_insert", "Number of inserts into the addrman tried table")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_ADDRMAN),
-    ).unwrap();
-
-    // -------------------- Mempool
-
-    /// Number of transactions added to the mempool.
-    pub static ref MEMPOOL_ADDED: IntCounter =
-    register_int_counter!(
-        Opts::new("added", "Number of transactions added to the mempool.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_MEMPOOL)
-    ).unwrap();
-
-    /// Number of vBytes added to the mempool.
-    pub static ref MEMPOOL_ADDED_VBYTES: IntCounter =
-    register_int_counter!(
-        Opts::new("added_vbytes", "Number of vbytes added to the mempool.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_MEMPOOL)
-    ).unwrap();
-
-    /// Number of transactions replaced from the mempool.
-    pub static ref MEMPOOL_REPLACED: IntCounter =
-    register_int_counter!(
-        Opts::new("replaced", "Number of vbytes added to the mempool.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_MEMPOOL)
-    ).unwrap();
-
-    /// Number of vBytes replaced in the mempool.
-    pub static ref MEMPOOL_REPLACED_VBYTES: IntCounter =
-    register_int_counter!(
-        Opts::new("replaced_vbytes", "Number of vbytes replaced in the mempool.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_MEMPOOL)
-    ).unwrap();
-
-    /// Number of rejected transactions with their rejection reason.
-    pub static ref MEMPOOL_REJECTED: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("rejected", "Number of rejected transactions with their rejection reason.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_MEMPOOL),
-        &[LABEL_MEMPOOL_REASON]
-    ).unwrap();
-
-    /// Number of removed transactions with their removal reason.
-    pub static ref MEMPOOL_REMOVED: IntCounterVec =
-    register_int_counter_vec!(
-        Opts::new("removed", "Number of removed transactions with their removal reason.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_MEMPOOL),
-        &[LABEL_MEMPOOL_REASON]
-    ).unwrap();
-
-    // -------------------- Validation
-
-    /// Last connected block height.
-    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_HEIGHT: IntGauge =
-    register_int_gauge!(
-        Opts::new("block_connected_latest_height", "Last connected block height.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_VALIDATION)
-    ).unwrap();
-
-    /// Last connected block connection time in µs.
-    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_TIME: IntGauge =
-    register_int_gauge!(
-        Opts::new("block_connected_latest_connection_time", "Last connected block connection time in µs")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_VALIDATION)
-    ).unwrap();
-
-    /// Total connected block connection time in µs.
-    pub static ref VALIDATION_BLOCK_CONNECTED_DURATION: IntCounter =
-    register_int_counter!(
-        Opts::new("block_connected_connection_time", "Last connected block connection time in µs")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_VALIDATION)
-    ).unwrap();
-
-    /// Last connected block sigops.
-    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_SIGOPS: IntGauge =
-    register_int_gauge!(
-        Opts::new("block_connected_latest_sigops", "Last connected block sigops.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_VALIDATION)
-    ).unwrap();
-
-    /// Last connected block inputs.
-    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_INPUTS: IntGauge =
-    register_int_gauge!(
-        Opts::new("block_connected_latest_inputs", "Last connected block inputs.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_VALIDATION)
-    ).unwrap();
-
-    /// Last connected block transactions.
-    pub static ref VALIDATION_BLOCK_CONNECTED_LATEST_TRANSACTIONS: IntGauge =
-    register_int_gauge!(
-        Opts::new("block_connected_latest_transactions", "Last connected block transactions.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_VALIDATION)
-    ).unwrap();
-
-    // -------------------- RPC
-
-    /// Number of peers connected that are on the 2018 ban list by gmax.
-    pub static ref RPC_PEER_INFO_LIST_CONNECTIONS_GMAX_BAN: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_list_peers_gmax_ban", "Number of peers connected to us that are on the 2018 ban list by gmax.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers connected to us that are on the monero banlist.
-    pub static ref RPC_PEER_INFO_LIST_CONNECTIONS_MONERO_BAN: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_list_peers_monero_ban", "Number of peers connected to us that are on the monero banlist.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers connected to us that are on the list of tor exit nodes.
-    pub static ref RPC_PEER_INFO_LIST_CONNECTIONS_TOR_EXIT: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_list_peers_tor_exit", "Number of peers connected to us that are on the list of tor exit nodes.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-
-    /// Number of peers connected to us that are known LinkingLion nodes.
-    pub static ref RPC_PEER_INFO_LIST_CONNECTIONS_LINKINGLION: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_list_peers_linkinglion", "Number of peers connected to us that are known LinkingLion nodes.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers connected to us that had at least one address rate-limited from being processed (see bitcoin/bitcoin #22387).
-    pub static ref RPC_PEER_INFO_ADDR_RATELIMITED_PEERS: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_addr_ratelimited_peers", "Number of peers connected to us that had at least one address rate-limited from being processed (see bitcoin/bitcoin #22387)")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of addressed rate-limited across all connected peers (see bitcoin/bitcoin #22387).
-    pub static ref RPC_PEER_INFO_ADDR_RATELIMITED_TOTAL: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_addr_ratelimited_total", "Number of addressed rate-limited across all connected peers (see bitcoin/bitcoin #22387).")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of addressed processed across all connected peers (see bitcoin/bitcoin #22387).
-    pub static ref RPC_PEER_INFO_ADDR_PROCESSED_TOTAL: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_addr_processed_total", "Number of addressed processed across all connected peers (see bitcoin/bitcoin #22387).")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Median ping of all connected peers.
-    pub static ref RPC_PEER_INFO_PING_MEDIAN: Gauge =
-    register_gauge!(
-        Opts::new("peer_info_ping_median", "Median ping (in milliseconds) of all connected peers.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Mean ping of all connected peers.
-    pub static ref RPC_PEER_INFO_PING_MEAN: Gauge =
-    register_gauge!(
-        Opts::new("peer_info_ping_mean", "Mean ping (in milliseconds) of all connected peers.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Median min_ping of all connected peers.
-    pub static ref RPC_PEER_INFO_MINPING_MEDIAN: Gauge =
-    register_gauge!(
-        Opts::new("peer_info_minping_median", "Median min_ping (in milliseconds) of all connected peers.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Mean min_ping of all connected peers.
-    pub static ref RPC_PEER_INFO_MINPING_MEAN: Gauge =
-    register_gauge!(
-        Opts::new("peer_info_minping_mean", "Mean min_ping (in milliseconds) of all connected peers.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers with a time offset greater than 10s.
-    pub static ref RPC_PEER_INFO_TIMEOFFSET_PLUS10S: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_timeoffset_plus10s", "Number of peers with a time offset greater than 10s.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers with a time offset smaller than -10s.
-    pub static ref RPC_PEER_INFO_TIMEOFFSET_MINUS10S: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_timeoffset_minus10s", "Number of peers with a time offset smaller than -10s.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers we selected peer as (compact blocks) high-bandwidth peer
-    pub static ref RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_TO: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_bip152_highbandwidth_to", "Number of peers we selected peer as (compact blocks) high-bandwidth peer.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers that selected us as (compact blocks) high-bandwidth peer
-    pub static ref RPC_PEER_INFO_BIP152_HIGHBANDWIDTH_FROM: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_bip152_highbandwidth_from", "Number of peers that selected us as (compact blocks) high-bandwidth peer.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers we are connected to
-    pub static ref RPC_PEER_INFO_NUM_PEERS: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_num_peers", "Number of peers we are connected to.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers we particiate in addr relay with (addr_relay_enabled)
-    pub static ref RPC_PEER_INFO_ADDR_RELAY_ENABLED_PEERS: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_addr_relay_enabled_peers", "Number of peers we particiate in addr relay with (addr_relay_enabled).")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers by transport_protocol_type (usually v1 and v2)
-    pub static ref RPC_PEER_INFO_TRANSPORT_PROTOCOL_TYPE_PEERS: IntGaugeVec =
-    register_int_gauge_vec!(
-        Opts::new("peer_info_transport_protocol_type_peers", "Number of peers by transport_protocol_type (usually v1 and v2).")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC),
-        &[LABEL_RPC_TRANSPORT_PROTOCOL_TYPE]
-    ).unwrap();
-
-    /// Number of peers by network
-    pub static ref RPC_PEER_INFO_NETWORK_PEERS: IntGaugeVec =
-    register_int_gauge_vec!(
-        Opts::new("peer_info_network_peers", "Number of peers by network.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC),
-        &[LABEL_RPC_NETWORK_TYPE]
-    ).unwrap();
-
-    /// Number of peers by connection_type
-    pub static ref RPC_PEER_INFO_CONNECTION_TYPE_PEERS: IntGaugeVec =
-    register_int_gauge_vec!(
-        Opts::new("peer_info_connection_type_peers", "Number of peers by connection_type")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC),
-        &[LABEL_RPC_CONNECTION_TYPE]
-    ).unwrap();
-
-    /// Number of peers by protocol_version
-    pub static ref RPC_PEER_INFO_PROTOCOL_VERSION_PEERS: IntGaugeVec =
-    register_int_gauge_vec!(
-        Opts::new("peer_info_protocol_version_peers", "Number of peers by protocol_version")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC),
-        &[LABEL_RPC_PROTOCOL_VERSION]
-    ).unwrap();
-
-    /// Number of peers by AS number
-    pub static ref RPC_PEER_INFO_ASN_PEERS: IntGaugeVec =
-    register_int_gauge_vec!(
-        Opts::new("peer_info_asn_peers", "Number of peers by AS number")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC),
-        &[LABEL_RPC_ASN]
-    ).unwrap();
-
-    /// Number of peers that have inflight blocks for us
-    pub static ref RPC_PEER_INFO_INFLIGHT_BLOCK_PEERS: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_inflight_block_peers", "Number of peers that have inflight blocks for us.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of distinct inflight blocks heights that peers are sending us
-    pub static ref RPC_PEER_INFO_INFLIGHT_DISTINCT_BLOCK_HEIGHTS: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_inflight_distinct_blocks_heights", "Number of distinct inflight blocks heights that peers are sending us.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
-    /// Number of peers that have a ping_wait larger than 5 seconds.
-    pub static ref RPC_PEER_INFO_PING_WAIT_LARGER_5_SECONDS_PEERS: IntGauge =
-    register_int_gauge!(
-        Opts::new("peer_info_ping_wait_larger_5_seconds_block_peers", "Number of peers that have a ping_wait larger than 5 seconds.")
-            .namespace(NAMESPACE)
-            .subsystem(SUBSYSTEM_RPC)
-    ).unwrap();
-
+macro_rules! g {
+    ($name:ident, $desc:expr, $registry:expr) => {
+        let $name: Gauge =
+            register_gauge_with_registry!(Opts::new(stringify!($name), $desc), $registry)
+                .expect(concat!("Could not create metric '", stringify!($name), "'"));
+    };
+}
+
+macro_rules! ig {
+    ($name:ident, $desc:expr, $registry:expr) => {
+        let $name: IntGauge =
+            register_int_gauge_with_registry!(Opts::new(stringify!($name), $desc), $registry)
+                .expect(concat!("Could not create metric '", stringify!($name), "'"));
+    };
+}
+
+macro_rules! igv {
+    ($name:ident, $desc:expr, $labels:expr, $registry:expr) => {
+        let $name: IntGaugeVec = register_int_gauge_vec_with_registry!(
+            Opts::new(stringify!($name), $desc),
+            &$labels,
+            $registry
+        )
+        .expect(concat!("Could not create metric '", stringify!($name), "'"));
+    };
+}
+
+macro_rules! icv {
+    ($name:ident, $desc:expr, $labels:expr, $registry:expr) => {
+        let $name: IntCounterVec = register_int_counter_vec_with_registry!(
+            Opts::new(stringify!($name), $desc),
+            &$labels,
+            $registry
+        )
+        .expect(concat!("Could not create metric '", stringify!($name), "'"));
+    };
+}
+
+macro_rules! ic {
+    ($name:ident, $desc:expr, $registry:expr) => {
+        let $name: IntCounter =
+            register_int_counter_with_registry!(Opts::new(stringify!($name), $desc), $registry)
+                .expect(concat!("Could not create metric '", stringify!($name), "'"));
+    };
+}
+
+macro_rules! hv {
+    ($name:ident, $desc:expr, $buckets:expr, $labels:expr, $registry:expr) => {
+        let $name: HistogramVec = register_histogram_vec_with_registry!(
+            HistogramOpts::new(stringify!($name), $desc).buckets($buckets.to_vec()),
+            &$labels,
+            $registry
+        )
+        .expect(concat!("Could not create metric '", stringify!($name), "'"));
+    };
+}
+
+#[derive(Debug, Clone)]
+pub struct Metrics {
+    pub registry: Registry,
+    pub runtime_start_timestamp: IntGauge,
+    pub p2p_message_count: IntCounterVec,
+    pub p2p_message_count_by_subnet: IntCounterVec,
+    pub p2p_message_bytes: IntCounterVec,
+    pub p2p_message_bytes_by_subnet: IntCounterVec,
+    pub p2p_message_bytes_linkinglion: IntCounterVec,
+    pub p2p_message_count_linkinglion: IntCounterVec,
+    pub p2p_addr_addresses: HistogramVec,
+    pub p2p_addr_timestamp_offset_seconds: HistogramVec,
+    pub p2p_addr_services_bits: HistogramVec,
+    pub p2p_addrv2_services_bits: HistogramVec,
+    pub p2p_addr_services: IntCounterVec,
+    pub p2p_addrv2_services: IntCounterVec,
+    pub p2p_addrv2_addresses: HistogramVec,
+    pub p2p_addrv2_timestamp_offset_seconds: HistogramVec,
+    pub p2p_addrv2_empty: IntCounterVec,
+    pub conn_inbound: IntCounter,
+    pub conn_inbound_subnet: IntCounterVec,
+    pub conn_inbound_network: IntCounterVec,
+    pub conn_inbound_banlist_monero: IntCounterVec,
+    pub conn_inbound_banlist_gmax: IntCounterVec,
+    pub conn_inbound_tor_exit: IntCounter,
+    pub conn_inbound_current: IntGauge,
+    pub conn_outbound: IntCounter,
+    pub conn_outbound_current: IntGauge,
+    pub conn_outbound_network: IntCounterVec,
+    pub conn_outbound_subnet: IntCounterVec,
+    pub conn_closed_network: IntCounterVec,
+    pub conn_closed_subnet: IntCounterVec,
+    pub conn_closed: IntCounter,
+    pub conn_closed_age: IntCounter,
+    pub conn_evicted_inbound: IntCounter,
+    pub conn_evicted_inbound_withinfo: IntCounterVec,
+    pub conn_misbehaving: IntCounterVec,
+    pub conn_misbehaving_reason: IntCounterVec,
+    pub p2p_inv_entries: IntCounterVec,
+    pub p2p_inv_entries_histogram: HistogramVec,
+    pub p2p_invs_homogeneous: IntCounterVec,
+    pub p2p_invs_heterogeneous: IntCounterVec,
+    pub p2p_ping_subnet: IntCounterVec,
+    pub p2p_oldping_subnet: IntCounterVec,
+    pub p2p_version_subnet: IntCounterVec,
+    pub p2p_version_useragent: IntCounterVec,
+    pub p2p_feefilter_feerate: IntCounterVec,
+    pub p2p_reject_message: IntCounterVec,
+    pub addrman_new_insert: IntCounterVec,
+    pub addrman_tried_insert: IntCounter,
+    pub mempool_added: IntCounter,
+    pub mempool_added_vbytes: IntCounter,
+    pub mempool_replaced: IntCounter,
+    pub mempool_replaced_vbytes: IntCounter,
+    pub mempool_rejected: IntCounterVec,
+    pub mempool_removed: IntCounterVec,
+    pub validation_block_connected_latest_height: IntGauge,
+    pub validation_block_connected_latest_connection_time: IntGauge,
+    pub validation_block_connected_latest_sigops: IntGauge,
+    pub validation_block_connected_latest_inputs: IntGauge,
+    pub validation_block_connected_latest_transactions: IntGauge,
+    pub validation_block_connected_connection_time: IntCounter,
+    pub rpc_peer_info_list_peers_gmax_ban: IntGauge,
+    pub rpc_peer_info_list_peers_monero_ban: IntGauge,
+    pub rpc_peer_info_list_peers_tor_exit: IntGauge,
+    pub rpc_peer_info_list_peers_linkinglion: IntGauge,
+    pub rpc_peer_info_addr_ratelimited_peers: IntGauge,
+    pub rpc_peer_info_addr_ratelimited_total: IntGauge,
+    pub rpc_peer_info_addr_processed_total: IntGauge,
+    pub rpc_peer_info_timeoffset_plus10s: IntGauge,
+    pub rpc_peer_info_timeoffset_minus10s: IntGauge,
+    pub rpc_peer_info_bip152_highbandwidth_to: IntGauge,
+    pub rpc_peer_info_bip152_highbandwidth_from: IntGauge,
+    pub rpc_peer_info_num_peers: IntGauge,
+    pub rpc_peer_info_addr_relay_enabled_peers: IntGauge,
+    pub rpc_peer_info_inflight_block_peers: IntGauge,
+    pub rpc_peer_info_inflight_distinct_blocks_heights: IntGauge,
+    pub rpc_peer_info_ping_wait_larger_5_seconds_block_peers: IntGauge,
+    pub rpc_peer_info_transport_protocol_type_peers: IntGaugeVec,
+    pub rpc_peer_info_network_peers: IntGaugeVec,
+    pub rpc_peer_info_connection_type_peers: IntGaugeVec,
+    pub rpc_peer_info_protocol_version_peers: IntGaugeVec,
+    pub rpc_peer_info_asn_peers: IntGaugeVec,
+    pub rpc_peer_info_ping_median: Gauge,
+    pub rpc_peer_info_ping_mean: Gauge,
+    pub rpc_peer_info_minping_median: Gauge,
+    pub rpc_peer_info_minping_mean: Gauge,
+}
+
+impl Metrics {
+    #[rustfmt::skip]
+    pub fn new() -> Self {
+        let registry = Registry::new_custom(Some(NAMESPACE.to_string()), None).expect("Could not setup prometheus metric registry");
+
+        ig!(runtime_start_timestamp, "UNIX epoch timestamp of peer-observer metrics tool start.", registry);
+        icv!(p2p_message_count, "Number of P2P network messages send or received.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_CONNECTION_TYPE, LABEL_P2P_DIRECTION], registry);
+        icv!(p2p_message_count_by_subnet, "Number of P2P network messages send or received by subnet.", [LABEL_P2P_DIRECTION, LABEL_P2P_SUBNET], registry);
+        icv!(p2p_message_bytes, "Number of P2P network messages bytes send or received.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_CONNECTION_TYPE, LABEL_P2P_DIRECTION], registry);
+        icv!(p2p_message_bytes_by_subnet, "Number of P2P network messages bytes send or received by SUBNET.", [LABEL_P2P_DIRECTION, LABEL_P2P_SUBNET], registry);
+        icv!(p2p_message_bytes_linkinglion, "Number of P2P network messages bytes send or received by LinkingLion peers.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION], registry);
+        icv!(p2p_message_count_linkinglion, "Number of P2P network messages send or received by LinkingLion peers.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION], registry);
+        hv!(p2p_addr_addresses, "Histogram of the number of addresses contained in an outbound 'addr' message.", BUCKETS_ADDR_ADDRESS_COUNT, [LABEL_P2P_DIRECTION], registry);
+        hv!(p2p_addr_timestamp_offset_seconds, "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addr' message.", BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET, [LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET], registry);
+        hv!(p2p_addr_services_bits, "Histogram of the service flags (per bit) of addresses contained in an 'addr' message.", BUCKETS_ADDR_SERVICE_BITS, [LABEL_P2P_DIRECTION], registry);
+        hv!(p2p_addrv2_services_bits, "Histogram of the service flags (per bit) of addresses contained in an 'addrv2' message.", BUCKETS_ADDR_SERVICE_BITS, [LABEL_P2P_DIRECTION], registry);
+        icv!(p2p_addr_services, "Number of addresses with these service bits contained in an 'addr' message.", [LABEL_P2P_DIRECTION, LABEL_P2P_SERVICES], registry);
+        icv!(p2p_addrv2_services, "Number of addresses with these service bits contained in an 'addrv2' message.", [LABEL_P2P_DIRECTION, LABEL_P2P_SERVICES], registry);
+        hv!(p2p_addrv2_addresses, "Histogram of the number of addresses contained in an 'addrv2' message.", BUCKETS_ADDR_ADDRESS_COUNT, [LABEL_P2P_DIRECTION], registry);
+        hv!(p2p_addrv2_timestamp_offset_seconds, "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addrv2' message.", BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET, [LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET], registry);
+        icv!(p2p_addrv2_empty, "Number of empty addrv2 messages received and sent (by address).", [LABEL_P2P_DIRECTION, LABEL_CONN_ADDR], registry);
+        ic!(conn_inbound, "Number of inbound connections.", registry);
+        icv!(conn_inbound_subnet, "Number of inbound connections by subnet (where applicable).", [LABEL_P2P_SUBNET], registry);
+        icv!(conn_inbound_network, "Number of inbound connections by network.", [LABEL_CONN_NETWORK], registry);
+        icv!(conn_inbound_banlist_monero, "Number of inbound connections from IPs on the Monero banlist.", [LABEL_CONN_ADDR], registry);
+        icv!(conn_inbound_banlist_gmax, "Number of inbound connections from IPs on the GMax banlist.", [LABEL_CONN_ADDR], registry);
+        ic!(conn_inbound_tor_exit, "Number of inbound connections from Tor exit nodes.", registry);
+        ig!(conn_inbound_current, "Number of currently open inbound connections.", registry);
+        ic!(conn_outbound, "Number of opened outbound connections.", registry);
+        ig!(conn_outbound_current, "Number of currently open outbound connections.", registry);
+        icv!(conn_outbound_network, "Number of opened outbound connections by network.", [LABEL_CONN_NETWORK], registry);
+        icv!(conn_outbound_subnet, "Number of opened outbound connections by subnet.", [LABEL_P2P_SUBNET], registry);
+        icv!(conn_closed_network, "Number of closed connections by network.", [LABEL_CONN_NETWORK], registry);
+        icv!(conn_closed_subnet, "Number of closed connections by subnet.", [LABEL_P2P_SUBNET], registry);
+        ic!(conn_closed, "Number of closed connections.", registry);
+        ic!(conn_closed_age, "Age (in seconds) of closed connections. The age of each closed connection is added to the metric.", registry);
+        ic!(conn_evicted_inbound, "Number of evicted inbound connections.", registry);
+        icv!(conn_evicted_inbound_withinfo, "Number of evicted inbound connections with information about their address and network.", [LABEL_CONN_ADDR, LABEL_CONN_NETWORK], registry);
+        icv!(conn_misbehaving, "Number of misbehaving connections.", [LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_MESSAGE], registry);
+        icv!(conn_misbehaving_reason, "Occurences of misbehavior by reasons", [LABEL_CONN_MISBEHAVING_MESSAGE], registry);
+        icv!(p2p_inv_entries, "Number of INV entries send and received with INV type.", [LABEL_P2P_DIRECTION, LABEL_P2P_INV_TYPE], registry);
+        hv!(p2p_inv_entries_histogram, "Histogram number of entries contained in an INV message.", BUCKETS_INV_SIZE, [LABEL_P2P_DIRECTION], registry);
+        icv!(p2p_invs_homogeneous, "Number of homogeneous INV entries sent and received.", [LABEL_P2P_DIRECTION], registry);
+        icv!(p2p_invs_heterogeneous, "Number of heterogeneous INV entries sent and received.", [LABEL_P2P_DIRECTION], registry);
+        icv!(p2p_ping_subnet, "Number of Pings received by subnet (where applicable).", [LABEL_P2P_SUBNET], registry);
+        icv!(p2p_oldping_subnet, "Number of 'old' Pings (without a value) received by subnet.", [LABEL_P2P_SUBNET], registry);
+        icv!(p2p_version_subnet, "Number of version messages received by subnet.", [LABEL_P2P_SUBNET], registry);
+        icv!(p2p_version_useragent, "Number of version messages received by user agent.", [LABEL_P2P_VERSION_USERAGENT], registry);
+        icv!(p2p_feefilter_feerate, "Number of feefilter messages received and sent by feerate.", [LABEL_P2P_DIRECTION, LABEL_P2P_FEEFILTER_FEERATE], registry);
+        icv!(p2p_reject_message, "Number of reject messages received by command and reason.", [LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON], registry);
+        icv!(addrman_new_insert, "Number of attempted inserts into the addrman new table with their success as label.", [LABEL_ADDRMAN_NEW_INSERT_SUCCESS], registry);
+        ic!(addrman_tried_insert, "Number of inserts into the addrman tried table", registry);
+        ic!(mempool_added, "Number of transactions added to the mempool.", registry);
+        ic!(mempool_added_vbytes, "Number of vbytes added to the mempool.", registry);
+        ic!(mempool_replaced, "Number of transactions replaced in the mempool.", registry);
+        ic!(mempool_replaced_vbytes, "Number of vbytes replaced in the mempool.", registry);
+        icv!(mempool_rejected, "Number of rejected transactions with their rejection reason.", [LABEL_MEMPOOL_REASON], registry);
+        icv!(mempool_removed, "Number of removed transactions with their removal reason.", [LABEL_MEMPOOL_REASON], registry);
+        ig!(validation_block_connected_latest_height, "Last connected block height.", registry);
+        ig!(validation_block_connected_latest_connection_time, "Last connected block connection time in µs", registry);
+        ig!(validation_block_connected_latest_sigops, "Last connected block sigops.", registry);
+        ig!(validation_block_connected_latest_inputs, "Last connected block inputs.", registry);
+        ig!(validation_block_connected_latest_transactions, "Last connected block transactions.", registry);
+        ic!(validation_block_connected_connection_time, "Last connected block connection time in µs", registry);
+        ig!(rpc_peer_info_list_peers_gmax_ban, "Number of peers connected to us that are on the 2018 ban list by gmax.", registry);
+        ig!(rpc_peer_info_list_peers_monero_ban, "Number of peers connected to us that are on the monero banlist.", registry);
+        ig!(rpc_peer_info_list_peers_tor_exit, "Number of peers connected to us that are on the list of tor exit nodes.", registry);
+        ig!(rpc_peer_info_list_peers_linkinglion, "Number of peers connected to us that are known LinkingLion nodes.", registry);
+        ig!(rpc_peer_info_addr_ratelimited_peers, "Number of peers connected to us that had at least one address rate-limited from being processed (see bitcoin/bitcoin #22387)", registry);
+        ig!(rpc_peer_info_addr_ratelimited_total, "Number of addresses rate-limited across all connected peers (see bitcoin/bitcoin #22387).", registry);
+        ig!(rpc_peer_info_addr_processed_total, "Number of addresses processed across all connected peers (see bitcoin/bitcoin #22387).", registry);
+        ig!(rpc_peer_info_timeoffset_plus10s, "Number of peers with a time offset greater than 10s.", registry);
+        ig!(rpc_peer_info_timeoffset_minus10s, "Number of peers with a time offset smaller than -10s.", registry);
+        ig!(rpc_peer_info_bip152_highbandwidth_to, "Number of peers we selected as (compact blocks) high-bandwidth peer.", registry);
+        ig!(rpc_peer_info_bip152_highbandwidth_from, "Number of peers that selected us as (compact blocks) high-bandwidth peer.", registry);
+        ig!(rpc_peer_info_num_peers, "Number of peers we are connected to.", registry);
+        ig!(rpc_peer_info_addr_relay_enabled_peers, "Number of peers we participate in addr relay with (addr_relay_enabled).", registry);
+        ig!(rpc_peer_info_inflight_block_peers, "Number of peers that have inflight blocks for us.", registry);
+        ig!(rpc_peer_info_inflight_distinct_blocks_heights, "Number of distinct inflight block heights that peers are sending us.", registry);
+        ig!(rpc_peer_info_ping_wait_larger_5_seconds_block_peers, "Number of peers that have a ping_wait larger than 5 seconds.", registry);
+        igv!(rpc_peer_info_transport_protocol_type_peers, "Number of peers by transport_protocol_type (usually v1 and v2).", [LABEL_RPC_TRANSPORT_PROTOCOL_TYPE], registry);
+        igv!(rpc_peer_info_network_peers, "Number of peers by network.", [LABEL_RPC_NETWORK_TYPE], registry);
+        igv!(rpc_peer_info_connection_type_peers, "Number of peers by connection_type", [LABEL_RPC_CONNECTION_TYPE], registry);
+        igv!(rpc_peer_info_protocol_version_peers, "Number of peers by protocol_version", [LABEL_RPC_PROTOCOL_VERSION], registry);
+        igv!(rpc_peer_info_asn_peers, "Number of peers by AS number", [LABEL_RPC_ASN], registry);
+        g!(rpc_peer_info_ping_median, "Median ping (in milliseconds) of all connected peers.", registry);
+        g!(rpc_peer_info_ping_mean, "Mean ping (in milliseconds) of all connected peers.", registry);
+        g!(rpc_peer_info_minping_median, "Median min_ping (in milliseconds) of all connected peers.", registry);
+        g!(rpc_peer_info_minping_mean, "Mean min_ping (in milliseconds) of all connected peers.", registry);
+
+
+        Self {
+            registry,
+            runtime_start_timestamp,
+            p2p_message_count,
+            p2p_message_count_by_subnet,
+            p2p_message_bytes,
+            p2p_message_bytes_by_subnet,
+            p2p_message_bytes_linkinglion,
+            p2p_message_count_linkinglion,
+            p2p_addr_addresses,
+            p2p_addr_timestamp_offset_seconds,
+            p2p_addr_services_bits,
+            p2p_addrv2_services_bits,
+            p2p_addr_services,
+            p2p_addrv2_services,
+            p2p_addrv2_addresses,
+            p2p_addrv2_timestamp_offset_seconds,
+            p2p_addrv2_empty,
+            conn_inbound,
+            conn_inbound_subnet,
+            conn_inbound_network,
+            conn_inbound_banlist_monero,
+            conn_inbound_banlist_gmax,
+            conn_inbound_tor_exit,
+            conn_inbound_current,
+            conn_outbound,
+            conn_outbound_current,
+            conn_outbound_network,
+            conn_outbound_subnet,
+            conn_closed_network,
+            conn_closed_subnet,
+            conn_closed,
+            conn_closed_age,
+            conn_evicted_inbound,
+            conn_evicted_inbound_withinfo,
+            conn_misbehaving,
+            conn_misbehaving_reason,
+            p2p_inv_entries,
+            p2p_inv_entries_histogram,
+            p2p_invs_homogeneous,
+            p2p_invs_heterogeneous,
+            p2p_ping_subnet,
+            p2p_oldping_subnet,
+            p2p_version_subnet,
+            p2p_version_useragent,
+            p2p_feefilter_feerate,
+            p2p_reject_message,
+            addrman_new_insert,
+            addrman_tried_insert,
+            mempool_added,
+            mempool_added_vbytes,
+            mempool_replaced,
+            mempool_replaced_vbytes,
+            mempool_rejected,
+            mempool_removed,
+            validation_block_connected_latest_height,
+            validation_block_connected_latest_connection_time,
+            validation_block_connected_latest_sigops,
+            validation_block_connected_latest_inputs,
+            validation_block_connected_latest_transactions,
+            validation_block_connected_connection_time,
+            rpc_peer_info_list_peers_gmax_ban,
+            rpc_peer_info_list_peers_monero_ban,
+            rpc_peer_info_list_peers_tor_exit,
+            rpc_peer_info_list_peers_linkinglion,
+            rpc_peer_info_addr_ratelimited_peers,
+            rpc_peer_info_addr_ratelimited_total,
+            rpc_peer_info_addr_processed_total,
+            rpc_peer_info_timeoffset_plus10s,
+            rpc_peer_info_timeoffset_minus10s,
+            rpc_peer_info_bip152_highbandwidth_to,
+            rpc_peer_info_bip152_highbandwidth_from,
+            rpc_peer_info_num_peers,
+            rpc_peer_info_addr_relay_enabled_peers,
+            rpc_peer_info_inflight_block_peers,
+            rpc_peer_info_inflight_distinct_blocks_heights,
+            rpc_peer_info_ping_wait_larger_5_seconds_block_peers,
+            rpc_peer_info_transport_protocol_type_peers,
+            rpc_peer_info_network_peers,
+            rpc_peer_info_connection_type_peers,
+            rpc_peer_info_protocol_version_peers,
+            rpc_peer_info_asn_peers,
+            rpc_peer_info_ping_median,
+            rpc_peer_info_ping_mean,
+            rpc_peer_info_minping_median,
+            rpc_peer_info_minping_mean,
+        }
+    }
 }
