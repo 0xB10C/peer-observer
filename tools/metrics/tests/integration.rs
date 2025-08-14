@@ -267,3 +267,55 @@ peerobserver_conn_inbound_subnet{subnet="127.0.0.0"} 1
     shutdown_tx.send(true).unwrap();
     metrics_handle.await.unwrap();
 }
+
+#[tokio::test]
+async fn test_integration_metrics_conn_outbound() {
+    println!("test that the outbound connection metrics work");
+    let (nats_port, metrics_port) = setup();
+    let _nats_server = NatsServerForTesting::new(nats_port).await;
+    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let args = make_test_args(nats_port, metrics_port);
+    let metrics_handle = tokio::spawn(async move {
+        metrics::run(args, shutdown_rx).await.unwrap();
+    });
+    // allow the metrics tool to start
+    sleep(Duration::from_secs(1)).await;
+
+    let event1 = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+        event: Some(net_conn::connection_event::Event::Outbound(
+            shared::net_conn::OutboundConnection {
+                conn: Connection {
+                    addr: "1.1.1.1:48333".to_string(),
+                    conn_type: 2,
+                    network: 3,
+                    peer_id: 11,
+                },
+                existing_connections: 321,
+            },
+        )),
+    }))
+    .unwrap()
+    .encode_to_vec();
+    nats_publisher
+        .publish(Subject::NetMsg.to_string(), event1)
+        .await;
+
+    sleep(Duration::from_millis(100)).await;
+
+    // also include "peerobserver_conn_inbound 0" here to make sure we never
+    // have state from a previous test here
+    let expected = r#"
+peerobserver_conn_inbound 0
+peerobserver_conn_outbound 1
+peerobserver_conn_outbound_current 321
+erobserver_conn_outbound_network{network="3"} 1
+peerobserver_conn_outbound_subnet{subnet="1.1.1.0"} 1
+"#;
+
+    let expected_lines: Vec<&str> = expected.split('\n').collect();
+    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
+
+    shutdown_tx.send(true).unwrap();
+    metrics_handle.await.unwrap();
+}
