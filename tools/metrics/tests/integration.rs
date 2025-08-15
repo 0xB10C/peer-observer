@@ -988,13 +988,150 @@ async fn test_integration_metrics_conn_outbound() {
             )),
         }))
         .unwrap()],
-        Subject::Validation,
+        Subject::NetConn,
         r#"
         peerobserver_conn_inbound 0
         peerobserver_conn_outbound 1
         peerobserver_conn_outbound_current 321
         erobserver_conn_outbound_network{network="3"} 1
         peerobserver_conn_outbound_subnet{subnet="1.1.1.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_conn_closed() {
+    println!("test that the closed connection metrics work");
+
+    let timestamp_now = current_timestamp();
+
+    publish_and_check(
+        &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Closed(
+                shared::net_conn::ClosedConnection {
+                    conn: Connection {
+                        addr: "2.2.2.2:48333".to_string(),
+                        conn_type: 4,
+                        network: 4,
+                        peer_id: 1,
+                    },
+                    time_established: timestamp_now - 1000,
+                },
+            )),
+        }))
+        .unwrap()],
+        Subject::NetConn,
+        r#"
+        peerobserver_conn_closed 1
+        peerobserver_conn_closed_age 1000
+        peerobserver_conn_closed_network{network="4"} 1
+        peerobserver_conn_closed_subnet{subnet="2.2.2.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_conn_inbound_evicted() {
+    println!("test that the inbound_evicted connection metrics work");
+
+    let timestamp_now = current_timestamp();
+
+    publish_and_check(
+        &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::InboundEvicted(
+                shared::net_conn::EvictedInboundConnection {
+                    conn: Connection {
+                        addr: "2.2.2.2:48333".to_string(),
+                        conn_type: 2,
+                        network: 2,
+                        peer_id: 1,
+                    },
+                    time_established: timestamp_now - 1000,
+                },
+            )),
+        }))
+        .unwrap()],
+        Subject::NetConn,
+        r#"
+        peerobserver_conn_evicted_inbound 1
+        peerobserver_conn_evicted_inbound_withinfo{addr="2.2.2.2",network="2"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_conn_misbehaving() {
+    println!("test that the misbehaving connection metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Misbehaving(
+                shared::net_conn::MisbehavingConnection {
+                    id: 2,
+                    message: "reason".to_string(),
+                },
+            )),
+        }))
+        .unwrap()],
+        Subject::NetConn,
+        r#"
+        peerobserver_conn_misbehaving{id="2",misbehavingmessage="reason"} 1
+        peerobserver_conn_misbehaving_reason{misbehavingmessage="reason"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_conn_special_ip() {
+    println!("test that the metrics for special IPs work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+                event: Some(net_conn::connection_event::Event::Inbound(
+                    shared::net_conn::InboundConnection {
+                        conn: Connection {
+                            addr: "162.218.65.123".to_string(), // an IP belonging to LinkingLion & banned on Gmax banlist
+                            conn_type: 1,
+                            network: 2,
+                            peer_id: 7,
+                        },
+                        existing_connections: 1,
+                    },
+                )),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+                event: Some(net_conn::connection_event::Event::Inbound(
+                    shared::net_conn::InboundConnection {
+                        conn: Connection {
+                            // a random IP belonging to a tor exit node.
+                            // This might not be a tor exit node IP in the future and the IP would need to updated.
+                            addr: "179.43.182.232:1234".to_string(),
+                            conn_type: 1,
+                            network: 2,
+                            peer_id: 7,
+                        },
+                        existing_connections: 2,
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::NetConn,
+        r#"
+        peerobserver_conn_inbound 2
+        peerobserver_conn_inbound_banlist_gmax{addr="162.218.65.123"} 1
+        peerobserver_conn_inbound_banlist_monero{addr="162.218.65.123"} 1
+        peerobserver_conn_inbound_current 2
+        peerobserver_conn_inbound_network{network="2"} 2
+        peerobserver_conn_inbound_subnet{subnet="162.218.65.0"} 1
+        peerobserver_conn_inbound_subnet{subnet="179.43.182.0"} 1
+        peerobserver_conn_inbound_tor_exit 1
         "#,
     )
     .await;
