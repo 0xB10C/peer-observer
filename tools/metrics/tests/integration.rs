@@ -16,6 +16,7 @@ use shared::{
     primitive::{self, inventory_item::Item, Address, InventoryItem},
     prost::Message,
     rand::{self, Rng},
+    rpc::{self, PeerInfo, PeerInfos},
     simple_logger::SimpleLogger,
     tokio::{self, sync::watch, time::sleep},
     util::current_timestamp,
@@ -23,6 +24,7 @@ use shared::{
 };
 
 use std::{
+    collections::HashMap,
     io::{Read, Write},
     net::TcpStream,
     sync::{
@@ -1279,6 +1281,173 @@ async fn test_integration_metrics_mempool_removed() {
         r#"
         peerobserver_mempool_removed{reason="expired"} 1
         peerobserver_mempool_removed{reason="evicted"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_rpc_peerinfo() {
+    println!("test that the RPC peer-info metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Rpc(rpc::RpcEvent {
+            event: Some(rpc::rpc_event::Event::PeerInfos(PeerInfos {
+                infos: vec![
+                    PeerInfo {
+                        addr_processed: 1234,
+                        addr_rate_limited: 1234,
+                        addr_relay_enabled: false,
+                        // a random IP belonging to a tor exit node.
+                        // This might not be a tor exit node IP in the future and the IP would need to updated.
+                        address: "179.43.182.232:1234".to_string(),
+                        address_bind: "1.2.3.4:8332".to_string(),
+                        address_local: "1.2.3.4:8332".to_string(),
+                        bip152_hb_from: true,
+                        bip152_hb_to: false,
+                        bytes_received: 1,
+                        bytes_received_per_message: HashMap::new(),
+                        bytes_sent_per_message: HashMap::new(),
+                        bytes_sent: 0,
+                        connection_time: 1,
+                        connection_type: "type0".to_string(),
+                        id: 1,
+                        inbound: true,
+                        inflight: vec![1337, 45324],
+                        last_block: 1337,
+                        last_received: 1234,
+                        last_send: 1234,
+                        last_transaction: 1234,
+                        mapped_as: 1234,
+                        minfeefilter: 1234.0,
+                        minimum_ping: 1234.0,
+                        network: "ipv4".to_string(),
+                        permissions: vec!["permission".to_string()],
+                        ping_time: 1234.0,
+                        ping_wait: 1234.0,
+                        relay_transactions: true,
+                        services: "service".to_string(),
+                        starting_height: 1337,
+                        subversion: "subversion".to_string(),
+                        synced_blocks: 4,
+                        synced_headers: 5,
+                        time_offset: 1234,
+                        transport_protocol_type: "v1".to_string(),
+                        version: 2841,
+                    },
+                    PeerInfo {
+                        addr_processed: 342,
+                        addr_rate_limited: 0,
+                        addr_relay_enabled: true,
+                        address: "162.218.65.123:8332".to_string(), // LinkingLion IP
+                        address_bind: "1.2.3.4:8332".to_string(),
+                        address_local: "1.2.3.4:8332".to_string(),
+                        bip152_hb_from: false,
+                        bip152_hb_to: true,
+                        bytes_received: 2344,
+                        bytes_received_per_message: HashMap::new(),
+                        bytes_sent_per_message: HashMap::new(),
+                        bytes_sent: 3483,
+                        connection_time: 8432,
+                        connection_type: "type1".to_string(),
+                        id: 2,
+                        inbound: false,
+                        inflight: vec![],
+                        last_block: 1337,
+                        last_received: 1234,
+                        last_send: 1234,
+                        last_transaction: 1234,
+                        mapped_as: 0,
+                        minfeefilter: 2.0,
+                        minimum_ping: 13.0,
+                        network: "ipv6".to_string(),
+                        permissions: vec!["permission".to_string()],
+                        ping_time: 23.0,
+                        ping_wait: 53.0,
+                        relay_transactions: false,
+                        services: "service".to_string(),
+                        starting_height: 231,
+                        subversion: "subversion2".to_string(),
+                        synced_blocks: 4,
+                        synced_headers: 5,
+                        time_offset: -1239,
+                        transport_protocol_type: "v2".to_string(),
+                        version: 2342,
+                    },
+                    PeerInfo {
+                        addr_processed: 342,
+                        addr_rate_limited: 434,
+                        addr_relay_enabled: true,
+                        address: "162.218.65.123:8332".to_string(), // LinkingLion IP
+                        address_bind: "1.2.3.4:8332".to_string(),
+                        address_local: "1.2.3.4:8332".to_string(),
+                        bip152_hb_from: false,
+                        bip152_hb_to: true,
+                        bytes_received: 2344,
+                        bytes_received_per_message: HashMap::new(),
+                        bytes_sent_per_message: HashMap::new(),
+                        bytes_sent: 3483,
+                        connection_time: 8432,
+                        connection_type: "type1".to_string(),
+                        id: 2,
+                        inbound: false,
+                        inflight: vec![],
+                        last_block: 1337,
+                        last_received: 1234,
+                        last_send: 1234,
+                        last_transaction: 1234,
+                        mapped_as: 1234,
+                        minfeefilter: 2.0,
+                        minimum_ping: 13.0,
+                        network: "ipv6".to_string(),
+                        permissions: vec!["permission".to_string()],
+                        ping_time: 23.0,
+                        ping_wait: 53.0,
+                        relay_transactions: false,
+                        services: "service".to_string(),
+                        starting_height: 231,
+                        subversion: "subversion2".to_string(),
+                        synced_blocks: 4,
+                        synced_headers: 5,
+                        time_offset: -1239,
+                        transport_protocol_type: "v2".to_string(),
+                        version: 2342,
+                    },
+                ],
+            })),
+        }))
+        .unwrap()],
+        Subject::Rpc,
+        r#"
+        peerobserver_rpc_peer_info_addr_processed_total 1918
+        peerobserver_rpc_peer_info_addr_ratelimited_peers 2
+        peerobserver_rpc_peer_info_addr_ratelimited_total 1668
+        peerobserver_rpc_peer_info_addr_relay_enabled_peers 2
+        peerobserver_rpc_peer_info_asn_peers{ASN="1234"} 2
+        peerobserver_rpc_peer_info_bip152_highbandwidth_from 1
+        peerobserver_rpc_peer_info_bip152_highbandwidth_to 2
+        peerobserver_rpc_peer_info_connection_type_peers{connection_type="type0"} 1
+        peerobserver_rpc_peer_info_connection_type_peers{connection_type="type1"} 2
+        peerobserver_rpc_peer_info_inflight_block_peers 1
+        peerobserver_rpc_peer_info_inflight_distinct_blocks_heights 2
+        peerobserver_rpc_peer_info_list_peers_gmax_ban 2
+        peerobserver_rpc_peer_info_list_peers_linkinglion 2
+        peerobserver_rpc_peer_info_list_peers_monero_ban 2
+        peerobserver_rpc_peer_info_list_peers_tor_exit 1
+        peerobserver_rpc_peer_info_minping_mean 420000
+        peerobserver_rpc_peer_info_minping_median 13000
+        peerobserver_rpc_peer_info_network_peers{network="ipv4"} 1
+        peerobserver_rpc_peer_info_network_peers{network="ipv6"} 2
+        peerobserver_rpc_peer_info_num_peers 3
+        peerobserver_rpc_peer_info_ping_mean 426666.6666666667
+        peerobserver_rpc_peer_info_ping_median 23000
+        peerobserver_rpc_peer_info_ping_wait_larger_5_seconds_block_peers 3
+        peerobserver_rpc_peer_info_protocol_version_peers{protocol_version="2342"} 2
+        peerobserver_rpc_peer_info_protocol_version_peers{protocol_version="2841"} 1
+        peerobserver_rpc_peer_info_timeoffset_minus10s 2
+        peerobserver_rpc_peer_info_timeoffset_plus10s 1
+        peerobserver_rpc_peer_info_transport_protocol_type_peers{transport_protocol_type="v1"} 1
+        peerobserver_rpc_peer_info_transport_protocol_type_peers{transport_protocol_type="v2"} 2
         "#,
     )
     .await;
