@@ -3,6 +3,7 @@
 use metrics::Args;
 
 use shared::{
+    addrman::{self, InsertNew, InsertTried},
     event_msg::{event_msg::Event, EventMsg},
     log,
     mempool::{self, Added, Rejected, Removed, Replaced},
@@ -1448,6 +1449,45 @@ async fn test_integration_metrics_rpc_peerinfo() {
         peerobserver_rpc_peer_info_timeoffset_plus10s 1
         peerobserver_rpc_peer_info_transport_protocol_type_peers{transport_protocol_type="v1"} 1
         peerobserver_rpc_peer_info_transport_protocol_type_peers{transport_protocol_type="v2"} 2
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_addrman() {
+    println!("test that the addrman metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
+                event: Some(addrman::addrman_event::Event::New(InsertNew {
+                    addr: "127.0.0.1:2340".to_string(),
+                    addr_as: 2,
+                    bucket: 2,
+                    bucket_pos: 2,
+                    inserted: false,
+                    source: "127.0.0.1:2340".to_string(),
+                    source_as: 0,
+                })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Addrman(addrman::AddrmanEvent {
+                event: Some(addrman::addrman_event::Event::Tried(InsertTried {
+                    addr: "127.0.0.1:2340".to_string(),
+                    addr_as: 2,
+                    bucket: 2,
+                    bucket_pos: 2,
+                    source: "127.0.0.1:2340".to_string(),
+                    source_as: 0,
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::Addrman,
+        r#"
+        peerobserver_addrman_new_insert{inserted="false"} 1
+        peerobserver_addrman_tried_insert 1
         "#,
     )
     .await;
