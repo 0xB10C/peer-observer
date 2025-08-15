@@ -10,6 +10,7 @@ use shared::{
     nats_subjects::Subject,
     net_conn::{self, Connection},
     net_msg::{self, message::Msg, Metadata, Ping, Pong},
+    validation::{self, BlockConnected},
     prost::Message,
     rand::{self, Rng},
     simple_logger::SimpleLogger,
@@ -311,6 +312,56 @@ peerobserver_conn_outbound 1
 peerobserver_conn_outbound_current 321
 erobserver_conn_outbound_network{network="3"} 1
 peerobserver_conn_outbound_subnet{subnet="1.1.1.0"} 1
+"#;
+
+    let expected_lines: Vec<&str> = expected.split('\n').collect();
+    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
+
+    shutdown_tx.send(true).unwrap();
+    metrics_handle.await.unwrap();
+}
+
+#[tokio::test]
+async fn test_integration_metrics_validation() {
+    println!("test that validation metrics work");
+    let (nats_port, metrics_port) = setup();
+    let _nats_server = NatsServerForTesting::new(nats_port).await;
+    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let args = make_test_args(nats_port, metrics_port);
+    let metrics_handle = tokio::spawn(async move {
+        metrics::run(args, shutdown_rx).await.unwrap();
+    });
+    // allow the metrics tool to start
+    sleep(Duration::from_secs(1)).await;
+
+
+    let event1 = EventMsg::new(Event::Validation(validation::ValidationEvent {
+        event: Some(validation::validation_event::Event::BlockConnected(BlockConnected{
+            hash: vec![0],
+            height: 1337,
+            transactions: 13,
+            inputs: 3,
+            sigops: 7,
+            connection_time: 5000,
+        }
+        )),
+    }))
+    .unwrap()
+    .encode_to_vec();
+    nats_publisher
+        .publish(Subject::NetMsg.to_string(), event1)
+        .await;
+
+    sleep(Duration::from_millis(100)).await;
+
+    let expected = r#"
+peerobserver_validation_block_connected_connection_time 5
+peerobserver_validation_block_connected_latest_connection_time 5
+peerobserver_validation_block_connected_latest_height 1337
+peerobserver_validation_block_connected_latest_inputs 3
+peerobserver_validation_block_connected_latest_sigops 7
+peerobserver_validation_block_connected_latest_transactions 13
 "#;
 
     let expected_lines: Vec<&str> = expected.split('\n').collect();
