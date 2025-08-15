@@ -10,11 +10,15 @@ use shared::{
     nats_server_for_testing::NatsServerForTesting,
     nats_subjects::Subject,
     net_conn::{self, Connection},
-    net_msg::{self, message::Msg, Metadata, Ping, Pong},
+    net_msg::{
+        self, message::Msg, Addr, AddrV2, FeeFilter, Inv, Metadata, Ping, Pong, Reject, Version,
+    },
+    primitive::{self, inventory_item::Item, Address, InventoryItem},
     prost::Message,
     rand::{self, Rng},
     simple_logger::SimpleLogger,
     tokio::{self, sync::watch, time::sleep},
+    util::current_timestamp,
     validation::{self, BlockConnected},
 };
 
@@ -96,6 +100,13 @@ fn check_metrics(port: u16, expected: &[&str]) -> Result<bool, std::io::Error> {
     println!("HTTP response from metrics server:\n");
     for line in metrics_raw.split("\n") {
         println!("{}", line);
+    }
+
+    println!("Only metrics (no help text):\n");
+    for line in metrics_raw.split("\n") {
+        if !line.starts_with("# ") {
+            println!("{}", line);
+        }
     }
 
     let mut no_lines_missing = true;
@@ -214,6 +225,715 @@ async fn test_integration_metrics_p2p_message_count() {
         peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         peerobserver_p2p_message_count_by_subnet{direction="outbound",subnet="127.0.0.0"} 1
         peerobserver_p2p_ping_subnet{subnet="127.0.0.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_traffic_linkinglion() {
+    println!("test that the linkinglion traffic P2P metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "162.218.65.123".to_string(), // an IP belonging to LinkingLion
+                    conn_type: 1,
+                    command: "ping".to_string(),
+                    inbound: true,
+                    size: 8,
+                },
+                msg: Some(Msg::Ping(Ping { value: 1 })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "91.198.115.23:8333".to_string(), // another IP belonging to LinkingLion
+                    conn_type: 1,
+                    command: "pong".to_string(),
+                    inbound: true,
+                    size: 8,
+                },
+                msg: Some(Msg::Pong(Pong { value: 1 })),
+            }))
+            .unwrap(),
+        ],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="ping"} 8
+        peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="pong"} 8
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="162.218.65.0"} 8
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="91.198.115.0"} 8
+        peerobserver_p2p_message_bytes_linkinglion{direction="inbound",message="ping"} 8
+        peerobserver_p2p_message_bytes_linkinglion{direction="inbound",message="pong"} 8
+        peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="ping"} 1
+        peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="pong"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="162.218.65.0"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="91.198.115.0"} 1
+        peerobserver_p2p_message_count_linkinglion{direction="inbound",message="ping"} 1
+        peerobserver_p2p_message_count_linkinglion{direction="inbound",message="pong"} 1
+        peerobserver_p2p_ping_subnet{subnet="162.218.65.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_addr() {
+    println!("test that the P2P addr metrics work");
+
+    let timestamp_now = current_timestamp() as u32;
+
+    publish_and_check(
+        &[EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 4,
+                addr: "127.0.0.1:1234".to_string(),
+                conn_type: 1,
+                command: "addr".to_string(),
+                inbound: true,
+                size: 1234,
+            },
+            msg: Some(Msg::Addr(Addr {
+                addresses: [
+                    Address {
+                        port: 1234,
+                        services: 1234,
+                        timestamp: timestamp_now + 200,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                    Address {
+                        port: 2412,
+                        services: 2311,
+                        timestamp: timestamp_now,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                ]
+                .to_vec(),
+            })),
+        }))
+        .unwrap()],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="0"} 0
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="1"} 0
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="2"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="3"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="4"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="5"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="6"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="7"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="8"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="9"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="10"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="15"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="20"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="25"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="30"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="50"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="75"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="100"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="150"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="200"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="250"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="300"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="400"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="500"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="600"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="700"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="800"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="900"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="999"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="1000"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="+Inf"} 1
+        peerobserver_p2p_addr_addresses_sum{direction="inbound"} 2
+        peerobserver_p2p_addr_addresses_count{direction="inbound"} 1
+        peerobserver_p2p_addr_services{direction="inbound",services="1234"} 1
+        peerobserver_p2p_addr_services{direction="inbound",services="2311"} 1
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="0"} 1
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="1"} 3
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="2"} 4
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="3"} 4
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="4"} 5
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="5"} 5
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="6"} 6
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="7"} 7
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="8"} 8
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="9"} 8
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="10"} 9
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="11"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="12"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="13"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="14"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="15"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="16"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="17"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="18"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="19"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="20"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="21"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="22"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="23"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="24"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="25"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="26"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="27"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="28"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="29"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="30"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="31"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="+Inf"} 10
+        peerobserver_p2p_addr_services_bits_sum{direction="inbound"} 50
+        peerobserver_p2p_addr_services_bits_count{direction="inbound"} 10
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="0"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="1"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="2"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="4"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="8"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="16"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="32"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="64"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="128"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="256"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="512"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="1024"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="2048"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="4096"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="8192"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="16384"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="32768"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="65536"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="131072"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="262144"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="524288"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="1048576"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="2097152"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="4194304"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="8388608"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="16777216"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="+Inf"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="future"} 200
+        peerobserver_p2p_addr_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="future"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="0"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="64"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="128"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="256"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="512"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1024"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2048"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4096"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8192"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16384"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32768"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="65536"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="131072"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="262144"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="524288"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1048576"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2097152"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4194304"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8388608"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16777216"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="+Inf"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="past"} 0
+        peerobserver_p2p_addr_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="past"} 1
+        peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="addr"} 1234
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 1234
+        peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="addr"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_addrv2() {
+    println!("test that the P2P addrv2 metrics work");
+
+    let timestamp_now = current_timestamp() as u32;
+
+    publish_and_check(
+        &[EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 8,
+                addr: "127.0.0.1:1111".to_string(),
+                conn_type: 2,
+                command: "addrv2".to_string(),
+                inbound: true,
+                size: 5432,
+            },
+            msg: Some(Msg::Addrv2(AddrV2 {
+                addresses: [
+                    Address {
+                        port: 1234,
+                        services: 1234,
+                        timestamp: timestamp_now + 512,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                    Address {
+                        port: 2412,
+                        services: 2311,
+                        timestamp: timestamp_now,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                ]
+                .to_vec(),
+            })),
+        }))
+        .unwrap()],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="0"} 0
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="1"} 0
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="2"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="3"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="4"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="5"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="6"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="7"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="8"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="9"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="10"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="15"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="20"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="25"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="30"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="50"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="75"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="100"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="150"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="200"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="250"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="300"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="400"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="500"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="600"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="700"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="800"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="900"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="999"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="1000"} 1
+        peerobserver_p2p_addrv2_addresses_bucket{direction="inbound",le="+Inf"} 1
+        peerobserver_p2p_addrv2_addresses_sum{direction="inbound"} 2
+        peerobserver_p2p_addrv2_addresses_count{direction="inbound"} 1
+        peerobserver_p2p_addrv2_services{direction="inbound",services="1234"} 1
+        peerobserver_p2p_addrv2_services{direction="inbound",services="2311"} 1
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="0"} 1
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="1"} 3
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="2"} 4
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="3"} 4
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="4"} 5
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="5"} 5
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="6"} 6
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="7"} 7
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="8"} 8
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="9"} 8
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="10"} 9
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="11"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="12"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="13"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="14"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="15"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="16"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="17"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="18"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="19"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="20"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="21"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="22"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="23"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="24"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="25"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="26"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="27"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="28"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="29"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="30"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="31"} 10
+        peerobserver_p2p_addrv2_services_bits_bucket{direction="inbound",le="+Inf"} 10
+        peerobserver_p2p_addrv2_services_bits_sum{direction="inbound"} 50
+        peerobserver_p2p_addrv2_services_bits_count{direction="inbound"} 10
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="0"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="1"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="2"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="4"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="8"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="16"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="32"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="64"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="128"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="256"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="512"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="1024"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="2048"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="4096"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="8192"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="16384"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="32768"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="65536"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="131072"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="262144"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="524288"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="1048576"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="2097152"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="4194304"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="8388608"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="16777216"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="+Inf"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="future"} 512
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="future"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="0"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="64"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="128"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="256"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="512"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1024"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2048"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4096"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8192"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16384"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32768"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="65536"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="131072"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="262144"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="524288"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1048576"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2097152"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4194304"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8388608"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16777216"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="+Inf"} 1
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="past"} 0
+        peerobserver_p2p_addrv2_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="past"} 1
+        peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="addrv2"} 5432
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 5432
+        peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="addrv2"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_version() {
+    println!("test that the P2P version metrics work");
+
+    let timestamp_now = current_timestamp() as u32;
+
+    publish_and_check(
+        &[EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 6,
+                addr: "127.0.0.1:9999".to_string(),
+                conn_type: 2,
+                command: "version".to_string(),
+                inbound: true,
+                size: 2,
+            },
+            msg: Some(Msg::Version(Version {
+                nonce: 2,
+                receiver: Address {
+                    port: 1234,
+                    services: 1234,
+                    timestamp: timestamp_now + 512,
+                    address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                },
+                sender: Address {
+                    port: 1234,
+                    services: 1234,
+                    timestamp: timestamp_now + 512,
+                    address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                },
+                services: 2341,
+                start_height: 1,
+                relay: false,
+                timestamp: timestamp_now as i64 - 10,
+                user_agent: "user_agent".to_string(),
+                version: 70016,
+            })),
+        }))
+        .unwrap()],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="version"} 2
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 2
+        peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="version"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
+        peerobserver_p2p_version_subnet{subnet="127.0.0.0"} 1
+        peerobserver_p2p_version_useragent{useragent="user_agent"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_feefilter() {
+    println!("test that the P2P feefilter metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 6,
+                addr: "127.0.0.1:2134".to_string(),
+                conn_type: 5,
+                command: "feefilter".to_string(),
+                inbound: true,
+                size: 6,
+            },
+            msg: Some(Msg::Feefilter(FeeFilter {
+                fee: 12345
+            })),
+        }))
+        .unwrap()],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_feefilter_feerate{direction="inbound",feerate="12345"} 1
+        peerobserver_p2p_message_bytes{connection_type="5",direction="inbound",message="feefilter"} 6
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 6
+        peerobserver_p2p_message_count{connection_type="5",direction="inbound",message="feefilter"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_rejected() {
+    println!("test that the P2P rejected metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 6,
+                addr: "127.0.0.1:2134".to_string(),
+                conn_type: 5,
+                command: "rejected".to_string(),
+                inbound: true,
+                size: 6,
+            },
+            msg: Some(Msg::Reject(Reject {
+                reason: 1,
+                reason_details: "details".to_string(),
+                rejected_command: "tx".to_string(),
+                hash: vec![],
+            })),
+        }))
+        .unwrap(),
+        EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 6,
+                addr: "127.0.0.1:2134".to_string(),
+                conn_type: 5,
+                command: "rejected".to_string(),
+                inbound: true,
+                size: 6,
+            },
+            msg: Some(Msg::Reject(Reject {
+                reason: 10000,
+                reason_details: "details".to_string(),
+                rejected_command: "tx".to_string(),
+                hash: vec![],
+            })),
+        }))
+        .unwrap()],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_message_bytes{connection_type="5",direction="inbound",message="rejected"} 12
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 12
+        peerobserver_p2p_message_count{connection_type="5",direction="inbound",message="rejected"} 2
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 2
+        peerobserver_p2p_reject_message{rejectcommand="tx",rejectreason="Invalid"} 1
+        peerobserver_p2p_reject_message{rejectcommand="tx",rejectreason="unknown"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_inv() {
+    println!("test that the P2P inv metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 1,
+                    addr: "127.0.0.1:2134".to_string(),
+                    conn_type: 3,
+                    command: "inv".to_string(),
+                    inbound: true,
+                    size: 80,
+                },
+                msg: Some(Msg::Inv(Inv {
+                    // homogenus
+                    items: [
+                        InventoryItem {
+                            item: Some(Item::Transaction(vec![])),
+                        },
+                        InventoryItem {
+                            item: Some(Item::Transaction(vec![])),
+                        },
+                    ]
+                    .to_vec(),
+                })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 1,
+                    addr: "127.0.0.1:2134".to_string(),
+                    conn_type: 3,
+                    command: "inv".to_string(),
+                    inbound: true,
+                    size: 80,
+                },
+                msg: Some(Msg::Inv(Inv {
+                    // heterogenous
+                    items: [
+                        InventoryItem {
+                            item: Some(Item::Transaction(vec![])),
+                        },
+                        InventoryItem {
+                            item: Some(Item::Block(vec![])),
+                        },
+                    ]
+                    .to_vec(),
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_inv_entries{direction="inbound",inv_type="Block"} 1
+        peerobserver_p2p_inv_entries{direction="inbound",inv_type="Tx"} 3
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="0"} 0
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="1"} 0
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="2"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="3"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="4"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="5"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="6"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="7"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="8"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="9"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="10"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="15"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="20"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="25"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="30"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="50"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="75"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="100"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="150"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="200"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="250"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="300"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="400"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="500"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="600"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="700"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="800"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="900"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="999"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="1000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="2000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="3000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="4000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="5000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="6000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="7000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="8000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="9000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="10000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="20000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="25000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="30000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="35000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="40000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="45000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="50000"} 2
+        peerobserver_p2p_inv_entries_histogram_bucket{direction="inbound",le="+Inf"} 2
+        peerobserver_p2p_inv_entries_histogram_sum{direction="inbound"} 4
+        peerobserver_p2p_inv_entries_histogram_count{direction="inbound"} 2
+        peerobserver_p2p_invs_heterogeneous{direction="inbound"} 1
+        peerobserver_p2p_invs_homogeneous{direction="inbound"} 1
+        peerobserver_p2p_message_bytes{connection_type="3",direction="inbound",message="inv"} 160
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 160
+        peerobserver_p2p_message_count{connection_type="3",direction="inbound",message="inv"} 2
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 2
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_oldping() {
+    println!("test that the P2P oldping metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 6,
+                addr: "127.0.0.1:2134".to_string(),
+                conn_type: 2,
+                command: "ping".to_string(),
+                inbound: true,
+                size: 0,
+            },
+            msg: Some(Msg::Oldping(false)),
+        }))
+        .unwrap()],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="ping"} 0
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 0
+        peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="ping"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
+        peerobserver_p2p_oldping_subnet{subnet="127.0.0.0"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2p_empty_addrv2() {
+    println!("test that the P2P emptyaddrv2 metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Msg(net_msg::Message {
+            meta: Metadata {
+                peer_id: 6,
+                addr: "127.0.0.1:2134".to_string(),
+                conn_type: 2,
+                command: "addrv2".to_string(),
+                inbound: true,
+                size: 0,
+            },
+            msg: Some(Msg::Emptyaddrv2(false)),
+        }))
+        .unwrap()],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_addrv2_empty{addr="127.0.0.1",direction="inbound"} 1
+        peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="addrv2"} 0
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 0
+        peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="addrv2"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         "#,
     )
     .await;
