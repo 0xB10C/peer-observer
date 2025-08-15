@@ -20,9 +20,9 @@ jobs:
       with:
         nix_path: nixpkgs=channel:nixos-25.05
     - name: Build
-      run: nix-shell --command "cargo build --verbose --all-features"
+      run: nix-shell --command "cargo build --all-features"
     - name: Run tests
-      run: nix-shell --command "cargo test --verbose --all-features"
+      run: nix-shell --command "cargo test --all-features"
     - name: Run cargo fmt
       run: nix-shell --command "cargo fmt --all -- --check"
     - name: Run cargo tarpaulin (code coverage)
