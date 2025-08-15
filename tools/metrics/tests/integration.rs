@@ -5,6 +5,7 @@ use metrics::Args;
 use shared::{
     event_msg::{event_msg::Event, EventMsg},
     log,
+    mempool::{self, Added, Rejected, Removed, Replaced},
     nats_publisher_for_testing::NatsPublisherForTesting,
     nats_server_for_testing::NatsServerForTesting,
     nats_subjects::Subject,
@@ -307,6 +308,120 @@ async fn test_integration_metrics_validation() {
         peerobserver_validation_block_connected_latest_inputs 3
         peerobserver_validation_block_connected_latest_sigops 7
         peerobserver_validation_block_connected_latest_transactions 13
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_mempool_added() {
+    println!("test that the mempool added metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+            event: Some(mempool::mempool_event::Event::Added(Added {
+                fee: 0,       // not covered by test
+                txid: vec![], // not covered by test
+                vsize: 453,
+            })),
+        }))
+        .unwrap()],
+        Subject::Mempool,
+        r#"
+        peerobserver_mempool_added 1
+        peerobserver_mempool_added_vbytes 453
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_mempool_replaced() {
+    println!("test that the mempool replaced metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+            event: Some(mempool::mempool_event::Event::Replaced(Replaced {
+                replaced_fee: 0, // not covered by test
+                replaced_vsize: 17,
+                replaced_entry_time: 0,        // not covered by test
+                replaced_txid: vec![],         // not covered by test
+                replacement_id: vec![],        // not covered by test
+                replacement_vsize: 0,          // not covered by test
+                replacement_fee: 0,            // not covered by test
+                replaced_by_transaction: true, // not covered by test
+            })),
+        }))
+        .unwrap()],
+        Subject::Mempool,
+        r#"
+        peerobserver_mempool_replaced 1
+        peerobserver_mempool_replaced_vbytes 17
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_mempool_rejected() {
+    println!("test that the mempool rejected metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+                event: Some(mempool::mempool_event::Event::Rejected(Rejected {
+                    reason: "ABC".to_string(),
+                    txid: vec![], // not covered by test
+                })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+                event: Some(mempool::mempool_event::Event::Rejected(Rejected {
+                    reason: "DEF".to_string(),
+                    txid: vec![], // not covered by test
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::Mempool,
+        r#"
+        peerobserver_mempool_rejected{reason="ABC"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_mempool_removed() {
+    println!("test that the mempool removed metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+                event: Some(mempool::mempool_event::Event::Removed(Removed {
+                    entry_time: 0, // not covered by test
+                    fee: 0,        // not covered by test
+                    vsize: 0,      // not covered by test
+                    txid: vec![],  // not covered by test
+                    reason: "expired".to_string(),
+                })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+                event: Some(mempool::mempool_event::Event::Removed(Removed {
+                    entry_time: 0, // not covered by test
+                    fee: 0,        // not covered by test
+                    vsize: 0,      // not covered by test
+                    txid: vec![],  // not covered by test
+                    reason: "evicted".to_string(),
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::Mempool,
+        r#"
+        peerobserver_mempool_removed{reason="expired"} 1
+        peerobserver_mempool_removed{reason="evicted"} 1
         "#,
     )
     .await;
