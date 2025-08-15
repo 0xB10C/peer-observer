@@ -10,11 +10,11 @@ use shared::{
     nats_subjects::Subject,
     net_conn::{self, Connection},
     net_msg::{self, message::Msg, Metadata, Ping, Pong},
-    validation::{self, BlockConnected},
     prost::Message,
     rand::{self, Rng},
     simple_logger::SimpleLogger,
     tokio::{self, sync::watch, time::sleep},
+    validation::{self, BlockConnected},
 };
 
 use std::{
@@ -111,6 +111,34 @@ fn check_metrics(port: u16, expected: &[&str]) -> Result<bool, std::io::Error> {
     return Ok(no_lines_missing);
 }
 
+async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str) {
+    let (nats_port, metrics_port) = setup();
+    let _nats_server = NatsServerForTesting::new(nats_port).await;
+    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let args = make_test_args(nats_port, metrics_port);
+    let metrics_handle = tokio::spawn(async move {
+        metrics::run(args, shutdown_rx).await.unwrap();
+    });
+    // allow the metrics tool to start
+    sleep(Duration::from_secs(1)).await;
+
+    for event in events {
+        println!("publishing: {:?}", event);
+        nats_publisher
+            .publish(subject.to_string(), event.encode_to_vec())
+            .await;
+    }
+
+    sleep(Duration::from_millis(100)).await;
+
+    let expected_lines: Vec<&str> = expected.split('\n').collect();
+    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
+
+    shutdown_tx.send(true).unwrap();
+    metrics_handle.await.unwrap();
+}
+
 #[tokio::test]
 async fn test_integration_metrics_no_nats_connection() {
     println!("test that we fail if we can't connect to NATS (due to port 0)");
@@ -134,239 +162,152 @@ async fn test_integration_metrics_no_nats_connection() {
 #[tokio::test]
 async fn test_integration_metrics_basic() {
     println!("test that we can connect to NATS and query from the metrics server");
-    let (nats_port, metrics_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
-    let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let args = make_test_args(nats_port, metrics_port);
-    let metrics_handle = tokio::spawn(async move {
-        metrics::run(args, shutdown_rx).await.unwrap();
-    });
-    // allow the metrics tool to start
-    sleep(Duration::from_secs(1)).await;
 
-    let expected = ["peerobserver_runtime_start_timestamp "];
-    assert!(check_metrics(metrics_port, &expected).expect("Could not fetch metrics"));
-
-    shutdown_tx.send(true).unwrap();
-    metrics_handle.await.unwrap();
+    publish_and_check(
+        &[],
+        Subject::NetMsg, // not used
+        "peerobserver_runtime_start_timestamp ",
+    )
+    .await;
 }
 
 #[tokio::test]
 async fn test_integration_metrics_p2p_message_count() {
     println!("test that the P2P message count works");
-    let (nats_port, metrics_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
-    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
-    let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let args = make_test_args(nats_port, metrics_port);
-    let metrics_handle = tokio::spawn(async move {
-        metrics::run(args, shutdown_rx).await.unwrap();
-    });
-    // allow the metrics tool to start
-    sleep(Duration::from_secs(1)).await;
 
-    let event1 = EventMsg::new(Event::Msg(net_msg::Message {
-        meta: Metadata {
-            peer_id: 0,
-            addr: "127.0.0.1:8333".to_string(),
-            conn_type: 1,
-            command: "ping".to_string(),
-            inbound: true,
-            size: 8,
-        },
-        msg: Some(Msg::Ping(Ping { value: 1 })),
-    }))
-    .unwrap()
-    .encode_to_vec();
-    nats_publisher
-        .publish(Subject::NetMsg.to_string(), event1)
-        .await;
-
-    let event2 = EventMsg::new(Event::Msg(net_msg::Message {
-        meta: Metadata {
-            peer_id: 0,
-            addr: "127.0.0.1:8333".to_string(),
-            conn_type: 1,
-            command: "pong".to_string(),
-            inbound: false,
-            size: 8,
-        },
-        msg: Some(Msg::Pong(Pong { value: 1 })),
-    }))
-    .unwrap()
-    .encode_to_vec();
-    nats_publisher
-        .publish(Subject::NetMsg.to_string(), event2)
-        .await;
-
-    sleep(Duration::from_millis(100)).await;
-
-    let expected = r#"
-peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="ping"} 8
-peerobserver_p2p_message_bytes{connection_type="1",direction="outbound",message="pong"} 8
-peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 8
-peerobserver_p2p_message_bytes_by_subnet{direction="outbound",subnet="127.0.0.0"} 8
-peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="ping"} 1
-peerobserver_p2p_message_count{connection_type="1",direction="outbound",message="pong"} 1
-peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
-peerobserver_p2p_message_count_by_subnet{direction="outbound",subnet="127.0.0.0"} 1
-peerobserver_p2p_ping_subnet{subnet="127.0.0.0"} 1
-"#;
-
-    let expected_lines: Vec<&str> = expected.split('\n').collect();
-    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
-
-    shutdown_tx.send(true).unwrap();
-    metrics_handle.await.unwrap();
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "127.0.0.1:8333".to_string(),
+                    conn_type: 1,
+                    command: "ping".to_string(),
+                    inbound: true,
+                    size: 8,
+                },
+                msg: Some(Msg::Ping(Ping { value: 1 })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "127.0.0.1:8333".to_string(),
+                    conn_type: 1,
+                    command: "pong".to_string(),
+                    inbound: false,
+                    size: 8,
+                },
+                msg: Some(Msg::Pong(Pong { value: 1 })),
+            }))
+            .unwrap(),
+        ],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="ping"} 8
+        peerobserver_p2p_message_bytes{connection_type="1",direction="outbound",message="pong"} 8
+        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 8
+        peerobserver_p2p_message_bytes_by_subnet{direction="outbound",subnet="127.0.0.0"} 8
+        peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="ping"} 1
+        peerobserver_p2p_message_count{connection_type="1",direction="outbound",message="pong"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
+        peerobserver_p2p_message_count_by_subnet{direction="outbound",subnet="127.0.0.0"} 1
+        peerobserver_p2p_ping_subnet{subnet="127.0.0.0"} 1
+        "#,
+    )
+    .await;
 }
 
 #[tokio::test]
 async fn test_integration_metrics_conn_inbound() {
     println!("test that the inbound connection metrics work");
-    let (nats_port, metrics_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
-    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
-    let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let args = make_test_args(nats_port, metrics_port);
-    let metrics_handle = tokio::spawn(async move {
-        metrics::run(args, shutdown_rx).await.unwrap();
-    });
-    // allow the metrics tool to start
-    sleep(Duration::from_secs(1)).await;
 
-    let event1 = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
-        event: Some(net_conn::connection_event::Event::Inbound(
-            shared::net_conn::InboundConnection {
-                conn: Connection {
-                    addr: "127.0.0.1:8333".to_string(),
-                    conn_type: 1,
-                    network: 2,
-                    peer_id: 7,
+    publish_and_check(
+        &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Inbound(
+                shared::net_conn::InboundConnection {
+                    conn: Connection {
+                        addr: "127.0.0.1:8333".to_string(),
+                        conn_type: 1,
+                        network: 2,
+                        peer_id: 7,
+                    },
+                    existing_connections: 123,
                 },
-                existing_connections: 123,
-            },
-        )),
-    }))
-    .unwrap()
-    .encode_to_vec();
-    nats_publisher
-        .publish(Subject::NetMsg.to_string(), event1)
-        .await;
-
-    sleep(Duration::from_millis(100)).await;
-
-    let expected = r#"
-peerobserver_conn_inbound 1
-peerobserver_conn_inbound_current 123
-peerobserver_conn_inbound_network{network="2"} 1
-peerobserver_conn_inbound_subnet{subnet="127.0.0.0"} 1
-"#;
-
-    let expected_lines: Vec<&str> = expected.split('\n').collect();
-    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
-
-    shutdown_tx.send(true).unwrap();
-    metrics_handle.await.unwrap();
+            )),
+        }))
+        .unwrap()],
+        Subject::NetConn,
+        r#"
+        peerobserver_conn_inbound 1
+        peerobserver_conn_inbound_current 123
+        peerobserver_conn_inbound_network{network="2"} 1
+        peerobserver_conn_inbound_subnet{subnet="127.0.0.0"} 1
+        "#,
+    )
+    .await;
 }
 
 #[tokio::test]
 async fn test_integration_metrics_conn_outbound() {
     println!("test that the outbound connection metrics work");
-    let (nats_port, metrics_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
-    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
-    let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let args = make_test_args(nats_port, metrics_port);
-    let metrics_handle = tokio::spawn(async move {
-        metrics::run(args, shutdown_rx).await.unwrap();
-    });
-    // allow the metrics tool to start
-    sleep(Duration::from_secs(1)).await;
 
-    let event1 = EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
-        event: Some(net_conn::connection_event::Event::Outbound(
-            shared::net_conn::OutboundConnection {
-                conn: Connection {
-                    addr: "1.1.1.1:48333".to_string(),
-                    conn_type: 2,
-                    network: 3,
-                    peer_id: 11,
+    publish_and_check(
+        &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Outbound(
+                shared::net_conn::OutboundConnection {
+                    conn: Connection {
+                        addr: "1.1.1.1:48333".to_string(),
+                        conn_type: 2,
+                        network: 3,
+                        peer_id: 11,
+                    },
+                    existing_connections: 321,
                 },
-                existing_connections: 321,
-            },
-        )),
-    }))
-    .unwrap()
-    .encode_to_vec();
-    nats_publisher
-        .publish(Subject::NetMsg.to_string(), event1)
-        .await;
-
-    sleep(Duration::from_millis(100)).await;
-
-    // also include "peerobserver_conn_inbound 0" here to make sure we never
-    // have state from a previous test here
-    let expected = r#"
-peerobserver_conn_inbound 0
-peerobserver_conn_outbound 1
-peerobserver_conn_outbound_current 321
-erobserver_conn_outbound_network{network="3"} 1
-peerobserver_conn_outbound_subnet{subnet="1.1.1.0"} 1
-"#;
-
-    let expected_lines: Vec<&str> = expected.split('\n').collect();
-    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
-
-    shutdown_tx.send(true).unwrap();
-    metrics_handle.await.unwrap();
+            )),
+        }))
+        .unwrap()],
+        Subject::Validation,
+        r#"
+        peerobserver_conn_inbound 0
+        peerobserver_conn_outbound 1
+        peerobserver_conn_outbound_current 321
+        erobserver_conn_outbound_network{network="3"} 1
+        peerobserver_conn_outbound_subnet{subnet="1.1.1.0"} 1
+        "#,
+    )
+    .await;
 }
 
 #[tokio::test]
 async fn test_integration_metrics_validation() {
     println!("test that validation metrics work");
-    let (nats_port, metrics_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
-    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
-    let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let args = make_test_args(nats_port, metrics_port);
-    let metrics_handle = tokio::spawn(async move {
-        metrics::run(args, shutdown_rx).await.unwrap();
-    });
-    // allow the metrics tool to start
-    sleep(Duration::from_secs(1)).await;
 
-
-    let event1 = EventMsg::new(Event::Validation(validation::ValidationEvent {
-        event: Some(validation::validation_event::Event::BlockConnected(BlockConnected{
-            hash: vec![0],
-            height: 1337,
-            transactions: 13,
-            inputs: 3,
-            sigops: 7,
-            connection_time: 5000,
-        }
-        )),
-    }))
-    .unwrap()
-    .encode_to_vec();
-    nats_publisher
-        .publish(Subject::NetMsg.to_string(), event1)
-        .await;
-
-    sleep(Duration::from_millis(100)).await;
-
-    let expected = r#"
-peerobserver_validation_block_connected_connection_time 5
-peerobserver_validation_block_connected_latest_connection_time 5
-peerobserver_validation_block_connected_latest_height 1337
-peerobserver_validation_block_connected_latest_inputs 3
-peerobserver_validation_block_connected_latest_sigops 7
-peerobserver_validation_block_connected_latest_transactions 13
-"#;
-
-    let expected_lines: Vec<&str> = expected.split('\n').collect();
-    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
-
-    shutdown_tx.send(true).unwrap();
-    metrics_handle.await.unwrap();
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Validation(validation::ValidationEvent {
+                event: Some(validation::validation_event::Event::BlockConnected(
+                    BlockConnected {
+                        hash: vec![0],
+                        height: 1337,
+                        transactions: 13,
+                        inputs: 3,
+                        sigops: 7,
+                        connection_time: 5000,
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::Validation,
+        r#"
+        peerobserver_validation_block_connected_connection_time 5
+        peerobserver_validation_block_connected_latest_connection_time 5
+        peerobserver_validation_block_connected_latest_height 1337
+        peerobserver_validation_block_connected_latest_inputs 3
+        peerobserver_validation_block_connected_latest_sigops 7
+        peerobserver_validation_block_connected_latest_transactions 13
+        "#,
+    )
+    .await;
 }
