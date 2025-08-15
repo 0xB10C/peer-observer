@@ -33,9 +33,9 @@ jobs:
           nats-server
     - uses: actions/checkout@v5
     - name: Build
-      run: cargo build --verbose --all-features
+      run: cargo build --all-features
     - name: Run tests and integration tests
-      run: NATS_SERVER_BINARY=$(which nats-server) cargo test --verbose --all-features
+      run: NATS_SERVER_BINARY=$(which nats-server) cargo test --all-features
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
 
