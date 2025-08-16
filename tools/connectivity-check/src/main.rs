@@ -323,7 +323,7 @@ fn main() {
     let (input_sender, input_receiver) = unbounded();
     let (output_sender, output_receiver) = unbounded();
 
-    metricserver::start(&args.metrics_address).unwrap();
+    metricserver::start(&args.metrics_address, None).unwrap();
     log::info!("metrics-server started on {}", &args.metrics_address);
 
     let nc = nats::connect(args.nats_address).expect("should be able to connect to NATS server");

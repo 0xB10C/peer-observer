@@ -13,3 +13,5 @@ __pycache__
 
 # All csv files
 *.csv
+
+tarpaulin-report.html

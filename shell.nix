@@ -23,5 +23,11 @@ pkgs.mkShell {
       pkgs.zlib
       pkgs.pkg-config
       pkgs.which
+
+      # for code coverage:
+      pkgs.cargo-tarpaulin
     ];
+
+    # Use for running integration tests
+    NATS_SERVER_BINARY = "${pkgs.nats-server}/bin/nats-server";
 }

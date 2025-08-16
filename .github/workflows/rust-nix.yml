@@ -14,14 +14,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install Nix
       uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:nixos-25.05
     - name: Build
-      run: nix-shell --command "cargo build --verbose --all-features"
+      run: nix-shell --command "cargo build --all-features"
     - name: Run tests
-      run: nix-shell --command "cargo test --verbose --all-features"
+      run: nix-shell --command "cargo test --all-features"
     - name: Run cargo fmt
       run: nix-shell --command "cargo fmt --all -- --check"
+    - name: Run cargo tarpaulin (code coverage)
+      run: nix-shell --command "cargo tarpaulin --out Lcov --out Html --workspace --all-features"
+    - name: Upload HTML coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-html
+        path: tarpaulin-report.html
+    - name: Upload LCOV file
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-lcov
+        path: lcov.info

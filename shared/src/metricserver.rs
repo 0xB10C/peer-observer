@@ -1,5 +1,6 @@
 use log;
 use prometheus::Encoder;
+use prometheus::Registry;
 use std::error;
 use std::fmt;
 use std::io;
@@ -14,7 +15,7 @@ const LOG_TARGET: &str = "metricserver";
 // This is a minimal, per request thread spawning, and incorrect HTTP server
 // which answers on all request methods with prometheus formatted metrics.
 
-pub fn start(prometheus_address: &str) -> Result<(), io::Error> {
+pub fn start(prometheus_address: &str, registry: Option<Registry>) -> Result<(), io::Error> {
     let listener = TcpListener::bind(prometheus_address)?;
     log::info!(
         target: LOG_TARGET,
@@ -34,7 +35,7 @@ pub fn start(prometheus_address: &str) -> Result<(), io::Error> {
                     continue;
                 }
             };
-            if let Err(e) = handle_request(stream) {
+            if let Err(e) = handle_request(stream, registry.clone()) {
                 log::error!(target: LOG_TARGET, "Could not handle request {}.", e);
                 continue;
             };
@@ -43,13 +44,20 @@ pub fn start(prometheus_address: &str) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn handle_request(mut stream: TcpStream) -> Result<(), RequestHandlingError> {
+fn handle_request(
+    mut stream: TcpStream,
+    registry: Option<Registry>,
+) -> Result<(), RequestHandlingError> {
     let mut buffer = [0; 1024];
     let _ = stream.read(&mut buffer)?;
 
     let mut output_buffer = vec![];
     let encoder = prometheus::TextEncoder::new();
-    let metric_families = prometheus::gather();
+
+    let metric_families = match registry {
+        Some(reg) => reg.gather(),
+        None => prometheus::gather(),
+    };
     if let Err(e) = encoder.encode(&metric_families, &mut output_buffer) {
         return Err(RequestHandlingError::Encoding(e));
     };
