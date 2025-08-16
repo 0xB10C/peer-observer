@@ -1,14 +1,11 @@
 use shared::lazy_static::lazy_static;
-use shared::prometheus::{
-    register_histogram_vec, register_int_counter_vec, register_int_gauge, HistogramOpts, Opts,
-};
-use shared::prometheus::{HistogramVec, IntCounterVec, IntGauge};
+use shared::prometheus::{register_histogram_vec, register_int_counter_vec, HistogramOpts, Opts};
+use shared::prometheus::{HistogramVec, IntCounterVec};
 
 // Prometheus Metrics
 
 const NAMESPACE: &str = "connectivitycheck";
 
-const SUBSYSTEM_RUNTIME: &str = "runtime";
 const SUBSYSTEM_ADDR: &str = "addr";
 
 pub const LABEL_NETWORK: &str = "network";
@@ -48,19 +45,6 @@ pub const BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET: [f64; 26] = [
 ];
 
 lazy_static! {
-
-    // -------------------- Runtime
-
-    /// UNIX epoch timestamp of bitcoind-observer start. Can be used to alert on
-    /// bitcoind-observer restarts.
-    pub static ref RUNTIME_START_TIMESTAMP: IntGauge =
-        register_int_gauge!(
-            Opts::new("start_timestamp", "UNIX epoch timestamp of bitcoind-observer start")
-                .namespace(NAMESPACE)
-                .subsystem(SUBSYSTEM_RUNTIME)
-        ).unwrap();
-
-    // -------------------- General
 
     /// Number of addresses processed.
     pub static ref ADDR_TRIED: IntCounterVec =
