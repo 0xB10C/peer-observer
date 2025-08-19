@@ -1,3 +1,4 @@
+use shared::async_nats::{error::Error as NatsError, ConnectErrorKind};
 use shared::log::SetLoggerError;
 use std::error;
 use std::fmt;
@@ -14,6 +15,7 @@ pub enum RuntimeError {
     IntParse(ParseIntError),
     SystemTime(SystemTimeError),
     SetLogger(SetLoggerError),
+    NatsConnection(NatsError<ConnectErrorKind>),
 }
 
 impl fmt::Display for RuntimeError {
@@ -28,6 +30,9 @@ impl fmt::Display for RuntimeError {
             RuntimeError::NoSuchBPFProg(prog) => {
                 write!(f, "could not find the BPF program {}", prog)
             }
+            RuntimeError::NatsConnection(e) => {
+                write!(f, "could not connect to NATS server {}", e)
+            }
         }
     }
 }
@@ -40,6 +45,7 @@ impl error::Error for RuntimeError {
             RuntimeError::IntParse(ref e) => Some(e),
             RuntimeError::SystemTime(ref e) => Some(e),
             RuntimeError::SetLogger(ref e) => Some(e),
+            RuntimeError::NatsConnection(ref e) => Some(e),
             RuntimeError::NoSuchBPFMap(_) => None,
             RuntimeError::NoSuchBPFProg(_) => None,
         }
@@ -73,5 +79,11 @@ impl From<SystemTimeError> for RuntimeError {
 impl From<SetLoggerError> for RuntimeError {
     fn from(e: SetLoggerError) -> Self {
         RuntimeError::SetLogger(e)
+    }
+}
+
+impl From<NatsError<ConnectErrorKind>> for RuntimeError {
+    fn from(e: NatsError<ConnectErrorKind>) -> Self {
+        RuntimeError::NatsConnection(e)
     }
 }
