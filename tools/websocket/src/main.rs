@@ -1,138 +1,14 @@
-#![cfg_attr(feature = "strict", deny(warnings))]
-
-use shared::clap::Parser;
-use shared::event_msg::{self, event_msg::Event};
-use shared::futures::{stream::SplitSink, SinkExt, StreamExt};
-use shared::log;
-use shared::prost::Message;
-use shared::simple_logger;
-use shared::{
-    async_nats, clap,
-    tokio::{
-        self,
-        net::{TcpListener, TcpStream},
-        sync::Mutex,
-    },
-};
-use std::collections::HashMap;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio_tungstenite::{
-    accept_async, tungstenite::protocol::Message as TungsteniteMessage, WebSocketStream,
-};
-
-/// A peer-observer tool that sends out all events on a websocket
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// The NATS server address the tool should connect and subscribe to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    nats_address: String,
-
-    /// The websocket address the tool listens on.
-    #[arg(short, long, default_value = "127.0.0.1:47482")]
-    websocket_address: String,
-
-    /// The log level the took should run with. Valid log levels are "trace",
-    /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html
-    #[arg(short, long, default_value_t = log::Level::Debug)]
-    log_level: log::Level,
-}
-
-type Clients =
-    Arc<Mutex<HashMap<SocketAddr, SplitSink<WebSocketStream<TcpStream>, TungsteniteMessage>>>>;
+use shared::tokio;
+use shared::{clap::Parser, simple_logger};
+use websocket::Args;
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    simple_logger::init_with_level(args.log_level).unwrap();
 
-    log::info!("Trying to connect to NATS server at {}", args.nats_address);
-    let nc = async_nats::connect(args.nats_address)
-        .await
-        .expect("should be able to connect to NATS server");
-    let mut sub = nc
-        .subscribe("*")
-        .await
-        .expect("could not subscribe to topic '*'");
-
-    let clients = Arc::new(Mutex::new(HashMap::new()));
-
-    // Spawn a thread to handle NATS messages and broadcast to WebSocket clients
-    {
-        let clients = Arc::clone(&clients);
-        tokio::spawn(async move {
-            while let Some(msg) = sub.next().await {
-                let unwrapped = event_msg::EventMsg::decode(msg.payload).unwrap().event;
-                if let Some(event) = unwrapped {
-                    match serde_json::to_string::<Event>(&event.clone().into()) {
-                        Ok(msg) => {
-                            broadcast_to_clients(&msg, &clients).await;
-                        }
-                        Err(e) => {
-                            log::error!("Could not serialize the message to JSON: {}", e)
-                        }
-                    }
-                }
-            }
-        });
+    if let Err(e) = simple_logger::init_with_level(args.log_level) {
+        eprintln!("websocket tool error: {}", e);
     }
 
-    log::info!("Starting websocket server on {}", args.websocket_address);
-    let server = TcpListener::bind(args.websocket_address)
-        .await
-        .expect("Failed to bind server");
-    // Accept WebSocket clients
-    loop {
-        let clients = Arc::clone(&clients);
-        let (stream, addr) = server
-            .accept()
-            .await
-            .expect("could not accept a connection on socket");
-        tokio::spawn(async move {
-            handle_client(stream, addr, clients).await;
-        });
-    }
-}
-
-async fn handle_client(stream: TcpStream, addr: SocketAddr, clients: Clients) {
-    let websocket = accept_async(stream)
-        .await
-        .expect("Failed to accept WebSocket");
-
-    let (outgoing, mut incoming) = websocket.split();
-    clients.lock().await.insert(addr, outgoing);
-
-    log::info!("Client '{}' connected", addr);
-
-    while let Some(msg) = incoming.next().await {
-        match msg {
-            Ok(m) => {
-                match m {
-                    TungsteniteMessage::Close(_) => {
-                        // Remove the client from the shared list if the connection is closed
-                        clients.lock().await.remove(&addr);
-                        break;
-                    }
-                    _ => (), // We ignore all other messages a client sends us.
-                }
-            }
-            Err(_) => {
-                log::info!("Client '{}' disconnected", addr);
-                // Remove the client from the shared list if the connection is closed
-                clients.lock().await.remove(&addr);
-                break;
-            }
-        }
-    }
-}
-
-async fn broadcast_to_clients(message: &str, clients: &Clients) {
-    let mut clients = clients.lock().await;
-
-    for (addr, outgoing) in clients.iter_mut() {
-        if let Err(e) = outgoing.send(TungsteniteMessage::text(message)).await {
-            log::warn!("Failed to send message to client '{}': {}", addr, e);
-        }
-    }
+    websocket::run(args).await;
 }
