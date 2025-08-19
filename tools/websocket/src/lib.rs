@@ -20,6 +20,8 @@ use tokio_tungstenite::{
     accept_async, tungstenite::protocol::Message as TungsteniteMessage, WebSocketStream,
 };
 
+pub mod error;
+
 /// A peer-observer tool that sends out all events on a websocket
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -41,15 +43,10 @@ pub struct Args {
 type Clients =
     Arc<Mutex<HashMap<SocketAddr, SplitSink<WebSocketStream<TcpStream>, TungsteniteMessage>>>>;
 
-pub async fn run(args: Args) {
+pub async fn run(args: Args) -> Result<(), error::RuntimeError> {
     log::info!("Trying to connect to NATS server at {}", args.nats_address);
-    let nc = async_nats::connect(args.nats_address)
-        .await
-        .expect("should be able to connect to NATS server");
-    let mut sub = nc
-        .subscribe("*")
-        .await
-        .expect("could not subscribe to topic '*'");
+    let nc = async_nats::connect(args.nats_address).await?;
+    let mut sub = nc.subscribe("*").await?;
 
     let clients = Arc::new(Mutex::new(HashMap::new()));
 
@@ -58,42 +55,51 @@ pub async fn run(args: Args) {
         let clients = Arc::clone(&clients);
         tokio::spawn(async move {
             while let Some(msg) = sub.next().await {
-                let unwrapped = event_msg::EventMsg::decode(msg.payload).unwrap().event;
-                if let Some(event) = unwrapped {
-                    match serde_json::to_string::<Event>(&event.clone().into()) {
-                        Ok(msg) => {
-                            broadcast_to_clients(&msg, &clients).await;
-                        }
-                        Err(e) => {
-                            log::error!("Could not serialize the message to JSON: {}", e)
+                match event_msg::EventMsg::decode(msg.payload) {
+                    Ok(event) => {
+                        if let Some(event) = event.event {
+                            match serde_json::to_string::<Event>(&event.clone().into()) {
+                                Ok(msg) => {
+                                    broadcast_to_clients(&msg, &clients).await;
+                                }
+                                Err(e) => {
+                                    log::error!("Could not serialize the message to JSON: {}", e)
+                                }
+                            }
                         }
                     }
-                }
+                    Err(e) => log::error!("Could not deserialize protobuf message: {}", e),
+                };
             }
         });
     }
 
     log::info!("Starting websocket server on {}", args.websocket_address);
-    let server = TcpListener::bind(args.websocket_address)
-        .await
-        .expect("Failed to bind server");
+    let server = TcpListener::bind(args.websocket_address).await?;
     // Accept WebSocket clients
     loop {
         let clients = Arc::clone(&clients);
-        let (stream, addr) = server
-            .accept()
-            .await
-            .expect("could not accept a connection on socket");
-        tokio::spawn(async move {
-            handle_client(stream, addr, clients).await;
-        });
+        match server.accept().await {
+            Ok((stream, addr)) => {
+                tokio::spawn(async move {
+                    if let Err(e) = handle_client(stream, addr, clients).await {
+                        log::warn!("Could not handle client: {}", e);
+                    };
+                });
+            }
+            Err(e) => {
+                log::warn!("Could not accept connection on socket: {}", e);
+            }
+        };
     }
 }
 
-async fn handle_client(stream: TcpStream, addr: SocketAddr, clients: Clients) {
-    let websocket = accept_async(stream)
-        .await
-        .expect("Failed to accept WebSocket");
+async fn handle_client(
+    stream: TcpStream,
+    addr: SocketAddr,
+    clients: Clients,
+) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+    let websocket = accept_async(stream).await?;
 
     let (outgoing, mut incoming) = websocket.split();
     clients.lock().await.insert(addr, outgoing);
@@ -120,6 +126,7 @@ async fn handle_client(stream: TcpStream, addr: SocketAddr, clients: Clients) {
             }
         }
     }
+    Ok(())
 }
 
 async fn broadcast_to_clients(message: &str, clients: &Clients) {

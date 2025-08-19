@@ -1,3 +1,4 @@
+use shared::log::error;
 use shared::tokio;
 use shared::{clap::Parser, simple_logger};
 use websocket::Args;
@@ -10,5 +11,7 @@ async fn main() {
         eprintln!("websocket tool error: {}", e);
     }
 
-    websocket::run(args).await;
+    if let Err(e) = websocket::run(args).await {
+        error!("websocket tool error: {}", e);
+    };
 }
