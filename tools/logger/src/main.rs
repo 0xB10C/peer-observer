@@ -3,10 +3,11 @@
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
+use shared::futures::stream::StreamExt;
 use shared::log;
 use shared::prost::Message;
 use shared::simple_logger;
-use shared::{clap, nats};
+use shared::{async_nats, clap, tokio};
 
 // Note: when modifying this struct, make sure to also update the usage
 // instructions in the README of this tool.
@@ -62,7 +63,8 @@ impl Args {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     //Add early binding of filter flags
     let args = Args::parse();
     let should_show_all = args.should_show_all();
@@ -75,10 +77,10 @@ fn main() {
     simple_logger::init_with_level(args.log_level).unwrap();
 
     // TODO: handle unwraps
-    let nc = nats::connect(args.nats_address).unwrap();
-    let sub = nc.subscribe("*").unwrap();
-    for msg in sub.messages() {
-        if let Ok(event_msg) = event_msg::EventMsg::decode(msg.data.as_slice()) {
+    let nc = async_nats::connect(args.nats_address).await.unwrap();
+    let mut sub = nc.subscribe("*").await.unwrap();
+    while let Some(msg) = sub.next().await {
+        if let Ok(event_msg) = event_msg::EventMsg::decode(msg.payload) {
             if let Some(event) = event_msg.event {
                 match event {
                     Event::Msg(msg) => {
