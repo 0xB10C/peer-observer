@@ -10,7 +10,8 @@ use shared::{
     tokio::{
         self,
         net::{TcpListener, TcpStream},
-        sync::Mutex,
+        sync::{watch, Mutex},
+        time::{sleep, Duration},
     },
 };
 use std::collections::HashMap;
@@ -40,10 +41,23 @@ pub struct Args {
     pub log_level: log::Level,
 }
 
+impl Args {
+    pub fn new(nats_address: String, websocket_address: String, log_level: log::Level) -> Self {
+        Self {
+            nats_address,
+            websocket_address,
+            log_level,
+        }
+    }
+}
+
 type Clients =
     Arc<Mutex<HashMap<SocketAddr, SplitSink<WebSocketStream<TcpStream>, TungsteniteMessage>>>>;
 
-pub async fn run(args: Args) -> Result<(), error::RuntimeError> {
+pub async fn run(
+    args: Args,
+    mut shutdown_rx: watch::Receiver<bool>,
+) -> Result<(), error::RuntimeError> {
     log::info!("Trying to connect to NATS server at {}", args.nats_address);
     let nc = async_nats::connect(args.nats_address).await?;
     let mut sub = nc.subscribe("*").await?;
@@ -76,22 +90,36 @@ pub async fn run(args: Args) -> Result<(), error::RuntimeError> {
 
     log::info!("Starting websocket server on {}", args.websocket_address);
     let server = TcpListener::bind(args.websocket_address).await?;
+
     // Accept WebSocket clients
     loop {
         let clients = Arc::clone(&clients);
-        match server.accept().await {
-            Ok((stream, addr)) => {
-                tokio::spawn(async move {
-                    if let Err(e) = handle_client(stream, addr, clients).await {
-                        log::warn!("Could not handle client: {}", e);
-                    };
-                });
+        shared::tokio::select! {
+            accept_result = server.accept() => {
+                match accept_result {
+                    Ok((stream, addr)) => {
+                        tokio::spawn(async move {
+                            if let Err(e) = handle_client(stream, addr, clients).await {
+                                log::warn!("Could not handle client: {}", e);
+                            };
+                        });
+                    }
+                    Err(e) => {
+                        log::warn!("Could not accept connection on socket: {}", e);
+                    }
+                }
             }
-            Err(e) => {
-                log::warn!("Could not accept connection on socket: {}", e);
+            _ = shutdown_rx.changed() => {
+                if *shutdown_rx.borrow() {
+                    log::info!("websocket tool received shutdown signal.");
+                    break;
+                }
             }
-        };
+        }
+        // Prevent busy loop if we don't have events
+        sleep(Duration::from_millis(50)).await;
     }
+    Ok(())
 }
 
 async fn handle_client(
