@@ -1,5 +1,6 @@
 use shared::log::error;
 use shared::tokio;
+use shared::tokio::sync::watch;
 use shared::{clap::Parser, simple_logger};
 use websocket::Args;
 
@@ -11,7 +12,9 @@ async fn main() {
         eprintln!("websocket tool error: {}", e);
     }
 
-    if let Err(e) = websocket::run(args).await {
+    // For now, the shutdown channel is only used in integration tests.
+    let (_, shutdown_rx) = watch::channel(false);
+    if let Err(e) = websocket::run(args, shutdown_rx).await {
         error!("websocket tool error: {}", e);
     };
 }
