@@ -109,8 +109,7 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &[&s
 async fn test_integration_websocket_conn_inbound() {
     println!("test that inbound connections work");
 
-    let subject = Subject::NetConn;
-    let events = [EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+    publish_and_check(&[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Inbound(
             shared::net_conn::InboundConnection {
                 conn: Connection {
@@ -123,10 +122,47 @@ async fn test_integration_websocket_conn_inbound() {
             },
         )),
     }))
-    .unwrap()];
-    let expected = vec![
+    .unwrap()], Subject::NetConn, &vec![
         r#"{"Conn":{"event":{"Inbound":{"conn":{"peer_id":7,"addr":"127.0.0.1:8333","conn_type":1,"network":2},"existing_connections":123}}}}"#,
-    ];
+    ]).await;
+}
 
-    publish_and_check(&events, subject, &expected).await;
+#[tokio::test]
+async fn test_integration_websocket_p2p_message_ping() {
+    println!("test that the P2P message via websockets work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "127.0.0.1:8333".to_string(),
+                    conn_type: 1,
+                    command: "ping".to_string(),
+                    inbound: true,
+                    size: 8,
+                },
+                msg: Some(Msg::Ping(Ping { value: 1 })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "127.0.0.1:8333".to_string(),
+                    conn_type: 1,
+                    command: "pong".to_string(),
+                    inbound: false,
+                    size: 8,
+                },
+                msg: Some(Msg::Pong(Pong { value: 1 })),
+            }))
+            .unwrap(),
+        ],
+        Subject::NetMsg,
+        &vec![
+            r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"ping","inbound":true,"size":8},"msg":{"Ping":{"value":1}}}}"#,
+            r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"pong","inbound":false,"size":8},"msg":{"Pong":{"value":1}}}}"#,
+        ],
+    )
+    .await;
 }
