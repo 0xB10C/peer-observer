@@ -11,6 +11,7 @@ use shared::bitcoin::Network;
 use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
+use shared::futures::stream::StreamExt;
 use shared::log;
 use shared::metricserver;
 use shared::net_msg::message::Msg;
@@ -20,7 +21,7 @@ use shared::primitive::Address;
 use shared::prost::Message as ProstMessage;
 use shared::simple_logger;
 use shared::util;
-use shared::{clap, nats};
+use shared::{async_nats, clap, tokio};
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::OpenOptions;
@@ -316,7 +317,8 @@ fn try_connect(address: SocketAddr) -> Option<VersionMessage> {
 // - general clean up
 // - error handling
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
     simple_logger::init_with_level(args.log_level).unwrap();
 
@@ -326,20 +328,25 @@ fn main() {
     metricserver::start(&args.metrics_address, None).unwrap();
     log::info!("metrics-server started on {}", &args.metrics_address);
 
-    let nc = nats::connect(args.nats_address).expect("should be able to connect to NATS server");
-    let sub = nc.subscribe("*").expect("could not subscribe to topic '*'");
+    let nc = async_nats::connect(args.nats_address)
+        .await
+        .expect("should be able to connect to NATS server");
+    let mut sub = nc
+        .subscribe("*")
+        .await
+        .expect("could not subscribe to topic '*'");
+
+    tokio::spawn(async move {
+        while let Some(msg) = sub.next().await {
+            let wrapped = event_msg::EventMsg::decode(msg.payload).unwrap();
+            let unwrapped = wrapped.event;
+            if let Some(event) = unwrapped {
+                handle_event(event, wrapped.timestamp, input_sender.clone());
+            }
+        }
+    });
 
     crossbeam::scope(|s| {
-        s.spawn(|_| {
-            for msg in sub.messages() {
-                let wrapped = event_msg::EventMsg::decode(msg.data.as_slice()).unwrap();
-                let unwrapped = wrapped.event;
-                if let Some(event) = unwrapped {
-                    handle_event(event, wrapped.timestamp, input_sender.clone());
-                }
-            }
-        });
-
         let recent_succesful_connections_cache: Arc<Mutex<HashMap<String, Instant>>> =
             Arc::new(Mutex::new(HashMap::new()));
         for _ in 0..WORKERS {
