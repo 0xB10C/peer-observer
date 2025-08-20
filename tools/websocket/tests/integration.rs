@@ -16,6 +16,7 @@ use shared::{
 };
 
 use std::{
+    io::ErrorKind,
     sync::{
         atomic::{AtomicU16, Ordering},
         Once, OnceLock,
@@ -23,7 +24,7 @@ use std::{
     time::Duration,
 };
 
-use websocket::Args;
+use websocket::{error::RuntimeError, Args};
 
 static INIT: Once = Once::new();
 
@@ -72,13 +73,34 @@ async fn publish_and_check(
     num_clients: u8,
     disconnect_client: Option<u8>, // which client to disconnect
 ) {
-    let (nats_port, websocket_port) = setup();
+    let (nats_port, mut websocket_port) = setup();
     let _nats_server = NatsServerForTesting::new(nats_port).await;
     let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let args = make_test_args(nats_port, websocket_port);
     let websocket_handle = tokio::spawn(async move {
-        websocket::run(args, shutdown_rx).await.unwrap();
+        loop {
+            let args = make_test_args(nats_port, websocket_port);
+            match websocket::run(args, shutdown_rx.clone()).await {
+                Ok(_) => break,
+                Err(e) => match e {
+                    RuntimeError::Io(e) => match e.kind() {
+                        ErrorKind::AddrInUse => {
+                            let new_port = NEXT_WEBSOCKET_PORT
+                                .get()
+                                .unwrap()
+                                .fetch_add(1, Ordering::SeqCst);
+                            println!(
+                                "Port {} seems to be already in use. Trying port {} next..",
+                                websocket_port, new_port
+                            );
+                            websocket_port = new_port;
+                        }
+                        _ => panic!("Couldn not start websocket tool: {}", e),
+                    },
+                    _ => panic!("Couldn not start websocket tool: {}", e),
+                },
+            }
+        }
     });
     // allow the websocket tool to start
     sleep(Duration::from_secs(1)).await;
