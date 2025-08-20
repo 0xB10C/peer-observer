@@ -86,10 +86,11 @@ async fn main() {
                     Event::Msg(msg) => {
                         if should_show_all || messages {
                             log::info!(
-                                "{} {} id={} (conn_type={:?}): {}",
+                                "{} {} id={} ip={} (conn_type={:?}): {}",
                                 if msg.meta.inbound { "<--" } else { "-->" },
                                 if msg.meta.inbound { "from" } else { "to" },
                                 msg.meta.peer_id,
+                                msg.meta.addr,
                                 msg.meta.conn_type,
                                 msg.msg.unwrap()
                             );
