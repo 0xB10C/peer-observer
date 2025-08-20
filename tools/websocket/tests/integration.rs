@@ -70,6 +70,7 @@ async fn publish_and_check(
     subject: Subject,
     expected: &[&str],
     num_clients: u8,
+    disconnect_client: Option<u8>, // which client to disconnect
 ) {
     let (nats_port, websocket_port) = setup();
     let _nats_server = NatsServerForTesting::new(nats_port).await;
@@ -98,10 +99,23 @@ async fn publish_and_check(
             .await;
     }
 
+    if let Some(idx) = disconnect_client {
+        clients[idx as usize]
+            .close(None)
+            .await
+            .expect("Should be able to close a client");
+    }
+
     sleep(Duration::from_millis(100)).await;
 
     assert_eq!(events.len(), expected.len());
-    for mut client in clients {
+    for (i, client) in clients.iter_mut().enumerate() {
+        if let Some(idx) = disconnect_client {
+            // if we closed this client, we can skip it here as we don't expect it to have all events
+            if i == idx as usize {
+                continue;
+            }
+        }
         for expected in expected.iter() {
             if let Some(msg) = client.next().await {
                 let msg = msg.unwrap();
@@ -134,7 +148,7 @@ async fn test_integration_websocket_conn_inbound() {
     }))
     .unwrap()], Subject::NetConn, &vec![
         r#"{"Conn":{"event":{"Inbound":{"conn":{"peer_id":7,"addr":"127.0.0.1:8333","conn_type":1,"network":2},"existing_connections":123}}}}"#,
-    ],1).await;
+    ],1, None).await;
 }
 
 #[tokio::test]
@@ -173,7 +187,8 @@ async fn test_integration_websocket_p2p_message_ping() {
             r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"ping","inbound":true,"size":8},"msg":{"Ping":{"value":1}}}}"#,
             r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"pong","inbound":false,"size":8},"msg":{"Pong":{"value":1}}}}"#,
         ],
-        1
+        1,
+        None
     )
     .await;
 }
@@ -214,7 +229,41 @@ async fn test_integration_websocket_multi_client() {
             r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"ping","inbound":true,"size":8},"msg":{"Ping":{"value":1}}}}"#,
             r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"pong","inbound":false,"size":8},"msg":{"Pong":{"value":1}}}}"#,
         ],
-        12
+        12,
+        None
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_websocket_closed_client() {
+    println!(
+        "test that we can close a client connection and the others will still receive the messages"
+    );
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
+            event: Some(net_conn::connection_event::Event::Outbound(
+                shared::net_conn::OutboundConnection {
+                    conn: Connection {
+                        addr: "1.1.1.1:48333".to_string(),
+                        conn_type: 2,
+                        network: 3,
+                        peer_id: 11,
+                    },
+                    existing_connections: 321,
+                },
+            )),
+        }))
+        .unwrap()
+        ],
+        Subject::NetConn,
+        &vec![
+            r#"{"Conn":{"event":{"Outbound":{"conn":{"peer_id":11,"addr":"1.1.1.1:48333","conn_type":2,"network":3},"existing_connections":321}}}}"#,
+        ],
+        4,
+        Some(2)
     )
     .await;
 }
