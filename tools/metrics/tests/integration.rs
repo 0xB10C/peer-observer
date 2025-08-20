@@ -1,5 +1,6 @@
 #![cfg(feature = "nats_integration_tests")]
 
+use metrics::error::RuntimeError;
 use metrics::Args;
 
 use shared::{
@@ -26,6 +27,7 @@ use shared::{
 
 use std::{
     collections::HashMap,
+    io::ErrorKind,
     io::{Read, Write},
     net::TcpStream,
     sync::{
@@ -127,13 +129,34 @@ fn check_metrics(port: u16, expected: &[&str]) -> Result<bool, std::io::Error> {
 }
 
 async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str) {
-    let (nats_port, metrics_port) = setup();
+    let (nats_port, mut metrics_port) = setup();
     let _nats_server = NatsServerForTesting::new(nats_port).await;
     let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let args = make_test_args(nats_port, metrics_port);
     let metrics_handle = tokio::spawn(async move {
-        metrics::run(args, shutdown_rx).await.unwrap();
+        loop {
+            let args = make_test_args(nats_port, metrics_port);
+            match metrics::run(args, shutdown_rx.clone()).await {
+                Ok(_) => break,
+                Err(e) => match e {
+                    RuntimeError::Io(e) => match e.kind() {
+                        ErrorKind::AddrInUse => {
+                            let new_port = NEXT_METRICS_PORT
+                                .get()
+                                .unwrap()
+                                .fetch_add(1, Ordering::SeqCst);
+                            println!(
+                                "Port {} seems to be already in use. Trying port {} next..",
+                                metrics_port, new_port
+                            );
+                            metrics_port = new_port;
+                        }
+                        _ => panic!("Couldn not start metrics tool: {}", e),
+                    },
+                    _ => panic!("Couldn not start metrics tool: {}", e),
+                },
+            }
+        }
     });
     // allow the metrics tool to start
     sleep(Duration::from_secs(1)).await;
