@@ -65,7 +65,12 @@ fn make_test_args(nats_port: u16, websocket_port: u16) -> Args {
     )
 }
 
-async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &[&str]) {
+async fn publish_and_check(
+    events: &[EventMsg],
+    subject: Subject,
+    expected: &[&str],
+    num_clients: u8,
+) {
     let (nats_port, websocket_port) = setup();
     let _nats_server = NatsServerForTesting::new(nats_port).await;
     let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
@@ -77,10 +82,14 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &[&s
     // allow the websocket tool to start
     sleep(Duration::from_secs(1)).await;
 
-    let (mut ws_stream, _) =
-        tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{}", websocket_port))
-            .await
-            .expect("Should be able to connect to websocket");
+    let mut clients = vec![];
+    for _ in 0..num_clients {
+        let (ws_stream, _) =
+            tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{}", websocket_port))
+                .await
+                .expect("Should be able to connect to websocket");
+        clients.push(ws_stream)
+    }
 
     for event in events.iter() {
         println!("publishing: {:?}", event);
@@ -92,12 +101,13 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &[&s
     sleep(Duration::from_millis(100)).await;
 
     assert_eq!(events.len(), expected.len());
-
-    for expected in expected.iter() {
-        if let Some(msg) = ws_stream.next().await {
-            let msg = msg.unwrap();
-            println!("data: {}", msg.to_string());
-            assert_eq!(*expected, msg.to_string());
+    for mut client in clients {
+        for expected in expected.iter() {
+            if let Some(msg) = client.next().await {
+                let msg = msg.unwrap();
+                println!("data: {}", msg.to_string());
+                assert_eq!(*expected, msg.to_string());
+            }
         }
     }
 
@@ -124,7 +134,7 @@ async fn test_integration_websocket_conn_inbound() {
     }))
     .unwrap()], Subject::NetConn, &vec![
         r#"{"Conn":{"event":{"Inbound":{"conn":{"peer_id":7,"addr":"127.0.0.1:8333","conn_type":1,"network":2},"existing_connections":123}}}}"#,
-    ]).await;
+    ],1).await;
 }
 
 #[tokio::test]
@@ -163,6 +173,48 @@ async fn test_integration_websocket_p2p_message_ping() {
             r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"ping","inbound":true,"size":8},"msg":{"Ping":{"value":1}}}}"#,
             r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"pong","inbound":false,"size":8},"msg":{"Pong":{"value":1}}}}"#,
         ],
+        1
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_websocket_multi_client() {
+    println!("test that multiple clients all receive the messages");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "127.0.0.1:8333".to_string(),
+                    conn_type: 1,
+                    command: "ping".to_string(),
+                    inbound: true,
+                    size: 8,
+                },
+                msg: Some(Msg::Ping(Ping { value: 1 })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 0,
+                    addr: "127.0.0.1:8333".to_string(),
+                    conn_type: 1,
+                    command: "pong".to_string(),
+                    inbound: false,
+                    size: 8,
+                },
+                msg: Some(Msg::Pong(Pong { value: 1 })),
+            }))
+            .unwrap(),
+        ],
+        Subject::NetMsg,
+        &vec![
+            r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"ping","inbound":true,"size":8},"msg":{"Ping":{"value":1}}}}"#,
+            r#"{"Msg":{"meta":{"peer_id":0,"addr":"127.0.0.1:8333","conn_type":1,"command":"pong","inbound":false,"size":8},"msg":{"Pong":{"value":1}}}}"#,
+        ],
+        12
     )
     .await;
 }
