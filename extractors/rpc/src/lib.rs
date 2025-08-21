@@ -3,7 +3,7 @@ use shared::corepc_client::client_sync::Auth;
 use shared::corepc_client::client_sync::v29::Client;
 use shared::event_msg::EventMsg;
 use shared::event_msg::event_msg::Event;
-use shared::log::{self, error};
+use shared::log;
 use shared::nats_subjects::Subject;
 use shared::prost::Message;
 use shared::rpc;
@@ -12,7 +12,7 @@ use shared::{async_nats, clap};
 
 mod error;
 
-use error::FetchOrPublishError;
+use error::{FetchOrPublishError, RuntimeError};
 
 /// The peer-observer rpc-extractor periodically queries data from the
 /// Bitcoin Core RPC endpoint and publishes the results as events into
@@ -56,7 +56,7 @@ pub struct Args {
     pub query_interval: u64,
 }
 
-pub async fn run(args: Args) -> () {
+pub async fn run(args: Args) -> Result<(), RuntimeError> {
     let auth: Auth = match args.rpc_cookie_file {
         Some(path) => Auth::CookieFile(path.into()),
         None => Auth::UserPass(
@@ -64,25 +64,10 @@ pub async fn run(args: Args) -> () {
             args.rpc_password.expect("need an RPC password"),
         ),
     };
-    let rpc_client = match Client::new_with_auth(&format!("http://{}", args.rpc_host), auth) {
-        Ok(client) => client,
-        Err(e) => {
-            error!("Could not create RPC client: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let rpc_client = Client::new_with_auth(&format!("http://{}", args.rpc_host), auth)?;
 
     log::debug!("Connecting to NATS server at {}..", args.nats_address);
-    let nats_client = match async_nats::connect(&args.nats_address).await {
-        Ok(nats_client) => nats_client,
-        Err(e) => {
-            error!(
-                "Could not connect to NATS server at {}: {}",
-                args.nats_address, e
-            );
-            std::process::exit(1);
-        }
-    };
+    let nats_client = async_nats::connect(&args.nats_address).await?;
     log::info!("Connected to NATS server at {}", &args.nats_address);
 
     let duration_sec = Duration::from_secs(args.query_interval);
