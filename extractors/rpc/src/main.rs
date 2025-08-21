@@ -1,126 +1,14 @@
-use shared::clap::{ArgGroup, Parser};
-use shared::corepc_client::client_sync::Auth;
-use shared::corepc_client::client_sync::v29::Client;
-use shared::event_msg::EventMsg;
-use shared::event_msg::event_msg::Event;
-use shared::log::{self, error};
-use shared::nats_subjects::Subject;
-use shared::prost::Message;
-use shared::tokio::{
-    self,
-    time::{self, Duration},
-};
-use shared::{async_nats, clap};
-use shared::{rpc, simple_logger};
-
-mod error;
-
-use error::FetchOrPublishError;
-
-/// The peer-observer rpc-extractor periodically queries data from the
-/// Bitcoin Core RPC endpoint and publishes the results as events into
-/// a NATS pub-sub queue.
-#[derive(Parser, Debug)]
-#[clap(group(
-    ArgGroup::new("auth")
-        .required(true)
-        .multiple(false)
-        .args(&["rpc_cookie_file", "rpc_user"])
-))]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// Address of the NATS server where the extractor will publish messages to.
-    #[arg(short, long, default_value = "127.0.0.1:4222")]
-    nats_address: String,
-
-    /// The log level the extractor should run with. Valid log levels are "trace",
-    /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html.
-    #[arg(short, long, default_value_t = log::Level::Debug)]
-    log_level: log::Level,
-
-    /// Address of the Bitcoin Core RPC endpoint the RPC extractor will query.
-    #[arg(long, default_value = "127.0.0.1:8332")]
-    rpc_host: String,
-
-    /// RPC username for authentication with the Bitcoin Core RPC endpoint.
-    #[arg(long)]
-    rpc_user: Option<String>,
-
-    /// RPC password for authentication with the Bitcoin Core RPC endpoint.
-    #[arg(requires = "rpc_user", long)]
-    rpc_password: Option<String>,
-
-    /// An RPC cookie file for authentication with the Bitcoin Core RPC endpoint.
-    #[arg(long)]
-    rpc_cookie_file: Option<String>,
-
-    /// Interval (in seconds) in which to query from the Bitcoin Core RPC endpoint.
-    #[arg(long, default_value_t = 10)]
-    query_interval: u64,
-}
+use rpc_extractor::Args;
+use shared::tokio;
+use shared::{clap::Parser, simple_logger};
 
 #[tokio::main]
-async fn main() -> () {
+async fn main() {
     let args = Args::parse();
 
-    simple_logger::init_with_level(args.log_level).expect("can't set up logger");
-
-    let auth: Auth = match args.rpc_cookie_file {
-        Some(path) => Auth::CookieFile(path.into()),
-        None => Auth::UserPass(
-            args.rpc_user.expect("need an RPC user"),
-            args.rpc_password.expect("need an RPC password"),
-        ),
-    };
-    let rpc_client = match Client::new_with_auth(&format!("http://{}", args.rpc_host), auth) {
-        Ok(client) => client,
-        Err(e) => {
-            error!("Could not create RPC client: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    log::debug!("Connecting to NATS server at {}..", args.nats_address);
-    let nats_client = match async_nats::connect(&args.nats_address).await {
-        Ok(nats_client) => nats_client,
-        Err(e) => {
-            error!(
-                "Could not connect to NATS server at {}: {}",
-                args.nats_address, e
-            );
-            std::process::exit(1);
-        }
-    };
-    log::info!("Connected to NATS server at {}", &args.nats_address);
-
-    let duration_sec = Duration::from_secs(args.query_interval);
-    let mut interval = time::interval(duration_sec);
-    log::info!(
-        "Querying the Bitcoin Core RPC interface every {:?}.",
-        duration_sec
-    );
-
-    loop {
-        interval.tick().await;
-
-        if let Err(e) = getpeerinfo(&rpc_client, &nats_client).await {
-            log::error!("Could not fetch and publish 'getpeerinfo': {}", e)
-        }
+    if let Err(e) = simple_logger::init_with_level(args.log_level) {
+        eprintln!("rpc extractor error: {}", e);
     }
-}
 
-async fn getpeerinfo(
-    rpc_client: &Client,
-    nats_client: &async_nats::Client,
-) -> Result<(), FetchOrPublishError> {
-    let peer_info = rpc_client.get_peer_info()?;
-
-    let proto = EventMsg::new(Event::Rpc(rpc::RpcEvent {
-        event: Some(rpc::rpc_event::Event::PeerInfos(peer_info.into())),
-    }))?;
-
-    nats_client
-        .publish(Subject::Rpc.to_string(), proto.encode_to_vec().into())
-        .await?;
-    Ok(())
+    rpc_extractor::run(args).await;
 }
