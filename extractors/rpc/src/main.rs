@@ -1,4 +1,5 @@
 use rpc_extractor::Args;
+use shared::log::error;
 use shared::tokio;
 use shared::{clap::Parser, simple_logger};
 
@@ -10,5 +11,7 @@ async fn main() {
         eprintln!("rpc extractor error: {}", e);
     }
 
-    rpc_extractor::run(args).await;
+    if let Err(e) = rpc_extractor::run(args).await {
+        error!("rpc extractor error: {}", e);
+    }
 }
