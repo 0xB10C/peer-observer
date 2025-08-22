@@ -11,7 +11,6 @@ use shared::{
         self,
         net::{TcpListener, TcpStream},
         sync::{watch, Mutex},
-        time::{sleep, Duration},
     },
 };
 use std::collections::HashMap;
@@ -109,15 +108,22 @@ pub async fn run(
                     }
                 }
             }
-            _ = shutdown_rx.changed() => {
-                if *shutdown_rx.borrow() {
-                    log::info!("websocket tool received shutdown signal.");
-                    break;
+            res = shutdown_rx.changed() => {
+                match res {
+                    Ok(_) => {
+                        if *shutdown_rx.borrow() {
+                            log::info!("websocket tool received shutdown signal.");
+                            break;
+                        }
+                    }
+                    Err(_) => {
+                        // all senders dropped -> treat as shutdown
+                        log::warn!("The shutdown notification sender was dropped. Shutting down.");
+                        break;
+                    }
                 }
             }
         }
-        // Prevent busy loop if we don't have events
-        sleep(Duration::from_millis(50)).await;
     }
     Ok(())
 }
