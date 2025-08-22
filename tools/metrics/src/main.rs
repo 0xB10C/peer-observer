@@ -1,7 +1,6 @@
 use metrics::Args;
 use shared::log::error;
-use shared::tokio;
-use shared::tokio::sync::watch;
+use shared::tokio::{self, signal, sync::watch};
 use shared::{clap::Parser, simple_logger};
 
 #[tokio::main]
@@ -12,9 +11,13 @@ async fn main() {
         eprintln!("metrics tool error: {}", e);
     }
 
-    // For now, the shutdown channel is only used in integration tests.
-    let (_, shutdown_rx) = watch::channel(false);
-    if let Err(e) = metrics::run(args, shutdown_rx).await {
-        error!("metrics tool error: {}", e);
-    };
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let metrics_handle = tokio::spawn(metrics::run(args, shutdown_rx));
+
+    signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
+    let _ = shutdown_tx.send(true);
+
+    if let Err(e) = metrics_handle.await {
+        error!("metrics task failed: {:?}", e);
+    }
 }

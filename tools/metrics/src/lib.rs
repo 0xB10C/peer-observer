@@ -15,10 +15,7 @@ use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::rpc::rpc_event;
-use shared::tokio::{
-    sync::watch,
-    time::{sleep, Duration},
-};
+use shared::tokio::sync::watch;
 use shared::util;
 use shared::validation::validation_event;
 use shared::{async_nats, clap};
@@ -84,22 +81,28 @@ pub async fn run(
             maybe_msg = sub.next() => {
                 if let Some(msg) = maybe_msg {
                     handle_event(msg, metrics.clone())?;
-                    // directly process next event if available
-                    continue
                 } else {
                     break; // subscription ended
                 }
             }
-            _ = shutdown_rx.changed() => {
-                if *shutdown_rx.borrow() {
-                    log::info!("metrics tool received shutdown signal.");
-                    break;
+            res = shutdown_rx.changed() => {
+                match res {
+                    Ok(_) => {
+                        if *shutdown_rx.borrow() {
+                            log::info!("metrics tool received shutdown signal.");
+                            break;
+                        }
+                    }
+                    Err(_) => {
+                        // all senders dropped -> treat as shutdown
+                        log::warn!("The shutdown notification sender was dropped. Shutting down.");
+                        break;
+                    }
                 }
             }
         }
-        // Prevent busy loop if we don't have events
-        sleep(Duration::from_millis(50)).await;
     }
+
     Ok(())
 }
 
