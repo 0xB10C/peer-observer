@@ -1219,6 +1219,34 @@ async fn test_integration_metrics_mempool_added() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_mempool_added_mass() {
+    println!("test that the mempool added metrics work when we add a lot of events");
+
+    let events: Vec<EventMsg> = (0..54321)
+        .map(|_| {
+            EventMsg::new(Event::Mempool(mempool::MempoolEvent {
+                event: Some(mempool::mempool_event::Event::Added(Added {
+                    fee: 0,       // not covered by test
+                    txid: vec![], // not covered by test
+                    vsize: 100,
+                })),
+            }))
+            .unwrap()
+        })
+        .collect();
+
+    publish_and_check(
+        &events,
+        Subject::Mempool,
+        r#"
+        peerobserver_mempool_added 54321
+        peerobserver_mempool_added_vbytes 5432100
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_mempool_replaced() {
     println!("test that the mempool replaced metrics work");
 
