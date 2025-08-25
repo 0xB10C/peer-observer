@@ -908,6 +908,83 @@ async fn test_integration_metrics_p2p_inv() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_p2p_inv_large_outbound() {
+    println!("test that large outbound INV message (> 35) metrics work");
+
+    let large_inv_items_tx: Vec<InventoryItem> = (0..40)
+        .map(|_| InventoryItem {
+            item: Some(Item::Transaction(vec![])),
+        })
+        .collect();
+
+    let large_inv_items_wtx: Vec<InventoryItem> = (0..36)
+        .map(|_| InventoryItem {
+            item: Some(Item::Wtx(vec![])),
+        })
+        .collect();
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 1,
+                    addr: "127.0.0.1:2134".to_string(),
+                    conn_type: 3,
+                    command: "inv".to_string(),
+                    inbound: false,
+                    size: 1000,
+                },
+                msg: Some(Msg::Inv(Inv {
+                    items: large_inv_items_tx,
+                })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 2,
+                    addr: "127.0.0.1:2134".to_string(),
+                    conn_type: 3,
+                    command: "inv".to_string(),
+                    inbound: false,
+                    size: 1000,
+                },
+                msg: Some(Msg::Inv(Inv {
+                    items: large_inv_items_wtx,
+                })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 3,
+                    addr: "127.0.0.1:2134".to_string(),
+                    conn_type: 3,
+                    command: "inv".to_string(),
+                    inbound: false,
+                    size: 80,
+                },
+                msg: Some(Msg::Inv(Inv {
+                    items: [
+                        InventoryItem {
+                            item: Some(Item::Transaction(vec![])),
+                        },
+                        InventoryItem {
+                            item: Some(Item::Transaction(vec![])),
+                        },
+                    ]
+                    .to_vec(),
+                })),
+            }))
+            .unwrap(),
+        ],
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_invs_outbound_large 2
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_p2p_oldping() {
     println!("test that the P2P oldping metrics work");
 
