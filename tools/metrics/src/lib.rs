@@ -694,6 +694,14 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
                         .with_label_values(&[&direction])
                         .inc();
                 }
+                // Large inv-to-send, see bitcoincore.org/en/2024/10/08/disclose-large-inv-to-send/
+                if direction == "outbound" {
+                    let tx_count = count_by_invtype.get("Tx").unwrap_or(&0);
+                    let wtx_count = count_by_invtype.get("WTx").unwrap_or(&0);
+                    if (*tx_count > 35) || (*wtx_count > 35) {
+                        metrics.p2p_invs_outbound_large.inc();
+                    }
+                }
             }
             Msg::Ping(_) => {
                 if msg.meta.inbound {
