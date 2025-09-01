@@ -26,7 +26,17 @@ pkgs.mkShell {
 
       # for code coverage:
       pkgs.cargo-tarpaulin
+
+      # for integration tests
+      pkgs.bitcoind
     ];
+
+    shellHook = ''
+      # during the integration tests, don't try to download a bitcoind binary
+      # use the nix one instead
+      export BITCOIND_SKIP_DOWNLOAD=1
+      export BITCOIND_EXE=${pkgs.bitcoind}/bin/bitcoind
+    '';
 
     # Use for running integration tests
     NATS_SERVER_BINARY = "${pkgs.nats-server}/bin/nats-server";
