@@ -157,9 +157,7 @@ pub struct Metrics {
     pub registry: Registry,
     pub runtime_start_timestamp: IntGauge,
     pub p2p_message_count: IntCounterVec,
-    pub p2p_message_count_by_subnet: IntCounterVec,
     pub p2p_message_bytes: IntCounterVec,
-    pub p2p_message_bytes_by_subnet: IntCounterVec,
     pub p2p_message_bytes_linkinglion: IntCounterVec,
     pub p2p_message_count_linkinglion: IntCounterVec,
     pub p2p_addr_addresses: HistogramVec,
@@ -249,9 +247,7 @@ impl Metrics {
 
         ig!(runtime_start_timestamp, "UNIX epoch timestamp of peer-observer metrics tool start.", registry);
         icv!(p2p_message_count, "Number of P2P network messages send or received.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_CONNECTION_TYPE, LABEL_P2P_DIRECTION], registry);
-        icv!(p2p_message_count_by_subnet, "Number of P2P network messages send or received by subnet.", [LABEL_P2P_DIRECTION, LABEL_P2P_SUBNET], registry);
         icv!(p2p_message_bytes, "Number of P2P network messages bytes send or received.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_CONNECTION_TYPE, LABEL_P2P_DIRECTION], registry);
-        icv!(p2p_message_bytes_by_subnet, "Number of P2P network messages bytes send or received by SUBNET.", [LABEL_P2P_DIRECTION, LABEL_P2P_SUBNET], registry);
         icv!(p2p_message_bytes_linkinglion, "Number of P2P network messages bytes send or received by LinkingLion peers.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION], registry);
         icv!(p2p_message_count_linkinglion, "Number of P2P network messages send or received by LinkingLion peers.", [LABEL_P2P_MSG_TYPE, LABEL_P2P_DIRECTION], registry);
         hv!(p2p_addr_addresses, "Histogram of the number of addresses contained in an outbound 'addr' message.", BUCKETS_ADDR_ADDRESS_COUNT, [LABEL_P2P_DIRECTION], registry);
@@ -338,9 +334,7 @@ impl Metrics {
             registry,
             runtime_start_timestamp,
             p2p_message_count,
-            p2p_message_count_by_subnet,
             p2p_message_bytes,
-            p2p_message_bytes_by_subnet,
             p2p_message_bytes_linkinglion,
             p2p_message_count_linkinglion,
             p2p_addr_addresses,
