@@ -2,8 +2,7 @@
 #![cfg(feature = "node_integration_tests")]
 
 use shared::{
-    async_nats,
-    corepc_node,
+    async_nats, corepc_node,
     event_msg::{EventMsg, event_msg::Event},
     futures::StreamExt,
     log::{self, info},
@@ -15,11 +14,9 @@ use shared::{
     tokio::{self, sync::watch},
 };
 
-use std::{
-    sync::{
-        Once, OnceLock,
-        atomic::{AtomicU16, Ordering},
-    },
+use std::sync::{
+    Once, OnceLock,
+    atomic::{AtomicU16, Ordering},
 };
 
 use rpc_extractor::Args;
@@ -47,13 +44,19 @@ fn setup() -> u16 {
     nats_port
 }
 
-fn make_test_args(nats_port: u16, rpc_url: String, cookie_file: String) -> Args {
+fn make_test_args(
+    nats_port: u16,
+    rpc_url: String,
+    cookie_file: String,
+    disable_getpeerinfo: bool,
+) -> Args {
     Args::new(
         format!("127.0.0.1:{}", nats_port),
         log::Level::Trace,
         rpc_url,
         cookie_file,
         QUERY_INTERVAL_SECONDS,
+        disable_getpeerinfo,
     )
 }
 
@@ -84,7 +87,7 @@ fn setup_two_connected_nodes() -> (corepc_node::Node, corepc_node::Node) {
     (node1, node2)
 }
 
-async fn check(_test_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
+async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
     let (node1, _node2) = setup_two_connected_nodes();
     let nats_port = setup();
     let _nats_server = NatsServerForTesting::new(nats_port).await;
@@ -95,6 +98,7 @@ async fn check(_test_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
             nats_port,
             node1.rpc_url().replace("http://", ""),
             node1.params.cookie_file.display().to_string(),
+            disable_getpeerinfo,
         );
         rpc_extractor::run(args, shutdown_rx.clone())
             .await
@@ -118,12 +122,11 @@ async fn check(_test_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
     rpc_extractor_handle.await.unwrap();
 }
 
-
 #[tokio::test]
-async fn test_integration_rpc_getpeerinfo2() {
+async fn test_integration_rpc_getpeerinfo() {
     println!("test that we receive getpeerinfo RPC events");
 
-    check(true, |event| {
+    check(false, |event| {
         match event {
             Event::Rpc(r) => {
                 if let Some(ref e) = r.event {
@@ -135,13 +138,13 @@ async fn test_integration_rpc_getpeerinfo2() {
                             assert_eq!(peer.connection_type, "inbound");
 
                             return;
-                        }
-                        // TODO: once we have more RPCs, we are going to need this.
-                        //_ => panic!("unexpected RPC data {:?}", r.event),
+                        } // TODO: once we have more RPCs, we are going to need this.
+                          //_ => panic!("unexpected RPC data {:?}", r.event),
                     }
                 }
             }
             _ => panic!("unexpected event {:?}", event),
         }
-    }).await;
+    })
+    .await;
 }
