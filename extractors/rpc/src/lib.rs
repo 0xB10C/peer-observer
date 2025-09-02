@@ -7,6 +7,7 @@ use shared::log;
 use shared::nats_subjects::Subject;
 use shared::prost::Message;
 use shared::rpc;
+use shared::tokio::sync::watch;
 use shared::tokio::time::{self, Duration};
 use shared::{async_nats, clap};
 
@@ -56,7 +57,7 @@ pub struct Args {
     pub query_interval: u64,
 }
 
-pub async fn run(args: Args) -> Result<(), RuntimeError> {
+pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
     let auth: Auth = match args.rpc_cookie_file {
         Some(path) => Auth::CookieFile(path.into()),
         None => Auth::UserPass(
@@ -78,12 +79,30 @@ pub async fn run(args: Args) -> Result<(), RuntimeError> {
     );
 
     loop {
-        interval.tick().await;
-
-        if let Err(e) = getpeerinfo(&rpc_client, &nats_client).await {
-            log::error!("Could not fetch and publish 'getpeerinfo': {}", e)
+        shared::tokio::select! {
+            _ = interval.tick() => {
+                if let Err(e) = getpeerinfo(&rpc_client, &nats_client).await {
+                    log::error!("Could not fetch and publish 'getpeerinfo': {}", e)
+                }
+            }
+            res = shutdown_rx.changed() => {
+                match res {
+                    Ok(_) => {
+                        if *shutdown_rx.borrow() {
+                            log::info!("rpc_extractor received shutdown signal.");
+                            break;
+                        }
+                    }
+                    Err(_) => {
+                        // all senders dropped -> treat as shutdown
+                        log::warn!("The shutdown notification sender was dropped. Shutting down.");
+                        break;
+                    }
+                }
+            }
         }
     }
+    Ok(())
 }
 
 async fn getpeerinfo(
