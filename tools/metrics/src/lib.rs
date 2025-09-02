@@ -493,7 +493,6 @@ fn handle_connection_event(
                 .set(o.existing_connections as i64);
         }
         connection_event::Event::Closed(c) => {
-            let ip = util::ip_from_ipport(c.conn.addr.clone());
             metrics.conn_closed.inc();
             metrics
                 .conn_closed_age
@@ -501,10 +500,6 @@ fn handle_connection_event(
             metrics
                 .conn_closed_network
                 .with_label_values(&[&c.conn.network.to_string()])
-                .inc();
-            metrics
-                .conn_closed_subnet
-                .with_label_values(&[&util::subnet(ip)])
                 .inc();
         }
         connection_event::Event::InboundEvicted(e) => {

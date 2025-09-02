@@ -18,6 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 970,
   "links": [],
   "panels": [
     {
@@ -70,17 +71,73 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
+                "color": "green"
               }
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IPv4"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IPv6"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Onion"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "I2P"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "CJDNS"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 22,
@@ -97,10 +154,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.0.3",
       "targets": [
         {
           "datasource": {
@@ -108,19 +167,20 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "sum(increase(peerobserver_conn_closed_subnet[1h])) by (host) / 60",
+          "expr": "sum(increase(peerobserver_conn_closed_network[10m])) by (network)",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{host}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "closed connections per minute (averaged by hour)",
+      "title": "closed connections per 10 minute per network",
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "",
-  "schemaVersion": 39,
+  "schemaVersion": 41,
   "tags": [
     "big-playlist",
     "connections"
@@ -129,13 +189,12 @@
     "list": []
   },
   "time": {
-    "from": "now-12h",
+    "from": "now-30d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "[connections] closed connections",
+  "title": "[connections] closed connections per network",
   "uid": "bdmeshfmf2i9sb",
-  "version": 1,
-  "weekStart": ""
+  "version": 1
 }

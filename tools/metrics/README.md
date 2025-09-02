@@ -27,9 +27,6 @@ peerobserver_conn_closed_age_seconds 16
 # HELP peerobserver_conn_closed_network Number of closed connections by network.
 # TYPE peerobserver_conn_closed_network counter
 peerobserver_conn_closed_network{network="1"} 14
-# HELP peerobserver_conn_closed_subnet Number of closed connections by subnet.
-# TYPE peerobserver_conn_closed_subnet counter
-peerobserver_conn_closed_subnet{subnet="XX.XXX.XX.0"} 14
 # HELP peerobserver_conn_evicted_inbound Number of evicted inbund connections.
 # TYPE peerobserver_conn_evicted_inbound counter
 peerobserver_conn_evicted_inbound 13
