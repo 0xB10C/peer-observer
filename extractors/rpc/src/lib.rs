@@ -55,6 +55,10 @@ pub struct Args {
     /// Interval (in seconds) in which to query from the Bitcoin Core RPC endpoint.
     #[arg(long, default_value_t = 10)]
     pub query_interval: u64,
+
+    /// Disable quering and publishing of `getpeerinfo` data.
+    #[arg(long, default_value_t = false)]
+    pub disable_getpeerinfo: bool,
 }
 
 impl Args {
@@ -64,6 +68,7 @@ impl Args {
         rpc_host: String,
         rpc_cookie_file: String,
         query_interval: u64,
+        disable_getpeerinfo: bool,
     ) -> Args {
         Self {
             nats_address,
@@ -73,6 +78,8 @@ impl Args {
             rpc_user: None,
             rpc_cookie_file: Some(rpc_cookie_file),
             query_interval,
+            disable_getpeerinfo,
+            // when adding more disable_* args, make sure to update the disable_all below
         }
     }
 }
@@ -98,11 +105,23 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
         duration_sec
     );
 
+    log::info!(
+        "Querying getpeerinfo enabled: {}",
+        !args.disable_getpeerinfo
+    );
+    // check if we have at least one RPC to query
+    let disable_all = args.disable_getpeerinfo;
+    if disable_all {
+        log::warn!("No RPC configured to be queried!");
+    }
+
     loop {
         shared::tokio::select! {
             _ = interval.tick() => {
-                if let Err(e) = getpeerinfo(&rpc_client, &nats_client).await {
-                    log::error!("Could not fetch and publish 'getpeerinfo': {}", e)
+                if !args.disable_getpeerinfo {
+                    if let Err(e) = getpeerinfo(&rpc_client, &nats_client).await {
+                        log::error!("Could not fetch and publish 'getpeerinfo': {}", e)
+                    }
                 }
             }
             res = shutdown_rx.changed() => {

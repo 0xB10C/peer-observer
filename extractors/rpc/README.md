@@ -37,6 +37,8 @@ Options:
           An RPC cookie file for authentication with the Bitcoin Core RPC endpoint
       --query-interval <QUERY_INTERVAL>
           Interval (in seconds) in which to query from the Bitcoin Core RPC endpoint [default: 10]
+      --disable-getpeerinfo
+          Disable quering and publishing of `getpeerinfo` data
   -h, --help
           Print help
   -V, --version
