@@ -1,6 +1,6 @@
 use rpc_extractor::Args;
 use shared::log::error;
-use shared::tokio;
+use shared::tokio::{self, signal, sync::watch};
 use shared::{clap::Parser, simple_logger};
 
 #[tokio::main]
@@ -11,7 +11,13 @@ async fn main() {
         eprintln!("rpc extractor error: {}", e);
     }
 
-    if let Err(e) = rpc_extractor::run(args).await {
-        error!("rpc extractor error: {}", e);
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let rpc_handle = tokio::spawn(rpc_extractor::run(args, shutdown_rx));
+
+    signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
+    let _ = shutdown_tx.send(true);
+
+    if let Err(e) = rpc_handle.await {
+        error!("rpc_extractor task failed: {:?}", e);
     }
 }
