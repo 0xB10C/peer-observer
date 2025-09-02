@@ -1105,7 +1105,6 @@ async fn test_integration_metrics_conn_closed() {
         peerobserver_conn_closed 1
         peerobserver_conn_closed_age 1000
         peerobserver_conn_closed_network{network="4"} 1
-        peerobserver_conn_closed_subnet{subnet="2.2.2.0"} 1
         "#,
     )
     .await;
