@@ -575,15 +575,6 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
             .inc_by(msg.meta.size);
     }
 
-    metrics
-        .p2p_message_bytes_by_subnet
-        .with_label_values(&[&direction, &subnet])
-        .inc_by(msg.meta.size);
-    metrics
-        .p2p_message_count_by_subnet
-        .with_label_values(&[&direction, &subnet])
-        .inc();
-
     if let Some(msg_ref) = msg.msg.as_ref() {
         match msg_ref {
             Msg::Addr(addr) => {

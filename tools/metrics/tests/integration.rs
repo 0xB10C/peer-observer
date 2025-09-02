@@ -244,12 +244,8 @@ async fn test_integration_metrics_p2p_message_count() {
         r#"
         peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="ping"} 8
         peerobserver_p2p_message_bytes{connection_type="1",direction="outbound",message="pong"} 8
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 8
-        peerobserver_p2p_message_bytes_by_subnet{direction="outbound",subnet="127.0.0.0"} 8
         peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="ping"} 1
         peerobserver_p2p_message_count{connection_type="1",direction="outbound",message="pong"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="outbound",subnet="127.0.0.0"} 1
         peerobserver_p2p_ping_subnet{subnet="127.0.0.0"} 1
         "#,
     )
@@ -291,14 +287,10 @@ async fn test_integration_metrics_p2p_traffic_linkinglion() {
         r#"
         peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="ping"} 8
         peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="pong"} 8
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="162.218.65.0"} 8
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="91.198.115.0"} 8
         peerobserver_p2p_message_bytes_linkinglion{direction="inbound",message="ping"} 8
         peerobserver_p2p_message_bytes_linkinglion{direction="inbound",message="pong"} 8
         peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="ping"} 1
         peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="pong"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="162.218.65.0"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="91.198.115.0"} 1
         peerobserver_p2p_message_count_linkinglion{direction="inbound",message="ping"} 1
         peerobserver_p2p_message_count_linkinglion{direction="inbound",message="pong"} 1
         peerobserver_p2p_ping_subnet{subnet="162.218.65.0"} 1
@@ -473,9 +465,7 @@ async fn test_integration_metrics_p2p_addr() {
         peerobserver_p2p_addr_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="past"} 0
         peerobserver_p2p_addr_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="past"} 1
         peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="addr"} 1234
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 1234
         peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="addr"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         "#,
     )
     .await;
@@ -647,9 +637,7 @@ async fn test_integration_metrics_p2p_addrv2() {
         peerobserver_p2p_addrv2_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="past"} 0
         peerobserver_p2p_addrv2_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="past"} 1
         peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="addrv2"} 5432
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 5432
         peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="addrv2"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         "#,
     )
     .await;
@@ -697,9 +685,7 @@ async fn test_integration_metrics_p2p_version() {
         Subject::NetMsg,
         r#"
         peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="version"} 2
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 2
         peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="version"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         peerobserver_p2p_version_subnet{subnet="127.0.0.0"} 1
         peerobserver_p2p_version_useragent{useragent="user_agent"} 1
         "#,
@@ -730,9 +716,7 @@ async fn test_integration_metrics_p2p_feefilter() {
         r#"
         peerobserver_p2p_feefilter_feerate{direction="inbound",feerate="12345"} 1
         peerobserver_p2p_message_bytes{connection_type="5",direction="inbound",message="feefilter"} 6
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 6
         peerobserver_p2p_message_count{connection_type="5",direction="inbound",message="feefilter"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         "#,
     )
     .await;
@@ -780,9 +764,7 @@ async fn test_integration_metrics_p2p_rejected() {
         Subject::NetMsg,
         r#"
         peerobserver_p2p_message_bytes{connection_type="5",direction="inbound",message="rejected"} 12
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 12
         peerobserver_p2p_message_count{connection_type="5",direction="inbound",message="rejected"} 2
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 2
         peerobserver_p2p_reject_message{rejectcommand="tx",rejectreason="Invalid"} 1
         peerobserver_p2p_reject_message{rejectcommand="tx",rejectreason="unknown"} 1
         "#,
@@ -899,9 +881,7 @@ async fn test_integration_metrics_p2p_inv() {
         peerobserver_p2p_invs_heterogeneous{direction="inbound"} 1
         peerobserver_p2p_invs_homogeneous{direction="inbound"} 1
         peerobserver_p2p_message_bytes{connection_type="3",direction="inbound",message="inv"} 160
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 160
         peerobserver_p2p_message_count{connection_type="3",direction="inbound",message="inv"} 2
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 2
         "#,
     )
     .await;
@@ -1004,9 +984,7 @@ async fn test_integration_metrics_p2p_oldping() {
         Subject::NetMsg,
         r#"
         peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="ping"} 0
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 0
         peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="ping"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         peerobserver_p2p_oldping_subnet{subnet="127.0.0.0"} 1
         "#,
     )
@@ -1034,9 +1012,7 @@ async fn test_integration_metrics_p2p_empty_addrv2() {
         r#"
         peerobserver_p2p_addrv2_empty{addr="127.0.0.1",direction="inbound"} 1
         peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="addrv2"} 0
-        peerobserver_p2p_message_bytes_by_subnet{direction="inbound",subnet="127.0.0.0"} 0
         peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="addrv2"} 1
-        peerobserver_p2p_message_count_by_subnet{direction="inbound",subnet="127.0.0.0"} 1
         "#,
     )
     .await;
