@@ -57,6 +57,26 @@ pub struct Args {
     pub query_interval: u64,
 }
 
+impl Args {
+    pub fn new(
+        nats_address: String,
+        log_level: log::Level,
+        rpc_host: String,
+        rpc_cookie_file: String,
+        query_interval: u64,
+    ) -> Args {
+        Self {
+            nats_address,
+            log_level,
+            rpc_host,
+            rpc_password: None,
+            rpc_user: None,
+            rpc_cookie_file: Some(rpc_cookie_file),
+            query_interval,
+        }
+    }
+}
+
 pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
     let auth: Auth = match args.rpc_cookie_file {
         Some(path) => Auth::CookieFile(path.into()),
