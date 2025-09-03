@@ -246,7 +246,6 @@ async fn test_integration_metrics_p2p_message_count() {
         peerobserver_p2p_message_bytes{connection_type="1",direction="outbound",message="pong"} 8
         peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="ping"} 1
         peerobserver_p2p_message_count{connection_type="1",direction="outbound",message="pong"} 1
-        peerobserver_p2p_ping_subnet{subnet="127.0.0.0"} 1
         "#,
     )
     .await;
@@ -293,7 +292,6 @@ async fn test_integration_metrics_p2p_traffic_linkinglion() {
         peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="pong"} 1
         peerobserver_p2p_message_count_linkinglion{direction="inbound",message="ping"} 1
         peerobserver_p2p_message_count_linkinglion{direction="inbound",message="pong"} 1
-        peerobserver_p2p_ping_subnet{subnet="162.218.65.0"} 1
         "#,
     )
     .await;
