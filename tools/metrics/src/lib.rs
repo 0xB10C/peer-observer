@@ -498,15 +498,8 @@ fn handle_connection_event(
                 .with_label_values(&[&c.conn.network.to_string()])
                 .inc();
         }
-        connection_event::Event::InboundEvicted(e) => {
+        connection_event::Event::InboundEvicted(_) => {
             metrics.conn_evicted_inbound.inc();
-            metrics
-                .conn_evicted_inbound_withinfo
-                .with_label_values(&[
-                    &util::ip_from_ipport(e.conn.addr.clone()),
-                    &e.conn.network.to_string(),
-                ])
-                .inc();
         }
         connection_event::Event::Misbehaving(m) => {
             metrics

@@ -1130,7 +1130,6 @@ async fn test_integration_metrics_conn_inbound_evicted() {
         Subject::NetConn,
         r#"
         peerobserver_conn_evicted_inbound 1
-        peerobserver_conn_evicted_inbound_withinfo{addr="2.2.2.2",network="2"} 1
         "#,
     )
     .await;
