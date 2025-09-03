@@ -194,7 +194,6 @@ pub struct Metrics {
     pub p2p_invs_outbound_large: IntCounter,
     pub p2p_ping_subnet: IntCounterVec,
     pub p2p_oldping_subnet: IntCounterVec,
-    pub p2p_version_subnet: IntCounterVec,
     pub p2p_version_useragent: IntCounterVec,
     pub p2p_feefilter_feerate: IntCounterVec,
     pub p2p_reject_message: IntCounterVec,
@@ -283,7 +282,6 @@ impl Metrics {
         ic!(p2p_invs_outbound_large, "Number of outbound INV messages with more than 35 entries, see https://bitcoincore.org/en/2024/10/08/disclose-large-inv-to-send/ and associated PR https://github.com/bitcoin/bitcoin/pull/27610.", registry);
         icv!(p2p_ping_subnet, "Number of Pings received by subnet (where applicable).", [LABEL_P2P_SUBNET], registry);
         icv!(p2p_oldping_subnet, "Number of 'old' Pings (without a value) received by subnet.", [LABEL_P2P_SUBNET], registry);
-        icv!(p2p_version_subnet, "Number of version messages received by subnet.", [LABEL_P2P_SUBNET], registry);
         icv!(p2p_version_useragent, "Number of version messages received by user agent.", [LABEL_P2P_VERSION_USERAGENT], registry);
         icv!(p2p_feefilter_feerate, "Number of feefilter messages received and sent by feerate.", [LABEL_P2P_DIRECTION, LABEL_P2P_FEEFILTER_FEERATE], registry);
         icv!(p2p_reject_message, "Number of reject messages received by command and reason.", [LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON], registry);
@@ -369,7 +367,6 @@ impl Metrics {
             p2p_invs_outbound_large,
             p2p_ping_subnet,
             p2p_oldping_subnet,
-            p2p_version_subnet,
             p2p_version_useragent,
             p2p_feefilter_feerate,
             p2p_reject_message,

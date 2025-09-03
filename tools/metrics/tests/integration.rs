@@ -686,7 +686,6 @@ async fn test_integration_metrics_p2p_version() {
         r#"
         peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="version"} 2
         peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="version"} 1
-        peerobserver_p2p_version_subnet{subnet="127.0.0.0"} 1
         peerobserver_p2p_version_useragent{useragent="user_agent"} 1
         "#,
     )

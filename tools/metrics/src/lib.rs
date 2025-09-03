@@ -705,10 +705,6 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
             Msg::Version(v) => {
                 if msg.meta.inbound {
                     metrics
-                        .p2p_version_subnet
-                        .with_label_values(&[&subnet])
-                        .inc();
-                    metrics
                         .p2p_version_useragent
                         .with_label_values(&[&v.user_agent])
                         .inc();
