@@ -1041,7 +1041,6 @@ async fn test_integration_metrics_conn_inbound() {
         peerobserver_conn_inbound 1
         peerobserver_conn_inbound_current 123
         peerobserver_conn_inbound_network{network="2"} 1
-        peerobserver_conn_inbound_subnet{subnet="127.0.0.0"} 1
         "#,
     )
     .await;
@@ -1206,8 +1205,6 @@ async fn test_integration_metrics_conn_special_ip() {
         peerobserver_conn_inbound_banlist_monero{addr="162.218.65.123"} 1
         peerobserver_conn_inbound_current 2
         peerobserver_conn_inbound_network{network="2"} 2
-        peerobserver_conn_inbound_subnet{subnet="162.218.65.0"} 1
-        peerobserver_conn_inbound_subnet{subnet="179.43.182.0"} 1
         peerobserver_conn_inbound_tor_exit 1
         "#,
     )

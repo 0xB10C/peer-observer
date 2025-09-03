@@ -170,7 +170,6 @@ pub struct Metrics {
     pub p2p_addrv2_timestamp_offset_seconds: HistogramVec,
     pub p2p_addrv2_empty: IntCounterVec,
     pub conn_inbound: IntCounter,
-    pub conn_inbound_subnet: IntCounterVec,
     pub conn_inbound_network: IntCounterVec,
     pub conn_inbound_banlist_monero: IntCounterVec,
     pub conn_inbound_banlist_gmax: IntCounterVec,
@@ -258,7 +257,6 @@ impl Metrics {
         hv!(p2p_addrv2_timestamp_offset_seconds, "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addrv2' message.", BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET, [LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET], registry);
         icv!(p2p_addrv2_empty, "Number of empty addrv2 messages received and sent (by address).", [LABEL_P2P_DIRECTION, LABEL_CONN_ADDR], registry);
         ic!(conn_inbound, "Number of inbound connections.", registry);
-        icv!(conn_inbound_subnet, "Number of inbound connections by subnet (where applicable).", [LABEL_P2P_SUBNET], registry);
         icv!(conn_inbound_network, "Number of inbound connections by network.", [LABEL_CONN_NETWORK], registry);
         icv!(conn_inbound_banlist_monero, "Number of inbound connections from IPs on the Monero banlist.", [LABEL_CONN_ADDR], registry);
         icv!(conn_inbound_banlist_gmax, "Number of inbound connections from IPs on the GMax banlist.", [LABEL_CONN_ADDR], registry);
@@ -343,7 +341,6 @@ impl Metrics {
             p2p_addrv2_timestamp_offset_seconds,
             p2p_addrv2_empty,
             conn_inbound,
-            conn_inbound_subnet,
             conn_inbound_network,
             conn_inbound_banlist_monero,
             conn_inbound_banlist_gmax,
