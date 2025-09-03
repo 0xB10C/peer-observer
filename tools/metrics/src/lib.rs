@@ -685,11 +685,6 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
                     }
                 }
             }
-            Msg::Ping(_) => {
-                if msg.meta.inbound {
-                    metrics.p2p_ping_subnet.with_label_values(&[&subnet]).inc();
-                }
-            }
             Msg::Oldping(_) => {
                 if msg.meta.inbound {
                     metrics
