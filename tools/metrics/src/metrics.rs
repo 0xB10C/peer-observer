@@ -276,7 +276,7 @@ impl Metrics {
         icv!(p2p_invs_heterogeneous, "Number of heterogeneous INV entries sent and received.", [LABEL_P2P_DIRECTION], registry);
         ic!(p2p_invs_outbound_large, "Number of outbound INV messages with more than 35 entries, see https://bitcoincore.org/en/2024/10/08/disclose-large-inv-to-send/ and associated PR https://github.com/bitcoin/bitcoin/pull/27610.", registry);
         icv!(p2p_oldping_subnet, "Number of 'old' Pings (without a value) received by subnet.", [LABEL_P2P_SUBNET], registry);
-        icv!(p2p_version_useragent, "Number of version messages received by user agent.", [LABEL_P2P_VERSION_USERAGENT], registry);
+        icv!(p2p_version_useragent, "Number of version messages received by user agent. Fake user agents from LinkingLion are set to 'LinkingLion'.", [LABEL_P2P_VERSION_USERAGENT], registry);
         icv!(p2p_feefilter_feerate, "Number of feefilter messages received and sent by feerate.", [LABEL_P2P_DIRECTION, LABEL_P2P_FEEFILTER_FEERATE], registry);
         icv!(p2p_reject_message, "Number of reject messages received by command and reason.", [LABEL_P2P_REJECT_COMMAND, LABEL_P2P_REJECT_REASON], registry);
         icv!(addrman_new_insert, "Number of attempted inserts into the addrman new table with their success as label.", [LABEL_ADDRMAN_NEW_INSERT_SUCCESS], registry);

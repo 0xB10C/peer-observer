@@ -648,42 +648,81 @@ async fn test_integration_metrics_p2p_version() {
     let timestamp_now = current_timestamp() as u32;
 
     publish_and_check(
-        &[EventMsg::new(Event::Msg(net_msg::Message {
-            meta: Metadata {
-                peer_id: 6,
-                addr: "127.0.0.1:9999".to_string(),
-                conn_type: 2,
-                command: "version".to_string(),
-                inbound: true,
-                size: 2,
-            },
-            msg: Some(Msg::Version(Version {
-                nonce: 2,
-                receiver: Address {
-                    port: 1234,
-                    services: 1234,
-                    timestamp: timestamp_now + 512,
-                    address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+        &[
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 6,
+                    addr: "127.0.0.1:9999".to_string(),
+                    conn_type: 2,
+                    command: "version".to_string(),
+                    inbound: true,
+                    size: 2,
                 },
-                sender: Address {
-                    port: 1234,
-                    services: 1234,
-                    timestamp: timestamp_now + 512,
-                    address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                msg: Some(Msg::Version(Version {
+                    nonce: 2,
+                    receiver: Address {
+                        port: 1234,
+                        services: 1234,
+                        timestamp: timestamp_now + 512,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                    sender: Address {
+                        port: 1234,
+                        services: 1234,
+                        timestamp: timestamp_now + 512,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                    services: 2341,
+                    start_height: 1,
+                    relay: false,
+                    timestamp: timestamp_now as i64 - 10,
+                    user_agent: "user_agent".to_string(),
+                    version: 70016,
+                })),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 2,
+                    addr: "162.218.65.123:1234".to_string(),
+                    conn_type: 1,
+                    command: "version".to_string(),
+                    inbound: true,
+                    size: 1,
                 },
-                services: 2341,
-                start_height: 1,
-                relay: false,
-                timestamp: timestamp_now as i64 - 10,
-                user_agent: "user_agent".to_string(),
-                version: 70016,
-            })),
-        }))
-        .unwrap()],
+                msg: Some(Msg::Version(Version {
+                    nonce: 2,
+                    receiver: Address {
+                        port: 1234,
+                        services: 1234,
+                        timestamp: timestamp_now + 512,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                    sender: Address {
+                        port: 1234,
+                        services: 1234,
+                        timestamp: timestamp_now + 512,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
+                    services: 2341,
+                    start_height: 1,
+                    relay: false,
+                    timestamp: timestamp_now as i64 - 10,
+                    user_agent: "user_agent".to_string(),
+                    version: 70016,
+                })),
+            }))
+            .unwrap(),
+        ],
         Subject::NetMsg,
         r#"
+        peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="version"} 1
         peerobserver_p2p_message_bytes{connection_type="2",direction="inbound",message="version"} 2
+        peerobserver_p2p_message_bytes_linkinglion{direction="inbound",message="version"} 1
+        peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="version"} 1
         peerobserver_p2p_message_count{connection_type="2",direction="inbound",message="version"} 1
+        peerobserver_p2p_message_count_linkinglion{direction="inbound",message="version"} 1
+        peerobserver_p2p_version_useragent{useragent="LinkingLion"} 1
         peerobserver_p2p_version_useragent{useragent="user_agent"} 1
         "#,
     )

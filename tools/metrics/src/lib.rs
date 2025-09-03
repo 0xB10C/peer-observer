@@ -16,7 +16,7 @@ use shared::net_msg::{message::Msg, reject::RejectReason};
 use shared::prost::Message;
 use shared::rpc::rpc_event;
 use shared::tokio::sync::watch;
-use shared::util;
+use shared::util::{self, is_on_linkinglion_banlist};
 use shared::validation::validation_event;
 use shared::{async_nats, clap};
 use std::collections::BTreeMap;
@@ -680,9 +680,17 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
             }
             Msg::Version(v) => {
                 if msg.meta.inbound {
+                    // LinkingLion is using a lot of fake user agents. To reduce noise and the metric
+                    // cardinality (see https://github.com/0xB10C/peer-observer/issues/239#issuecomment-3248916550),
+                    // treat them as "LinkingLion".
+                    // https://b10c.me/data/observations/06-linkinglion/linkinglion-user-agents.txt
+                    let user_agent = match is_on_linkinglion_banlist(&ip) {
+                        true => "LinkingLion",
+                        false => &v.user_agent,
+                    };
                     metrics
                         .p2p_version_useragent
-                        .with_label_values(&[&v.user_agent])
+                        .with_label_values(&[&user_agent])
                         .inc();
                 }
             }
