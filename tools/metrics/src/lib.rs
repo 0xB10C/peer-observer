@@ -471,15 +471,10 @@ fn handle_connection_event(
                 .set(i.existing_connections as i64);
         }
         connection_event::Event::Outbound(o) => {
-            let ip = util::ip_from_ipport(o.conn.addr.clone());
             metrics.conn_outbound.inc();
             metrics
                 .conn_outbound_network
                 .with_label_values(&[&o.conn.network.to_string()])
-                .inc();
-            metrics
-                .conn_outbound_subnet
-                .with_label_values(&[&util::subnet(ip)])
                 .inc();
             metrics
                 .conn_outbound_current

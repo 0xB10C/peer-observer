@@ -1069,7 +1069,6 @@ async fn test_integration_metrics_conn_outbound() {
         peerobserver_conn_outbound 1
         peerobserver_conn_outbound_current 321
         erobserver_conn_outbound_network{network="3"} 1
-        peerobserver_conn_outbound_subnet{subnet="1.1.1.0"} 1
         "#,
     )
     .await;
