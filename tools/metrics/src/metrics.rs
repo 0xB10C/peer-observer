@@ -179,7 +179,6 @@ pub struct Metrics {
     pub conn_outbound: IntCounter,
     pub conn_outbound_current: IntGauge,
     pub conn_outbound_network: IntCounterVec,
-    pub conn_outbound_subnet: IntCounterVec,
     pub conn_closed_network: IntCounterVec,
     pub conn_closed: IntCounter,
     pub conn_closed_age: IntCounter,
@@ -265,7 +264,6 @@ impl Metrics {
         ic!(conn_outbound, "Number of opened outbound connections.", registry);
         ig!(conn_outbound_current, "Number of currently open outbound connections.", registry);
         icv!(conn_outbound_network, "Number of opened outbound connections by network.", [LABEL_CONN_NETWORK], registry);
-        icv!(conn_outbound_subnet, "Number of opened outbound connections by subnet.", [LABEL_P2P_SUBNET], registry);
         icv!(conn_closed_network, "Number of closed connections by network.", [LABEL_CONN_NETWORK], registry);
         ic!(conn_closed, "Number of closed connections.", registry);
         ic!(conn_closed_age, "Age (in seconds) of closed connections. The age of each closed connection is added to the metric.", registry);
@@ -348,7 +346,6 @@ impl Metrics {
             conn_outbound,
             conn_outbound_current,
             conn_outbound_network,
-            conn_outbound_subnet,
             conn_closed_network,
             conn_closed,
             conn_closed_age,
