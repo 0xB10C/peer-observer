@@ -30,10 +30,6 @@ peerobserver_conn_closed_network{network="1"} 14
 # HELP peerobserver_conn_evicted_inbound Number of evicted inbund connections.
 # TYPE peerobserver_conn_evicted_inbound counter
 peerobserver_conn_evicted_inbound 13
-# HELP peerobserver_conn_evicted_inbound_withinfo Number of evicted inbound connections with information about their address and network.
-# TYPE peerobserver_conn_evicted_inbound_withinfo counter
-peerobserver_conn_evicted_inbound_withinfo{addr="XXX.X.XX.XXX",network="1"} 6
-peerobserver_conn_evicted_inbound_withinfo{addr="XX.X.XXX.X",network="1"} 7
 # HELP peerobserver_conn_inbound Number of inbound connections.
 # TYPE peerobserver_conn_inbound counter
 peerobserver_conn_inbound 14
@@ -47,9 +43,6 @@ peerobserver_conn_inbound_current 115
 # HELP peerobserver_conn_inbound_network Number of inbound connections by network.
 # TYPE peerobserver_conn_inbound_network counter
 peerobserver_conn_inbound_network{network="1"} 14
-# HELP peerobserver_conn_inbound_subnet Number of inbound connections by subnet (where applicable).
-# TYPE peerobserver_conn_inbound_subnet counter
-peerobserver_conn_inbound_subnet{subnet="XX.XX.XXX.0"} 14
 # HELP peerobserver_mempool_added Number of transactions added to the mempool.
 # TYPE peerobserver_mempool_added counter
 peerobserver_mempool_added 53

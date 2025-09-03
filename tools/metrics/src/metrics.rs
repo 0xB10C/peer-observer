@@ -183,7 +183,6 @@ pub struct Metrics {
     pub conn_closed: IntCounter,
     pub conn_closed_age: IntCounter,
     pub conn_evicted_inbound: IntCounter,
-    pub conn_evicted_inbound_withinfo: IntCounterVec,
     pub conn_misbehaving: IntCounterVec,
     pub conn_misbehaving_reason: IntCounterVec,
     pub p2p_inv_entries: IntCounterVec,
@@ -269,7 +268,6 @@ impl Metrics {
         ic!(conn_closed, "Number of closed connections.", registry);
         ic!(conn_closed_age, "Age (in seconds) of closed connections. The age of each closed connection is added to the metric.", registry);
         ic!(conn_evicted_inbound, "Number of evicted inbound connections.", registry);
-        icv!(conn_evicted_inbound_withinfo, "Number of evicted inbound connections with information about their address and network.", [LABEL_CONN_ADDR, LABEL_CONN_NETWORK], registry);
         icv!(conn_misbehaving, "Number of misbehaving connections.", [LABEL_CONN_MISBEHAVING_ID, LABEL_CONN_MISBEHAVING_MESSAGE], registry);
         icv!(conn_misbehaving_reason, "Occurences of misbehavior by reasons", [LABEL_CONN_MISBEHAVING_MESSAGE], registry);
         icv!(p2p_inv_entries, "Number of INV entries send and received with INV type.", [LABEL_P2P_DIRECTION, LABEL_P2P_INV_TYPE], registry);
@@ -352,7 +350,6 @@ impl Metrics {
             conn_closed,
             conn_closed_age,
             conn_evicted_inbound,
-            conn_evicted_inbound_withinfo,
             conn_misbehaving,
             conn_misbehaving_reason,
             p2p_inv_entries,
