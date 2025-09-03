@@ -454,16 +454,13 @@ fn handle_connection_event(
                 metrics.conn_inbound_tor_exit.inc();
             }
             if util::is_on_gmax_banlist(&ip) {
-                metrics
-                    .conn_inbound_banlist_gmax
-                    .with_label_values(&[&ip])
-                    .inc();
+                metrics.conn_inbound_banlist_gmax.inc();
             }
             if util::is_on_monero_banlist(&ip) {
-                metrics
-                    .conn_inbound_banlist_monero
-                    .with_label_values(&[&ip])
-                    .inc();
+                metrics.conn_inbound_banlist_monero.inc();
+            }
+            if util::is_on_linkinglion_banlist(&ip) {
+                metrics.conn_inbound_list_linkinglion.inc();
             }
             metrics
                 .conn_inbound_network

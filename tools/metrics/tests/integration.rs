@@ -1198,8 +1198,9 @@ async fn test_integration_metrics_conn_special_ip() {
         Subject::NetConn,
         r#"
         peerobserver_conn_inbound 2
-        peerobserver_conn_inbound_banlist_gmax{addr="162.218.65.123"} 1
-        peerobserver_conn_inbound_banlist_monero{addr="162.218.65.123"} 1
+        peerobserver_conn_inbound_banlist_gmax 1
+        peerobserver_conn_inbound_banlist_monero 1
+        peerobserver_conn_inbound_list_linkinglion 1
         peerobserver_conn_inbound_current 2
         peerobserver_conn_inbound_network{network="2"} 2
         peerobserver_conn_inbound_tor_exit 1
