@@ -171,8 +171,9 @@ pub struct Metrics {
     pub p2p_addrv2_empty: IntCounterVec,
     pub conn_inbound: IntCounter,
     pub conn_inbound_network: IntCounterVec,
-    pub conn_inbound_banlist_monero: IntCounterVec,
-    pub conn_inbound_banlist_gmax: IntCounterVec,
+    pub conn_inbound_banlist_monero: IntCounter,
+    pub conn_inbound_banlist_gmax: IntCounter,
+    pub conn_inbound_list_linkinglion: IntCounter,
     pub conn_inbound_tor_exit: IntCounter,
     pub conn_inbound_current: IntGauge,
     pub conn_outbound: IntCounter,
@@ -256,8 +257,9 @@ impl Metrics {
         icv!(p2p_addrv2_empty, "Number of empty addrv2 messages received and sent (by address).", [LABEL_P2P_DIRECTION, LABEL_CONN_ADDR], registry);
         ic!(conn_inbound, "Number of inbound connections.", registry);
         icv!(conn_inbound_network, "Number of inbound connections by network.", [LABEL_CONN_NETWORK], registry);
-        icv!(conn_inbound_banlist_monero, "Number of inbound connections from IPs on the Monero banlist.", [LABEL_CONN_ADDR], registry);
-        icv!(conn_inbound_banlist_gmax, "Number of inbound connections from IPs on the GMax banlist.", [LABEL_CONN_ADDR], registry);
+        ic!(conn_inbound_banlist_monero, "Number of inbound connections from IPs on the Monero banlist.", registry);
+        ic!(conn_inbound_banlist_gmax, "Number of inbound connections from IPs on the GMax banlist.", registry);
+        ic!(conn_inbound_list_linkinglion, "Number of inbound connections from IPs belonging to LinkingLion.", registry);
         ic!(conn_inbound_tor_exit, "Number of inbound connections from Tor exit nodes.", registry);
         ig!(conn_inbound_current, "Number of currently open inbound connections.", registry);
         ic!(conn_outbound, "Number of opened outbound connections.", registry);
@@ -340,6 +342,7 @@ impl Metrics {
             conn_inbound_network,
             conn_inbound_banlist_monero,
             conn_inbound_banlist_gmax,
+            conn_inbound_list_linkinglion,
             conn_inbound_tor_exit,
             conn_inbound_current,
             conn_outbound,

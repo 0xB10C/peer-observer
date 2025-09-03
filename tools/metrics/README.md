@@ -33,10 +33,6 @@ peerobserver_conn_evicted_inbound 13
 # HELP peerobserver_conn_inbound Number of inbound connections.
 # TYPE peerobserver_conn_inbound counter
 peerobserver_conn_inbound 14
-# HELP peerobserver_conn_inbound_banlist_monero Number of inbound connections from IPs on the Monero banlist.
-# TYPE peerobserver_conn_inbound_banlist_monero counter
-peerobserver_conn_inbound_banlist_monero{addr="XX.XX.XX.XX"} 7
-peerobserver_conn_inbound_banlist_monero{addr="XXX.XX.XX.XX"} 7
 # HELP peerobserver_conn_inbound_current Number of currently open inbound connections.
 # TYPE peerobserver_conn_inbound_current gauge
 peerobserver_conn_inbound_current 115
