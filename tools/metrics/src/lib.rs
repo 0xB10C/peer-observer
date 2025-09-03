@@ -466,10 +466,6 @@ fn handle_connection_event(
                     .inc();
             }
             metrics
-                .conn_inbound_subnet
-                .with_label_values(&[&util::subnet(ip)])
-                .inc();
-            metrics
                 .conn_inbound_network
                 .with_label_values(&[&i.conn.network.to_string()])
                 .inc();
