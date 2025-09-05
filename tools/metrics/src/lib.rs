@@ -187,6 +187,9 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
             let mut peers_with_inflight_blocks = 0;
             let mut distinct_inflight_block_heights = BTreeSet::new();
 
+            // We keep track of the number of peers that relay sub 1 sat/vbyte transactions.
+            let mut sub1satvb_relay_peers = 0;
+
             for peer in info.infos.iter() {
                 let ip = util::ip_from_ipport(peer.address.clone());
                 if util::is_on_gmax_banlist(&ip) {
@@ -272,6 +275,18 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
                         .entry(peer.mapped_as)
                         .and_modify(|e| *e += 1)
                         .or_insert(1);
+                }
+
+                if peer.relay_transactions
+
+                    // check that the minfeefilter of this pee is below 1 sat/vbyte
+                    && peer.minfeefilter < 0.00001000 // in BTC/kvB (0.00001000 BTC/kvB = 1 sat/vbyte)
+                    // filter out spy nodes that never request transactions
+                    // and don't send transaction
+                    && (peer.bytes_received_per_message.contains_key("tx")
+                        || peer.bytes_sent_per_message.contains_key("tx"))
+                {
+                    sub1satvb_relay_peers += 1;
                 }
             }
 
@@ -379,6 +394,10 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
                     .with_label_values(&[k.to_string()])
                     .set(*v);
             }
+
+            metrics
+                .rpc_peer_info_sub1satvb_relay
+                .set(sub1satvb_relay_peers);
         }
     }
 }

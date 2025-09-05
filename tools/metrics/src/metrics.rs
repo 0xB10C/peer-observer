@@ -233,6 +233,7 @@ pub struct Metrics {
     pub rpc_peer_info_ping_mean: Gauge,
     pub rpc_peer_info_minping_median: Gauge,
     pub rpc_peer_info_minping_mean: Gauge,
+    pub rpc_peer_info_sub1satvb_relay: IntGauge,
 }
 
 impl Metrics {
@@ -318,7 +319,7 @@ impl Metrics {
         g!(rpc_peer_info_ping_mean, "Mean ping (in milliseconds) of all connected peers.", registry);
         g!(rpc_peer_info_minping_median, "Median min_ping (in milliseconds) of all connected peers.", registry);
         g!(rpc_peer_info_minping_mean, "Mean min_ping (in milliseconds) of all connected peers.", registry);
-
+        ig!(rpc_peer_info_sub1satvb_relay, "Number of peers that relay sub-1 sat/vbyte transactions.", registry);
 
         Self {
             registry,
@@ -400,6 +401,7 @@ impl Metrics {
             rpc_peer_info_ping_mean,
             rpc_peer_info_minping_median,
             rpc_peer_info_minping_mean,
+            rpc_peer_info_sub1satvb_relay,
         }
     }
 }
