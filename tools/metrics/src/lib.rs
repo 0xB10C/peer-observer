@@ -7,7 +7,7 @@ use shared::clap::Parser;
 use shared::event_msg;
 use shared::event_msg::event_msg::Event;
 use shared::futures::StreamExt;
-use shared::log;
+use shared::log::{self, warn};
 use shared::mempool::mempool_event;
 use shared::metricserver;
 use shared::net_conn::connection_event;
@@ -190,6 +190,11 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
             // We keep track of the number of peers that relay sub 1 sat/vbyte transactions.
             let mut sub1satvb_relay_peers = 0;
 
+            // Keep track of the total number of inbound IPv4 peers and
+            // the number distinct /16 subnets of these peers.
+            let mut ipv4_inbound_peers = 0;
+            let mut ipv4_inbound_peer_slash16s = BTreeSet::new();
+
             for peer in info.infos.iter() {
                 let ip = util::ip_from_ipport(peer.address.clone());
                 if util::is_on_gmax_banlist(&ip) {
@@ -278,7 +283,6 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
                 }
 
                 if peer.relay_transactions
-
                     // check that the minfeefilter of this pee is below 1 sat/vbyte
                     && peer.minfeefilter < 0.00001000 // in BTC/kvB (0.00001000 BTC/kvB = 1 sat/vbyte)
                     // filter out spy nodes that never request transactions
@@ -287,6 +291,22 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
                         || peer.bytes_sent_per_message.contains_key("tx"))
                 {
                     sub1satvb_relay_peers += 1;
+                }
+
+                // To calculate the diversity of our inbound IPv4 connections,
+                // we keep track of the number of peers per IPv4 /16.
+                if peer.network.to_lowercase() == "ipv4" && peer.inbound {
+                    let ipv4_parts = ip.split(".").collect::<Vec<&str>>();
+                    if ipv4_parts.len() == 4 {
+                        ipv4_inbound_peers += 1;
+                        let slash16 = format!("{}-{}", ipv4_parts[0], ipv4_parts[1]);
+                        ipv4_inbound_peer_slash16s.insert(slash16);
+                    } else {
+                        warn!(
+                            "Could not split IPv4 for inbound divserity metric: ip={}",
+                            ip
+                        );
+                    }
                 }
             }
 
@@ -398,6 +418,13 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
             metrics
                 .rpc_peer_info_sub1satvb_relay
                 .set(sub1satvb_relay_peers);
+
+            if ipv4_inbound_peers > 0 {
+                // avoid division by zero
+                metrics
+                    .rpc_peer_info_connection_divserity_inbound_ipv4
+                    .set(ipv4_inbound_peer_slash16s.len() as f64 / ipv4_inbound_peers as f64)
+            }
         }
     }
 }
