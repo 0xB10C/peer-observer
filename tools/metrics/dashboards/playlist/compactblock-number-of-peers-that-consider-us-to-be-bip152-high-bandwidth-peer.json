@@ -141,7 +141,7 @@
           "useBackend": false
         }
       ],
-      "title": "number of peers our node considers as BIP152 high-bandwidth peer",
+      "title": "number of peers that consider our node as BIP-152 high-bandwidth peer",
       "type": "timeseries"
     }
   ],
