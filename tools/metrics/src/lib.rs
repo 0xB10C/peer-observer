@@ -689,6 +689,21 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
                     }
                 }
             }
+            Msg::Ping(ping) => {
+                let value_range = match ping.value {
+                    0 => "0",
+                    1..=0xFF => "u8",
+                    0x100..=0xFFFF => "u16",
+                    0x10000..=0xFFFFFFFF => "u32",
+                    0x10000000..=u64::MAX => "u64",
+                };
+                if msg.meta.inbound {
+                    metrics
+                        .p2p_ping_inbound_value
+                        .with_label_values(&[&value_range])
+                        .inc();
+                }
+            }
             Msg::Oldping(_) => {
                 if msg.meta.inbound {
                     metrics
