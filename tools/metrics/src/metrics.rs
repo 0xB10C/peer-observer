@@ -20,6 +20,7 @@ pub const LABEL_P2P_VERSION_USERAGENT: &str = "useragent";
 pub const LABEL_P2P_FEEFILTER_FEERATE: &str = "feerate";
 pub const LABEL_P2P_REJECT_REASON: &str = "rejectreason";
 pub const LABEL_P2P_REJECT_COMMAND: &str = "rejectcommand";
+pub const LABEL_P2P_PING_VALUE: &str = "value";
 
 pub const LABEL_CONN_NETWORK: &str = "network";
 pub const LABEL_CONN_ADDR: &str = "addr";
@@ -169,6 +170,7 @@ pub struct Metrics {
     pub p2p_addrv2_addresses: HistogramVec,
     pub p2p_addrv2_timestamp_offset_seconds: HistogramVec,
     pub p2p_addrv2_empty: IntCounterVec,
+    pub p2p_ping_inbound_value: IntCounterVec,
     pub conn_inbound: IntCounter,
     pub conn_inbound_network: IntCounterVec,
     pub conn_inbound_banlist_monero: IntCounter,
@@ -254,6 +256,7 @@ impl Metrics {
         icv!(p2p_addrv2_services, "Number of addresses with these service bits contained in an 'addrv2' message.", [LABEL_P2P_DIRECTION, LABEL_P2P_SERVICES], registry);
         hv!(p2p_addrv2_addresses, "Histogram of the number of addresses contained in an 'addrv2' message.", BUCKETS_ADDR_ADDRESS_COUNT, [LABEL_P2P_DIRECTION], registry);
         hv!(p2p_addrv2_timestamp_offset_seconds, "Histogram of the timestamp offset (in seconds) of addresses contained in an 'addrv2' message.", BUCKETS_ADDR_ADDRESS_TIMESTAMP_OFFSET, [LABEL_P2P_DIRECTION, LABEL_P2P_ADDR_TIMESTAMP_OFFSET], registry);
+        icv!(p2p_ping_inbound_value, "Number of pings per value (0, u8, u16, u32, u64)", [LABEL_P2P_PING_VALUE], registry);
         icv!(p2p_addrv2_empty, "Number of empty addrv2 messages received and sent (by address).", [LABEL_P2P_DIRECTION, LABEL_CONN_ADDR], registry);
         ic!(conn_inbound, "Number of inbound connections.", registry);
         icv!(conn_inbound_network, "Number of inbound connections by network.", [LABEL_CONN_NETWORK], registry);
@@ -337,6 +340,7 @@ impl Metrics {
             p2p_addrv2_addresses,
             p2p_addrv2_timestamp_offset_seconds,
             p2p_addrv2_empty,
+            p2p_ping_inbound_value,
             conn_inbound,
             conn_inbound_network,
             conn_inbound_banlist_monero,

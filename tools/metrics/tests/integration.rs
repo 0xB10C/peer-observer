@@ -1028,6 +1028,58 @@ async fn test_integration_metrics_p2p_oldping() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_p2p_ping_value() {
+    println!("test that the P2P ping value metrics work");
+
+    let values = vec![
+        0,                   // => 0
+        1,                   // => u8
+        u8::MAX as u64 - 1,  // => u8
+        u8::MAX as u64,      // => u8
+        u8::MAX as u64 + 1,  // => u16
+        u16::MAX as u64 - 1, // => u16
+        u16::MAX as u64,     // => u16
+        u16::MAX as u64 + 1, // => u32
+        u32::MAX as u64 - 1, // => u32
+        u32::MAX as u64,     // => u32
+        u32::MAX as u64 + 1, // => u64
+        u64::MAX as u64 - 1, // => u64
+        u64::MAX as u64,     // => u64
+    ];
+
+    let events: Vec<EventMsg> = values
+        .iter()
+        .map(|v| {
+            EventMsg::new(Event::Msg(net_msg::Message {
+                meta: Metadata {
+                    peer_id: 6,
+                    addr: "127.0.0.1:2134".to_string(),
+                    conn_type: 2,
+                    command: "ping".to_string(),
+                    inbound: true,
+                    size: 8,
+                },
+                msg: Some(Msg::Ping(Ping { value: *v })),
+            }))
+            .unwrap()
+        })
+        .collect();
+
+    publish_and_check(
+        &events,
+        Subject::NetMsg,
+        r#"
+        peerobserver_p2p_ping_inbound_value{value="0"} 1
+        peerobserver_p2p_ping_inbound_value{value="u8"} 3
+        peerobserver_p2p_ping_inbound_value{value="u16"} 3
+        peerobserver_p2p_ping_inbound_value{value="u32"} 3
+        peerobserver_p2p_ping_inbound_value{value="u64"} 3
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_p2p_empty_addrv2() {
     println!("test that the P2P emptyaddrv2 metrics work");
 
