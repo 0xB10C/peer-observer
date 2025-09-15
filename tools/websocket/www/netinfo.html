@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <title>netinfo</title>
+</head>
+
+<body class="container-fluid">
+  <div id="websocket-picker"></div>
+  <p>status: <span id="status">disconnected</span></p>
+  <p>summary:
+    <span id="summary"></span>
+  </p>
+  <table id="peer-table" class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <td id="id">id</td>
+        <td id="ip">address</td>
+        <td id="ua">user&nbsp;agent</td>
+        <td id="tags">tags</td>
+        <td id="ct">connection&nbsp;type</td>
+        <td id="net">network</td>
+        <td id="trans">transport</td>
+        <td id="txrelay">tx&nbsp;relay</td>
+        <td id="addrrelay">addr&nbsp;relay</td>
+        <td id="total_received">received</td>
+        <td id="total_sent">sent</td>
+        <td id="age">age</td>
+        <td id="addr_processed">addr&nbsp;processed</td>
+        <td id="addr_rate_limited">addr&nbsp;rate&nbsp;limited</td>
+        <td id="ping">ping</td>
+        <td id="minping">minping</td>
+      </tr>
+    </thead>
+    <tbody id="peer-table-tbody">
+        <!-- filled with JS -->
+    </tbody>
+  </table>
+</body>
+
+<template id="table-row">
+  <tr>
+    <td id="id">ID</td>
+    <td id="ip">IP</td>
+    <td id="ua">UA</td>
+    <td id="tags">tags</td>
+    <td id="ct">type</td>
+    <td id="net">network</td>
+    <td id="trans">transport</td>
+    <td id="txrelay">tx relay</td>
+    <td id="addrrelay">addr relay</td>
+    <td id="total_received">received</td>
+    <td id="total_sent">sent</td>
+    <td id="age">age</td>
+    <td id="addr_processed">addr processed</td>
+    <td id="addr_rate_limited">addr rate limited</td>
+    <td id="ping">ping</td>
+    <td id="minping">minping</td>
+  </tr>
+</template>
+
+<script src="js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy"
+  crossorigin="anonymous"></script>
+<script src="js/websocket-picker.js"></script>
+<script src="js/lib.js"></script>
+
+</html>
+
+<style>
+</style>
+
+<script>
+  const peerTable = document.getElementById("peer-table")
+  const peerTableBody = document.getElementById("peer-table-tbody")
+  const statusSpan = document.getElementById("status")
+  const summarySpan = document.getElementById("summary")
+
+  function formatMB(b) {
+    return (b / 1_000_000).toFixed(1) + " MB"
+  }
+
+  function mkTag(label, color) {
+    let tag = document.createElement('span')
+    tag.textContent = label;
+    tag.classList.add("badge")
+    tag.classList.add("text-bg-" + color)
+    return tag
+  }
+
+  function redrawTable(infos) {
+    peerTableBody.innerHTML = '';
+    let num_peers = infos.length;
+    let num_spys = 0;
+    let num_v2 = 0;
+    let num_tx_relay = 0;
+    let num_addr_relay = 0;
+    let num_addr_ratelimited = 0;
+    let num_hb_to = 0;
+    let num_hb_from = 0;
+    for(const peer of infos) {
+      const template = document.querySelector("#table-row");
+      clone = template.content.cloneNode(true);
+      clone.querySelector("#id").textContent = peer.id;
+      clone.querySelector("#ip").textContent = peer.address;
+      clone.querySelector("#ua").textContent = peer.subversion;
+      clone.querySelector("#ct").textContent = peer.connection_type;
+      clone.querySelector("#net").textContent = peer.network;
+      clone.querySelector("#trans").textContent = peer.transport_protocol_type;
+      clone.querySelector("#txrelay").textContent = peer.relay_transactions;
+      clone.querySelector("#addrrelay").textContent = peer.addr_relay_enabled;
+      clone.querySelector("#total_received").textContent = formatMB(peer.bytes_received);
+      clone.querySelector("#total_sent").textContent = formatMB(peer.bytes_sent);
+      clone.querySelector("#age").textContent = (new Date() / 1000 - peer.connection_time).toFixed(0) + "s";
+      clone.querySelector("#addr_processed").textContent = peer.addr_processed;
+      clone.querySelector("#ping").textContent = (peer.ping_time * 1000).toFixed(0);
+      clone.querySelector("#minping").textContent = (peer.minimum_ping * 1000).toFixed(0);
+
+      if (peer.addr_relay_enabled) {
+        num_addr_relay++;
+      }
+      if (peer.transport_protocol_type == "v2") {
+        num_v2++;
+      }
+      if (peer.relay_transactions) {
+        num_tx_relay++;
+      }
+
+      clone.querySelector("#addr_rate_limited").textContent = "";
+      if (peer.addr_rate_limited) {
+        num_addr_ratelimited++;
+        clone.querySelector("#addr_rate_limited").append(mkTag(peer.addr_rate_limited, "warning"));
+      }
+
+      clone.querySelector("#tags").textContent = "";
+      if (peer.bip152_hb_to) {
+        num_hb_to++;
+        clone.querySelector("#tags").append(mkTag("BIP152 high-bandwidth to", "light"));
+      }
+      if (peer.bip152_hb_from) {
+        num_hb_from++;
+        clone.querySelector("#tags").append(mkTag("BIP152 high-bandwidth from", "light"));
+      }
+      if (peer.relay_transactions && peer.inbound && !("inv" in peer.bytes_received_per_message) && !("tx" in peer.bytes_sent_per_message)) {
+        num_spys++;
+        clone.querySelector("#tags").append(mkTag("spy", "warning"));
+      }
+      if (peer.time_offset > 60 || peer.time_offset < -60) {
+        clone.querySelector("#tags").append(mkTag("offset: " + peer.time_offset, "warning"));
+      }
+      if (peer.ping_wait > 1000) {
+        clone.querySelector("#tags").append(mkTag("ping-wait: " + (peer.ping_wait/1000).toFixed(1) + "s", "danger"));
+      }
+      clone.querySelector("#net").textContent = peer.network;
+      peerTableBody.appendChild(clone)
+    }
+    summarySpan.textContent = `peers=${num_peers}, `
+        + `v2=${num_peers ? (num_v2/num_peers*100).toFixed(1) : 0}%, `
+        + `spys=${num_peers ? (num_spys/num_peers*100).toFixed(1) : 0}%, `
+        + `txrelay=${num_peers ? (num_tx_relay/num_peers*100).toFixed(1) : 0}%, `
+        + `addrrelay=${num_peers ? (num_addr_relay/num_peers*100).toFixed(1) : 0}%, `
+        + `addr_rate_limited=${num_peers ? (num_addr_ratelimited/num_peers*100).toFixed(1) : 0}%, `
+        + `highbandwidth_to=${num_peers ? (num_hb_to/num_peers*100).toFixed(1) : 0}%, `
+        + `highbandwidth_from=${num_peers ? (num_hb_from/num_peers*100).toFixed(1) : 0}%, `
+  }
+
+  function handleWebsocketMessage(e) {
+    let event = JSON.parse(e.data)
+    if ("Rpc" in event) {
+      statusSpan.textContent = "connected";
+      console.log(event.Rpc.event.PeerInfos.infos)
+      redrawTable(event.Rpc.event.PeerInfos.infos)
+    } else {
+      if (statusSpan.textContent != "connected") {
+        statusSpan.textContent = "connected; waiting for first getpeerinfo";
+      }
+    }
+  };
+
+  function handleWebsocketReset() {
+    statusSpan.textContent = "connection reset";
+    redrawTable([])
+    summarySpan.textContent = "";
+  };
+
+  window.onload = (event) => {
+    runUnitTests()
+    initWebsocketPicker("websockets.json", "websocket-picker", handleWebsocketMessage, handleWebsocketReset)
+  };
+
+</script>
