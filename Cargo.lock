@@ -477,25 +477,12 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "corepc-client"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "565724b3d7556c06827b27c468333bbf97e2173097aaed576b5da73faf7a1e04"
+checksum = "d2ce205b817339b55d93bdb41d66704cfc5299f89576ab24107bd2abf4c29c1e"
 dependencies = [
  "bitcoin",
- "corepc-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jsonrpc",
- "log",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "corepc-client"
-version = "0.8.0"
-source = "git+https://github.com/0xb10c/corepc.git?branch=2025-07-peer-observer-rpc-extractor#5e1b6091ec8aeeba9a9db20ee63141e09f40da25"
-dependencies = [
- "bitcoin",
- "corepc-types 0.8.0 (git+https://github.com/0xb10c/corepc.git?branch=2025-07-peer-observer-rpc-extractor)",
+ "corepc-types",
  "jsonrpc",
  "log",
  "serde",
@@ -504,13 +491,13 @@ dependencies = [
 
 [[package]]
 name = "corepc-node"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "596e4ee1ff3616ae3f36e89e0b847604034ba689243cc5e7dd08da395b88ec58"
+checksum = "76025e0755bc411fda75e0912a0a0e511d13b54988bf05b90d7681f0c7570b67"
 dependencies = [
  "anyhow",
  "bitcoin_hashes",
- "corepc-client 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "corepc-client",
  "flate2",
  "log",
  "minreq",
@@ -523,19 +510,9 @@ dependencies = [
 
 [[package]]
 name = "corepc-types"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a7f2faedffc7c654e348e2da6c6416090525c6072979fee9681d620d1d398a4"
-dependencies = [
- "bitcoin",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "corepc-types"
-version = "0.8.0"
-source = "git+https://github.com/0xb10c/corepc.git?branch=2025-07-peer-observer-rpc-extractor#5e1b6091ec8aeeba9a9db20ee63141e09f40da25"
+checksum = "8f0231e773ddcfebb8eb8627a16553de56ab064a03843d847f409107ad661f25"
 dependencies = [
  "bitcoin",
  "serde",
@@ -771,7 +748,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "778e2ac28f6c47af28e4907f13ffd1e1ddbd400980a9abd7c8df189bf578a5ad"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1886,7 +1863,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.9.4",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2144,7 +2121,7 @@ dependencies = [
  "base32",
  "bitcoin",
  "clap",
- "corepc-client 0.8.0 (git+https://github.com/0xb10c/corepc.git?branch=2025-07-peer-observer-rpc-extractor)",
+ "corepc-client",
  "corepc-node",
  "futures",
  "hex",
