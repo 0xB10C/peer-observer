@@ -5,6 +5,7 @@ members = [
   "shared",
   "extractors/ebpf",
   "extractors/rpc",
+  "extractors/p2p",
   "tools/logger",
   "tools/websocket",
   "tools/metrics",
