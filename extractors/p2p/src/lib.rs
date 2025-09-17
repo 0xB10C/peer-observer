@@ -11,7 +11,11 @@ use shared::{
         },
     },
     clap::{self, Parser, ValueEnum},
+    event_msg::{EventMsg, event_msg::Event},
     log,
+    nats_subjects::Subject,
+    p2p_extractor,
+    prost::Message,
     rand::{self, Rng},
     tokio::{
         io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -153,7 +157,9 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
                 if let Ok(connection) = res {
                     let (socket, addr) = connection;
                     log::info!("accepted a new connection from: {}", addr);
-                    shared::tokio::task::spawn(handle_connection(socket, network, args.clone()));
+                    let nats_client_clone = nats_client.clone();
+                    shared::tokio::task::spawn(handle_connection(socket, network, args.clone(), nats_client_clone));
+
                 } else {
                     log::warn!("Could not accept connection on socket: {:?}", res);
                 }
@@ -178,7 +184,12 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     Ok(())
 }
 
-async fn handle_connection(mut stream: TcpStream, network: BitcoinNetwork, args: Args) {
+async fn handle_connection(
+    mut stream: TcpStream,
+    network: BitcoinNetwork,
+    args: Args,
+    nats_client: async_nats::Client,
+) {
     let addr: &str = match stream.peer_addr() {
         Ok(addr) => &addr.to_string(),
         Err(e) => {
@@ -238,7 +249,9 @@ async fn handle_connection(mut stream: TcpStream, network: BitcoinNetwork, args:
                                     .duration_since(UNIX_EPOCH)
                                     .expect("Time error")
                                     .as_nanos() as u64;
+                                let duration = now - nonce;
                                 log::debug!(target: addr, "processing the ping message took: {}ns", now - nonce);
+                                publish_ping_measurement_event(duration, &nats_client).await;
                             }
                             NetworkMessage::GetAddr | NetworkMessage::Alert(_) => {
                                 // ignore these for now..
@@ -261,7 +274,34 @@ async fn handle_connection(mut stream: TcpStream, network: BitcoinNetwork, args:
     let _ = stream.shutdown();
 }
 
-pub async fn read_and_decode_message<R: AsyncRead + Unpin>(
+async fn publish_ping_measurement_event(duration: u64, nats_client: &async_nats::Client) {
+    let proto_result = EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+        event: Some(p2p_extractor::p2p_extractor_event::Event::PingDuration(
+            p2p_extractor::PingDuration { duration },
+        )),
+    }));
+
+    match proto_result {
+        Ok(proto) => {
+            if let Err(e) = nats_client
+                .publish(
+                    Subject::P2PExtractor.to_string(),
+                    proto.encode_to_vec().into(),
+                )
+                .await
+            {
+                log::error!("could not publish Ping measurement into NATS: {}", e);
+            } else {
+                log::trace!("published Ping measurement into NATS: {:?}", proto);
+            }
+        }
+        Err(e) => {
+            log::error!("could not create Ping measurement protobuf: {}", e);
+        }
+    }
+}
+
+async fn read_and_decode_message<R: AsyncRead + Unpin>(
     reader: &mut BufReader<R>,
     network: BitcoinNetwork,
     addr: &str,
