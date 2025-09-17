@@ -13,6 +13,7 @@ use shared::metricserver;
 use shared::net_conn::connection_event;
 use shared::net_msg;
 use shared::net_msg::{message::Msg, reject::RejectReason};
+use shared::p2p_extractor::p2p_extractor_event;
 use shared::prost::Message;
 use shared::rpc::rpc_event;
 use shared::tokio::sync::watch;
@@ -139,6 +140,11 @@ fn handle_event(
             Event::Rpc(r) => {
                 if let Some(e) = r.event {
                     handle_rpc_event(&e, metrics);
+                }
+            }
+            Event::P2pExtractorEvent(p) => {
+                if let Some(e) = p.event {
+                    handle_p2p_extractor_event(&e, metrics);
                 }
             }
         }
@@ -549,6 +555,12 @@ fn handle_connection_event(
                 .with_label_values(&[&m.message])
                 .inc();
         }
+    }
+}
+
+fn handle_p2p_extractor_event(p2p_event: &p2p_extractor_event::Event, _metrics: metrics::Metrics) {
+    match p2p_event {
+        _ => (), // FIXME: this is implemented in a following commit
     }
 }
 

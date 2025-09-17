@@ -68,6 +68,7 @@ Options:
       --mempool                      If passed, show mempool events
       --validation                   If passed, show validation events
       --rpc                          If passed, show RPC events
+      --p2p-extractor                If passed, show p2p-extractor events
   -h, --help                         Print help
   -V, --version                      Print version
 ```

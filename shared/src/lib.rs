@@ -21,6 +21,7 @@ pub mod mempool;
 pub mod nats_subjects;
 pub mod net_conn;
 pub mod net_msg;
+pub mod p2p_extractor;
 pub mod primitive;
 pub mod rpc;
 pub mod validation;

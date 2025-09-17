@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+// This file is only for Events of the p2p-extractor.
+package p2p_extractor;
+
+message P2PExtractorEvent {
+  oneof event {
+    PingDuration ping_duration = 1;
+  }
+}
+
+// A Ping-Pong duration measurement performed by the p2p-extractor.
+message PingDuration {
+  required uint64 duration = 1; // Time it takes for the node to respond with a pong to a ping in nanoseconds. This is useful to measure node processing backlog.
+}
