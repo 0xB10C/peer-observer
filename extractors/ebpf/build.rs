@@ -14,13 +14,12 @@ fn main() {
     match SkeletonBuilder::new()
         .source(SOURCE)
         .clang_args([OsStr::new("-I"), vmlinux_path.as_os_str()])
-        //.clang_args(format!("-I {}", vmlinux_path.display()))
         .build_and_generate(DEST)
     {
         Ok(_) => (),
         Err(e) => {
-            println!("Error: {}", e);
-            panic!("could not compile {}", SOURCE);
+            eprintln!("Failed to build BPF skeleton:");
+            panic!("could not compile {}: {:?}", SOURCE, e);
         }
     }
     println!("cargo:rerun-if-changed={}", SOURCE);
