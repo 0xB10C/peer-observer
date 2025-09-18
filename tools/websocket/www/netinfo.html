@@ -34,6 +34,7 @@
         <td id="addr_rate_limited">addr&nbsp;rate&nbsp;limited</td>
         <td id="ping">ping</td>
         <td id="minping">minping</td>
+        <td id="feefilter">feefilter</td>
       </tr>
     </thead>
     <tbody id="peer-table-tbody">
@@ -60,6 +61,7 @@
     <td id="addr_rate_limited">addr rate limited</td>
     <td id="ping">ping</td>
     <td id="minping">minping</td>
+    <td id="feefilter">feefilter</td>
   </tr>
 </template>
 
@@ -118,6 +120,7 @@
       clone.querySelector("#addr_processed").textContent = peer.addr_processed;
       clone.querySelector("#ping").textContent = (peer.ping_time * 1000).toFixed(0);
       clone.querySelector("#minping").textContent = (peer.minimum_ping * 1000).toFixed(0);
+      clone.querySelector("#feefilter").textContent = peer.minfeefilter ? (peer.minfeefilter * 100_000).toFixed(2) + " s/vb" : "-";
 
       if (peer.addr_relay_enabled) {
         num_addr_relay++;
