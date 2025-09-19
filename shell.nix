@@ -1,7 +1,7 @@
 { pkgs ? import <nixpkgs> {}}:
 
 let
-  llvm = pkgs.llvmPackages_15;
+  llvm = pkgs.llvmPackages_21;
 in
 pkgs.mkShell {
 
