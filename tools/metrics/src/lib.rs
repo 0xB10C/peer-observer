@@ -558,9 +558,13 @@ fn handle_connection_event(
     }
 }
 
-fn handle_p2p_extractor_event(p2p_event: &p2p_extractor_event::Event, _metrics: metrics::Metrics) {
+fn handle_p2p_extractor_event(p2p_event: &p2p_extractor_event::Event, metrics: metrics::Metrics) {
     match p2p_event {
-        _ => (), // FIXME: this is implemented in a following commit
+        p2p_extractor_event::Event::PingDuration(ping_duration) => {
+            metrics
+                .p2pextractor_ping_duration_nanoseconds
+                .set(ping_duration.duration as i64);
+        }
     }
 }
 
