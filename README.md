@@ -56,7 +56,8 @@ NATS server. Each extractor connects to a different interface:
 | **extractor** | **description**                       |             **details**             |
 |---------------|---------------------------------------|:-----------------------------------:|
 | ebpf          | uses tracepoints for real-time events | [extractors/ebpf/](extractors/ebpf) |
-| rpc           | periodically fetches RPC for events   | [tools/rpc/](extractors/rpc)        |
+| rpc           | periodically fetches RPC for events   | [extractors/rpc/](extractors/rpc)   |
+| p2p           |Bitcoin P2P events from an inbound node| [extractors/p2p/](extractors/p2p)   |
 
 ## Tools
 
