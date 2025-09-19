@@ -237,6 +237,7 @@ pub struct Metrics {
     pub rpc_peer_info_minping_mean: Gauge,
     pub rpc_peer_info_sub1satvb_relay: IntGauge,
     pub rpc_peer_info_connection_divserity_inbound_ipv4: Gauge,
+    pub p2pextractor_ping_duration_nanoseconds: IntGauge,
 }
 
 impl Metrics {
@@ -326,6 +327,9 @@ impl Metrics {
         ig!(rpc_peer_info_sub1satvb_relay, "Number of peers that relay sub-1 sat/vbyte transactions.", registry);
         g!(rpc_peer_info_connection_divserity_inbound_ipv4, "Diversity of IPv4 inbound connections by /16 (higher is better). Calculated: <number of distinct /16 IPv4 inbound connection subnets>/<number of inbound IPv4 peers>", registry);
 
+        // RPC-extractor
+        ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
+
         Self {
             registry,
             runtime_start_timestamp,
@@ -409,6 +413,7 @@ impl Metrics {
             rpc_peer_info_minping_mean,
             rpc_peer_info_sub1satvb_relay,
             rpc_peer_info_connection_divserity_inbound_ipv4,
+            p2pextractor_ping_duration_nanoseconds,
         }
     }
 }

@@ -15,6 +15,7 @@ use shared::{
     net_msg::{
         self, message::Msg, Addr, AddrV2, FeeFilter, Inv, Metadata, Ping, Pong, Reject, Version,
     },
+    p2p_extractor,
     primitive::{self, inventory_item::Item, Address, InventoryItem},
     prost::Message,
     rand::{self, Rng},
@@ -1962,6 +1963,27 @@ async fn test_integration_metrics_rpc_peerinfo_ipv4_inbound_diversity() {
         Subject::Rpc,
         r#"
         peerobserver_rpc_peer_info_connection_divserity_inbound_ipv4 0.6666666666666666
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_p2pextractor_ping_duration() {
+    println!("test that p2p-extractor ping duration metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+                event: Some(p2p_extractor::p2p_extractor_event::Event::PingDuration(
+                    p2p_extractor::PingDuration { duration: 1234567 },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::Validation,
+        r#"
+        peerobserver_p2pextractor_ping_duration_nanoseconds 1234567
         "#,
     )
     .await;

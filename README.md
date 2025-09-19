@@ -56,7 +56,8 @@ NATS server. Each extractor connects to a different interface:
 | **extractor** | **description**                       |             **details**             |
 |---------------|---------------------------------------|:-----------------------------------:|
 | ebpf          | uses tracepoints for real-time events | [extractors/ebpf/](extractors/ebpf) |
-| rpc           | periodically fetches RPC for events   | [tools/rpc/](extractors/rpc)        |
+| rpc           | periodically fetches RPC for events   | [extractors/rpc/](extractors/rpc)   |
+| p2p           |Bitcoin P2P events from an inbound node| [extractors/p2p/](extractors/p2p)   |
 
 ## Tools
 
@@ -88,19 +89,20 @@ I'll do my best to add more documentation.
 
 ### Integration tests
 
-To run the integration tests, run with the feature `nats_integration_tests`:
+To run the integration tests, run with the feature `nats_integration_tests` and 
+`node_integration_tests`. If you are not using the nix-shell, you need to set the
+`NATS_SERVER_BINARY` to the path to your `nats-server` binary. Addtionally,
+`BITCOIND_EXE` can be set to a custom `bitcoind` binary. By default, a recent
+release will be downloaded and used if `BITCOIND_SKIP_DOWNLOAD` is unset.
 
 ```bash
-$ cargo test --features nats_integration_tests
+$ cargo test --features nats_integration_tests --features node_integration_tests
 ```
-
-If you are not using the nix-shell, you need to set the `NATS_SERVER_BINARY` to the path
-to your `nats-server` binary.
 
 Test coverage can be generated with:
 
 ```bash
-$ cargo tarpaulin --out Html --features nats_integration_tests
+$ cargo tarpaulin --out Html --features nats_integration_tests --features node_integration_tests
 ```
 
 This generates a `tarpaulin-report.html` file which can be viewed in the browser.
