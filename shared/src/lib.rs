@@ -14,8 +14,11 @@ pub extern crate rand;
 pub extern crate simple_logger;
 pub extern crate tokio;
 
+/// Mappings and implementation for the protobuf types used in NATS
+/// to communicate between the extractors and tools.
 pub mod protobuf;
 
+/// Subjects used when publishing and subscribing to NATS.
 pub mod nats_subjects;
 
 /// A minimal HTTP webserver (but not spec compliant) used to serve prometheus metrics via HTTP.
