@@ -5,8 +5,6 @@ use metrics::Args;
 
 use shared::{
     log,
-    nats_publisher_for_testing::NatsPublisherForTesting,
-    nats_server_for_testing::NatsServerForTesting,
     nats_subjects::Subject,
     prost::Message,
     protobuf::addrman::{self, InsertNew, InsertTried},
@@ -25,6 +23,8 @@ use shared::{
     protobuf::validation::{self, BlockConnected},
     rand::{self, Rng},
     simple_logger::SimpleLogger,
+    testing::nats_publisher::NatsPublisherForTesting,
+    testing::nats_server::NatsServerForTesting,
     tokio::{self, sync::watch, time::sleep},
     util::current_timestamp,
 };

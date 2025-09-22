@@ -20,10 +20,10 @@ pub mod nats_subjects;
 
 /// A minimal HTTP webserver (but not spec compliant) used to serve prometheus metrics via HTTP.
 pub mod metricserver;
-/// A NATS publisher to be used in integration tests.
-pub mod nats_publisher_for_testing;
-/// A NATS server runnner to be used in integration tests.
-pub mod nats_server_for_testing;
+
+/// Used in integration testing.
+pub mod testing;
+
 /// Utillity functions shared among peer-observer tools
 pub mod util;
 
