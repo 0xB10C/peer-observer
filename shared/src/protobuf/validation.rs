@@ -1,5 +1,5 @@
 use crate::bitcoin::hashes::Hash;
-use crate::ctypes;
+use crate::protobuf::ctypes;
 use std::fmt;
 
 // structs are generated via the validation.proto file

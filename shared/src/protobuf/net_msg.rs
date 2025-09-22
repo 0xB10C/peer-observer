@@ -5,7 +5,7 @@ use bitcoin::p2p;
 
 use std::fmt;
 
-use crate::primitive::{Address, BlockHeader, PrefilledTransaction};
+use crate::protobuf::primitive::{Address, BlockHeader, PrefilledTransaction};
 
 // structs are generated via the p2p.proto file
 include!(concat!(env!("OUT_DIR"), "/net_msg.rs"));

@@ -4,26 +4,29 @@ use metrics::error::RuntimeError;
 use metrics::Args;
 
 use shared::{
-    addrman::{self, InsertNew, InsertTried},
-    event_msg::{event_msg::Event, EventMsg},
     log,
-    mempool::{self, Added, Rejected, Removed, Replaced},
     nats_publisher_for_testing::NatsPublisherForTesting,
     nats_server_for_testing::NatsServerForTesting,
     nats_subjects::Subject,
-    net_conn::{self, Connection},
-    net_msg::{
+    prost::Message,
+    protobuf::addrman::{self, InsertNew, InsertTried},
+    protobuf::event_msg::{event_msg::Event, EventMsg},
+    protobuf::mempool::{self, Added, Rejected, Removed, Replaced},
+    protobuf::net_conn::{self, Connection},
+    protobuf::net_conn::{
+        ClosedConnection, EvictedInboundConnection, InboundConnection, MisbehavingConnection,
+    },
+    protobuf::net_msg::{
         self, message::Msg, Addr, AddrV2, FeeFilter, Inv, Metadata, Ping, Pong, Reject, Version,
     },
-    p2p_extractor,
-    primitive::{self, inventory_item::Item, Address, InventoryItem},
-    prost::Message,
+    protobuf::p2p_extractor,
+    protobuf::primitive::{self, inventory_item::Item, Address, InventoryItem},
+    protobuf::rpc::{self, PeerInfo, PeerInfos},
+    protobuf::validation::{self, BlockConnected},
     rand::{self, Rng},
-    rpc::{self, PeerInfo, PeerInfos},
     simple_logger::SimpleLogger,
     tokio::{self, sync::watch, time::sleep},
     util::current_timestamp,
-    validation::{self, BlockConnected},
 };
 
 use std::{
@@ -1114,7 +1117,7 @@ async fn test_integration_metrics_conn_inbound() {
     publish_and_check(
         &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Inbound(
-                shared::net_conn::InboundConnection {
+                InboundConnection {
                     conn: Connection {
                         addr: "127.0.0.1:8333".to_string(),
                         conn_type: 1,
@@ -1143,7 +1146,7 @@ async fn test_integration_metrics_conn_outbound() {
     publish_and_check(
         &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Outbound(
-                shared::net_conn::OutboundConnection {
+                shared::protobuf::net_conn::OutboundConnection {
                     conn: Connection {
                         addr: "1.1.1.1:48333".to_string(),
                         conn_type: 2,
@@ -1175,7 +1178,7 @@ async fn test_integration_metrics_conn_closed() {
     publish_and_check(
         &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Closed(
-                shared::net_conn::ClosedConnection {
+                ClosedConnection {
                     conn: Connection {
                         addr: "2.2.2.2:48333".to_string(),
                         conn_type: 4,
@@ -1206,7 +1209,7 @@ async fn test_integration_metrics_conn_inbound_evicted() {
     publish_and_check(
         &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::InboundEvicted(
-                shared::net_conn::EvictedInboundConnection {
+                EvictedInboundConnection {
                     conn: Connection {
                         addr: "2.2.2.2:48333".to_string(),
                         conn_type: 2,
@@ -1233,7 +1236,7 @@ async fn test_integration_metrics_conn_misbehaving() {
     publish_and_check(
         &[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Misbehaving(
-                shared::net_conn::MisbehavingConnection {
+                MisbehavingConnection {
                     id: 2,
                     message: "reason".to_string(),
                 },
@@ -1257,7 +1260,7 @@ async fn test_integration_metrics_conn_special_ip() {
         &[
             EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
                 event: Some(net_conn::connection_event::Event::Inbound(
-                    shared::net_conn::InboundConnection {
+                    InboundConnection {
                         conn: Connection {
                             addr: "162.218.65.123".to_string(), // an IP belonging to LinkingLion & banned on Gmax banlist
                             conn_type: 1,
@@ -1271,7 +1274,7 @@ async fn test_integration_metrics_conn_special_ip() {
             .unwrap(),
             EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
                 event: Some(net_conn::connection_event::Event::Inbound(
-                    shared::net_conn::InboundConnection {
+                    InboundConnection {
                         conn: Connection {
                             // a random IP belonging to a tor exit node.
                             // This might not be a tor exit node IP in the future and the IP would need to updated.

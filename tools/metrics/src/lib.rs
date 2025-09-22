@@ -2,23 +2,23 @@
 // Allow for more metric macros in metrics.rs
 #![recursion_limit = "256"]
 
-use shared::addrman::addrman_event;
 use shared::clap::Parser;
-use shared::event_msg;
-use shared::event_msg::event_msg::Event;
 use shared::futures::StreamExt;
 use shared::log::{self, warn};
-use shared::mempool::mempool_event;
 use shared::metricserver;
-use shared::net_conn::connection_event;
-use shared::net_msg;
-use shared::net_msg::{message::Msg, reject::RejectReason};
-use shared::p2p_extractor::p2p_extractor_event;
 use shared::prost::Message;
-use shared::rpc::rpc_event;
+use shared::protobuf::addrman::addrman_event;
+use shared::protobuf::event_msg;
+use shared::protobuf::event_msg::event_msg::Event;
+use shared::protobuf::mempool::mempool_event;
+use shared::protobuf::net_conn::connection_event;
+use shared::protobuf::net_msg;
+use shared::protobuf::net_msg::{message::Msg, reject::RejectReason};
+use shared::protobuf::p2p_extractor::p2p_extractor_event;
+use shared::protobuf::rpc::rpc_event;
+use shared::protobuf::validation::validation_event;
 use shared::tokio::sync::watch;
 use shared::util::{self, is_on_linkinglion_banlist};
-use shared::validation::validation_event;
 use shared::{async_nats, clap};
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;

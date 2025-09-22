@@ -1,15 +1,15 @@
 #![cfg(feature = "nats_integration_tests")]
 
 use shared::{
-    event_msg::{event_msg::Event, EventMsg},
     futures::StreamExt,
     log,
     nats_publisher_for_testing::NatsPublisherForTesting,
     nats_server_for_testing::NatsServerForTesting,
     nats_subjects::Subject,
-    net_conn::{self, Connection},
-    net_msg::{self, message::Msg, Metadata, Ping, Pong},
     prost::Message,
+    protobuf::event_msg::{event_msg::Event, EventMsg},
+    protobuf::net_conn::{self, Connection},
+    protobuf::net_msg::{self, message::Msg, Metadata, Ping, Pong},
     rand::{self, Rng},
     simple_logger::SimpleLogger,
     tokio::{self, sync::watch, time::sleep},
@@ -157,7 +157,7 @@ async fn test_integration_websocket_conn_inbound() {
 
     publish_and_check(&[EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
         event: Some(net_conn::connection_event::Event::Inbound(
-            shared::net_conn::InboundConnection {
+            shared::protobuf::net_conn::InboundConnection {
                 conn: Connection {
                     addr: "127.0.0.1:8333".to_string(),
                     conn_type: 1,
@@ -267,7 +267,7 @@ async fn test_integration_websocket_closed_client() {
         &[
             EventMsg::new(Event::Conn(net_conn::ConnectionEvent {
             event: Some(net_conn::connection_event::Event::Outbound(
-                shared::net_conn::OutboundConnection {
+                shared::protobuf::net_conn::OutboundConnection {
                     conn: Connection {
                         addr: "1.1.1.1:48333".to_string(),
                         conn_type: 2,

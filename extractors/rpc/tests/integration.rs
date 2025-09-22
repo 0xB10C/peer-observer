@@ -3,13 +3,13 @@
 
 use shared::{
     async_nats, corepc_node,
-    event_msg::{EventMsg, event_msg::Event},
     futures::StreamExt,
     log::{self, info},
     nats_server_for_testing::NatsServerForTesting,
     prost::Message,
+    protobuf::event_msg::{EventMsg, event_msg::Event},
+    protobuf::rpc::rpc_event::Event::PeerInfos,
     rand::{self, Rng},
-    rpc::rpc_event::Event::PeerInfos,
     simple_logger::SimpleLogger,
     tokio::{self, sync::watch},
 };

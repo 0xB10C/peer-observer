@@ -14,17 +14,9 @@ pub extern crate rand;
 pub extern crate simple_logger;
 pub extern crate tokio;
 
-pub mod addrman;
-pub mod ctypes;
-pub mod event_msg;
-pub mod mempool;
+pub mod protobuf;
+
 pub mod nats_subjects;
-pub mod net_conn;
-pub mod net_msg;
-pub mod p2p_extractor;
-pub mod primitive;
-pub mod rpc;
-pub mod validation;
 
 /// A minimal HTTP webserver (but not spec compliant) used to serve prometheus metrics via HTTP.
 pub mod metricserver;

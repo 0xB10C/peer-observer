@@ -1,4 +1,4 @@
-use crate::ctypes;
+use crate::protobuf::ctypes;
 use bitcoin::hashes::Hash;
 use std::fmt;
 

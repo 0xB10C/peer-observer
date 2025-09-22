@@ -1,6 +1,5 @@
+use crate::protobuf::ctypes;
 use std::fmt;
-
-use crate::ctypes;
 
 // structs are generated via the addrman.proto file
 include!(concat!(env!("OUT_DIR"), "/addrman.rs"));

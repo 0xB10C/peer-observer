@@ -323,7 +323,7 @@ impl fmt::Display for UnknownAddress {
 mod tests {
     #[test]
     fn test_address_into_addrtype_onion() {
-        use crate::primitive;
+        use crate::protobuf::primitive;
         use bitcoin::p2p::address::Address;
         use bitcoin::p2p::ServiceFlags;
 

@@ -1,11 +1,11 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 use shared::clap::Parser;
-use shared::event_msg;
-use shared::event_msg::event_msg::Event;
 use shared::futures::stream::StreamExt;
 use shared::log;
 use shared::prost::Message;
+use shared::protobuf::event_msg;
+use shared::protobuf::event_msg::event_msg::Event;
 use shared::simple_logger;
 use shared::{async_nats, clap, tokio};
 
