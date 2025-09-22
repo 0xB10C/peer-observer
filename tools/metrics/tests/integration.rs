@@ -4,28 +4,33 @@ use metrics::error::RuntimeError;
 use metrics::Args;
 
 use shared::{
-    log,
+    log::{self, warn},
     nats_subjects::Subject,
     prost::Message,
-    protobuf::addrman::{self, InsertNew, InsertTried},
-    protobuf::event_msg::{event_msg::Event, EventMsg},
-    protobuf::mempool::{self, Added, Rejected, Removed, Replaced},
-    protobuf::net_conn::{self, Connection},
-    protobuf::net_conn::{
-        ClosedConnection, EvictedInboundConnection, InboundConnection, MisbehavingConnection,
+    protobuf::{
+        addrman::{self, InsertNew, InsertTried},
+        event_msg::{event_msg::Event, EventMsg},
+        mempool::{self, Added, Rejected, Removed, Replaced},
+        net_conn::{
+            self, ClosedConnection, Connection, EvictedInboundConnection, InboundConnection,
+            MisbehavingConnection,
+        },
+        net_msg::{
+            self, message::Msg, Addr, AddrV2, FeeFilter, Inv, Metadata, Ping, Pong, Reject, Version,
+        },
+        p2p_extractor,
+        primitive::{self, inventory_item::Item, Address, InventoryItem},
+        rpc::{self, PeerInfo, PeerInfos},
+        validation::{self, BlockConnected},
     },
-    protobuf::net_msg::{
-        self, message::Msg, Addr, AddrV2, FeeFilter, Inv, Metadata, Ping, Pong, Reject, Version,
-    },
-    protobuf::p2p_extractor,
-    protobuf::primitive::{self, inventory_item::Item, Address, InventoryItem},
-    protobuf::rpc::{self, PeerInfo, PeerInfos},
-    protobuf::validation::{self, BlockConnected},
     rand::{self, Rng},
     simple_logger::SimpleLogger,
-    testing::nats_publisher::NatsPublisherForTesting,
-    testing::nats_server::NatsServerForTesting,
-    tokio::{self, sync::watch, time::sleep},
+    testing::{nats_publisher::NatsPublisherForTesting, nats_server::NatsServerForTesting},
+    tokio::{
+        self,
+        sync::{watch, Mutex},
+        time::sleep,
+    },
     util::current_timestamp,
 };
 
@@ -36,17 +41,15 @@ use std::{
     net::TcpStream,
     sync::{
         atomic::{AtomicU16, Ordering},
-        Once, OnceLock,
+        Arc, Once, OnceLock,
     },
     time::Duration,
 };
 
 static INIT: Once = Once::new();
-
-static NEXT_NATS_PORT: OnceLock<AtomicU16> = OnceLock::new();
 static NEXT_METRICS_PORT: OnceLock<AtomicU16> = OnceLock::new();
 
-fn setup() -> (u16, u16) {
+fn setup() -> u16 {
     INIT.call_once(|| {
         SimpleLogger::new()
             .with_level(log::LevelFilter::Trace)
@@ -56,21 +59,18 @@ fn setup() -> (u16, u16) {
         let mut rng = rand::rng();
 
         // choose start ports from the ephemeral port range
-        let nats_start = rng.random_range(49152..65500);
         let metrics_start = rng.random_range(49152..65500);
 
-        NEXT_NATS_PORT.set(AtomicU16::new(nats_start)).unwrap();
         NEXT_METRICS_PORT
             .set(AtomicU16::new(metrics_start))
             .unwrap();
     });
 
-    let nats_port = NEXT_NATS_PORT.get().unwrap().fetch_add(1, Ordering::SeqCst);
     let metrics_port = NEXT_METRICS_PORT
         .get()
         .unwrap()
         .fetch_add(1, Ordering::SeqCst);
-    return (nats_port, metrics_port);
+    return metrics_port;
 }
 
 fn make_test_args(nats_port: u16, metrics_port: u16) -> Args {
@@ -83,6 +83,7 @@ fn make_test_args(nats_port: u16, metrics_port: u16) -> Args {
 
 fn fetch_metrics(port: u16) -> Result<String, std::io::Error> {
     let addr = format!("127.0.0.1:{}", port);
+    log::debug!("fetching metrics from {}", addr);
     let mut stream = TcpStream::connect(addr.clone())?;
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
@@ -133,13 +134,22 @@ fn check_metrics(port: u16, expected: &[&str]) -> Result<bool, std::io::Error> {
 }
 
 async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str) {
-    let (nats_port, mut metrics_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
-    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
+    let initial_metrics_port = setup();
+    let metrics_port: Arc<Mutex<u16>> = Arc::new(Mutex::new(initial_metrics_port));
+
+    let nats_server = NatsServerForTesting::new().await;
+    let nats_publisher = NatsPublisherForTesting::new(nats_server.port).await;
+
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let metrics_port_clone = metrics_port.clone();
     let metrics_handle = tokio::spawn(async move {
         loop {
-            let args = make_test_args(nats_port, metrics_port);
+            let port: u16;
+            {
+                port = *metrics_port_clone.lock().await;
+            }
+
+            let args = make_test_args(nats_server.port, port);
             match metrics::run(args, shutdown_rx.clone()).await {
                 Ok(_) => break,
                 Err(e) => match e {
@@ -149,11 +159,12 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str
                                 .get()
                                 .unwrap()
                                 .fetch_add(1, Ordering::SeqCst);
-                            println!(
+                            warn!(
                                 "Port {} seems to be already in use. Trying port {} next..",
-                                metrics_port, new_port
+                                port, new_port
                             );
-                            metrics_port = new_port;
+                            let mut port = metrics_port_clone.lock().await;
+                            *port = new_port;
                         }
                         _ => panic!("Couldn not start metrics tool: {}", e),
                     },
@@ -166,7 +177,7 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str
     sleep(Duration::from_secs(1)).await;
 
     for event in events {
-        println!("publishing: {:?}", event);
+        log::debug!("publishing: {:?}", event);
         nats_publisher
             .publish(subject.to_string(), event.encode_to_vec())
             .await;
@@ -175,7 +186,8 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str
     sleep(Duration::from_millis(100)).await;
 
     let expected_lines: Vec<&str> = expected.split('\n').collect();
-    assert!(check_metrics(metrics_port, &expected_lines).expect("Could not fetch metrics"));
+    let port = metrics_port.lock().await;
+    assert!(check_metrics(*port, &expected_lines).expect("Could not fetch metrics"));
 
     shutdown_tx.send(true).unwrap();
     metrics_handle.await.unwrap();
@@ -184,7 +196,7 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str
 #[tokio::test]
 async fn test_integration_metrics_no_nats_connection() {
     println!("test that we fail if we can't connect to NATS (due to port 0)");
-    let (_, _) = setup();
+    let _ = setup();
 
     let args = make_test_args(0, 0);
     let (_, shutdown_rx) = watch::channel(false);

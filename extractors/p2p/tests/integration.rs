@@ -26,13 +26,12 @@ use std::sync::{
 use p2p_extractor::{Args, Network};
 
 static INIT: Once = Once::new();
-static NEXT_NATS_PORT: OnceLock<AtomicU16> = OnceLock::new();
 static NEXT_P2PEXTRACTOR_PORT: OnceLock<AtomicU16> = OnceLock::new();
 
 // 1 second ping interval for fast tests
 const PING_INTERVAL_SECONDS: u64 = 1;
 
-fn setup() -> (u16, u16) {
+fn setup() -> u16 {
     INIT.call_once(|| {
         SimpleLogger::new()
             .with_level(log::LevelFilter::Trace)
@@ -42,19 +41,16 @@ fn setup() -> (u16, u16) {
         let mut rng = rand::rng();
 
         // choose start ports from the ephemeral port range
-        let nats_start = rng.random_range(49152..65500);
-        NEXT_NATS_PORT.set(AtomicU16::new(nats_start)).unwrap();
         let p2p_extractor_start = rng.random_range(49152..65500);
         NEXT_P2PEXTRACTOR_PORT
             .set(AtomicU16::new(p2p_extractor_start))
             .unwrap();
     });
-    let nats_port = NEXT_NATS_PORT.get().unwrap().fetch_add(1, Ordering::SeqCst);
     let p2p_extractor_port = NEXT_P2PEXTRACTOR_PORT
         .get()
         .unwrap()
         .fetch_add(1, Ordering::SeqCst);
-    (nats_port, p2p_extractor_port)
+    p2p_extractor_port
 }
 
 fn make_test_args(nats_port: u16, p2p_address: String, disable_ping: bool) -> Args {
@@ -93,13 +89,13 @@ fn setup_node_with_addnode(p2p_extractor_port: u16) -> corepc_node::Node {
 }
 
 async fn check(disable_ping: bool, check_expected: fn(Event) -> ()) {
-    let (nats_port, p2p_extractor_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
+    let p2p_extractor_port = setup();
+    let nats_server = NatsServerForTesting::new().await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     let p2p_extractor_handle = tokio::spawn(async move {
         let args = make_test_args(
-            nats_port,
+            nats_server.port,
             format!("127.0.0.1:{}", p2p_extractor_port),
             disable_ping,
         );
@@ -115,7 +111,7 @@ async fn check(disable_ping: bool, check_expected: fn(Event) -> ()) {
     // extractor is ready to accept connections
     let _node = setup_node_with_addnode(p2p_extractor_port);
 
-    let nc = async_nats::connect(format!("127.0.0.1:{}", nats_port))
+    let nc = async_nats::connect(format!("127.0.0.1:{}", nats_server.port))
         .await
         .unwrap();
     let mut sub = nc.subscribe("*").await.unwrap();
