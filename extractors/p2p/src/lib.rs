@@ -11,11 +11,11 @@ use shared::{
         },
     },
     clap::{self, Parser, ValueEnum},
-    event_msg::{EventMsg, event_msg::Event},
     log,
     nats_subjects::Subject,
-    p2p_extractor,
     prost::Message,
+    protobuf::event_msg::{EventMsg, event_msg::Event},
+    protobuf::p2p_extractor,
     rand::{self, Rng},
     tokio::{
         io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},

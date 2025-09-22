@@ -1,7 +1,7 @@
 // structs are generated via the wrapper.proto file
 include!(concat!(env!("OUT_DIR"), "/event_msg.rs"));
 
-use crate::event_msg::event_msg::Event;
+use crate::protobuf::event_msg::event_msg::Event;
 use log::trace;
 use std::time::SystemTime;
 use std::time::SystemTimeError;

@@ -1,12 +1,12 @@
 use shared::clap::{ArgGroup, Parser};
 use shared::corepc_client::client_sync::Auth;
 use shared::corepc_client::client_sync::v29::Client;
-use shared::event_msg::EventMsg;
-use shared::event_msg::event_msg::Event;
 use shared::log;
 use shared::nats_subjects::Subject;
 use shared::prost::Message;
-use shared::rpc;
+use shared::protobuf::event_msg::EventMsg;
+use shared::protobuf::event_msg::event_msg::Event;
+use shared::protobuf::rpc;
 use shared::tokio::sync::watch;
 use shared::tokio::time::{self, Duration};
 use shared::{async_nats, clap};

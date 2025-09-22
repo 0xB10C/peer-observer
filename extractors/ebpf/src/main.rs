@@ -4,17 +4,18 @@ use error::RuntimeError;
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use libbpf_rs::{Map, MapCore, Object, ProgramMut, RingBufferBuilder};
 use shared::clap::Parser;
-use shared::ctypes::{
+use shared::log::{self, error};
+use shared::nats_subjects::Subject;
+use shared::prost::Message;
+use shared::protobuf::ctypes::{
     AddrmanInsertNew, AddrmanInsertTried, ClosedConnection, InboundConnection, MempoolAdded,
     MempoolRejected, MempoolRemoved, MempoolReplaced, MisbehavingConnection, OutboundConnection,
     P2PMessage, ValidationBlockConnected,
 };
-use shared::event_msg::event_msg::Event;
-use shared::event_msg::EventMsg;
-use shared::log::{self, error};
-use shared::prost::Message;
+use shared::protobuf::event_msg::event_msg::Event;
+use shared::protobuf::event_msg::EventMsg;
+use shared::protobuf::{addrman, mempool, net_conn, net_msg, validation};
 use shared::simple_logger;
-use shared::{addrman, mempool, nats_subjects::Subject, net_conn, net_msg, validation};
 use shared::{async_nats, clap, tokio};
 use std::fs::File;
 use std::io::{BufReader, Read};

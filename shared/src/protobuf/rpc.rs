@@ -1,6 +1,5 @@
-use std::fmt;
-
 use corepc_client::types::v26::{GetPeerInfo as RPCGetPeerInfo, PeerInfo as RPCPeerInfo};
+use std::fmt;
 
 // structs are generated via the rpc.proto file
 include!(concat!(env!("OUT_DIR"), "/rpc.rs"));

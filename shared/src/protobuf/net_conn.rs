@@ -1,7 +1,6 @@
-use crate::primitive::ConnType;
+use crate::protobuf::ctypes;
+use crate::protobuf::primitive::ConnType;
 use std::fmt;
-
-use crate::ctypes;
 
 // structs are generated via the connection.proto file
 include!(concat!(env!("OUT_DIR"), "/net_conn.rs"));

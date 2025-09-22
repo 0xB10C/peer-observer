@@ -3,12 +3,12 @@
 
 use shared::{
     async_nats, corepc_node,
-    event_msg::{EventMsg, event_msg::Event},
     futures::StreamExt,
     log::{self, info},
     nats_server_for_testing::NatsServerForTesting,
-    p2p_extractor::p2p_extractor_event::Event::PingDuration,
     prost::Message,
+    protobuf::event_msg::{EventMsg, event_msg::Event},
+    protobuf::p2p_extractor::p2p_extractor_event::Event::PingDuration,
     rand::{self, Rng},
     simple_logger::SimpleLogger,
     tokio::{
