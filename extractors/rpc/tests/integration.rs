@@ -5,12 +5,12 @@ use shared::{
     async_nats, corepc_node,
     futures::StreamExt,
     log::{self, info},
-    nats_server_for_testing::NatsServerForTesting,
     prost::Message,
     protobuf::event_msg::{EventMsg, event_msg::Event},
     protobuf::rpc::rpc_event::Event::PeerInfos,
     rand::{self, Rng},
     simple_logger::SimpleLogger,
+    testing::nats_server::NatsServerForTesting,
     tokio::{self, sync::watch},
 };
 

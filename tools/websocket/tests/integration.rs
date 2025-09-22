@@ -3,8 +3,6 @@
 use shared::{
     futures::StreamExt,
     log,
-    nats_publisher_for_testing::NatsPublisherForTesting,
-    nats_server_for_testing::NatsServerForTesting,
     nats_subjects::Subject,
     prost::Message,
     protobuf::event_msg::{event_msg::Event, EventMsg},
@@ -12,6 +10,8 @@ use shared::{
     protobuf::net_msg::{self, message::Msg, Metadata, Ping, Pong},
     rand::{self, Rng},
     simple_logger::SimpleLogger,
+    testing::nats_publisher::NatsPublisherForTesting,
+    testing::nats_server::NatsServerForTesting,
     tokio::{self, sync::watch, time::sleep},
 };
 
