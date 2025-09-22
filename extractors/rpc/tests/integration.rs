@@ -8,40 +8,27 @@ use shared::{
     prost::Message,
     protobuf::event_msg::{EventMsg, event_msg::Event},
     protobuf::rpc::rpc_event::Event::PeerInfos,
-    rand::{self, Rng},
     simple_logger::SimpleLogger,
     testing::nats_server::NatsServerForTesting,
     tokio::{self, sync::watch},
 };
 
-use std::sync::{
-    Once, OnceLock,
-    atomic::{AtomicU16, Ordering},
-};
+use std::sync::Once;
 
 use rpc_extractor::Args;
 
 static INIT: Once = Once::new();
-static NEXT_NATS_PORT: OnceLock<AtomicU16> = OnceLock::new();
 
 // 1 second query interval for fast tests
 const QUERY_INTERVAL_SECONDS: u64 = 1;
 
-fn setup() -> u16 {
+fn setup() -> () {
     INIT.call_once(|| {
         SimpleLogger::new()
             .with_level(log::LevelFilter::Trace)
             .init()
             .unwrap();
-
-        let mut rng = rand::rng();
-
-        // choose start ports from the ephemeral port range
-        let nats_start = rng.random_range(49152..65500);
-        NEXT_NATS_PORT.set(AtomicU16::new(nats_start)).unwrap();
     });
-    let nats_port = NEXT_NATS_PORT.get().unwrap().fetch_add(1, Ordering::SeqCst);
-    nats_port
 }
 
 fn make_test_args(
@@ -88,14 +75,14 @@ fn setup_two_connected_nodes() -> (corepc_node::Node, corepc_node::Node) {
 }
 
 async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
+    setup();
     let (node1, _node2) = setup_two_connected_nodes();
-    let nats_port = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
+    let nats_server = NatsServerForTesting::new().await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     let rpc_extractor_handle = tokio::spawn(async move {
         let args = make_test_args(
-            nats_port,
+            nats_server.port,
             node1.rpc_url().replace("http://", ""),
             node1.params.cookie_file.display().to_string(),
             disable_getpeerinfo,
@@ -105,7 +92,7 @@ async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
             .expect("rpc extractor failed");
     });
 
-    let nc = async_nats::connect(format!("127.0.0.1:{}", nats_port))
+    let nc = async_nats::connect(format!("127.0.0.1:{}", nats_server.port))
         .await
         .unwrap();
     let mut sub = nc.subscribe("*").await.unwrap();

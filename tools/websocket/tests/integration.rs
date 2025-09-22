@@ -2,7 +2,7 @@
 
 use shared::{
     futures::StreamExt,
-    log,
+    log::{self, warn},
     nats_subjects::Subject,
     prost::Message,
     protobuf::event_msg::{event_msg::Event, EventMsg},
@@ -12,14 +12,18 @@ use shared::{
     simple_logger::SimpleLogger,
     testing::nats_publisher::NatsPublisherForTesting,
     testing::nats_server::NatsServerForTesting,
-    tokio::{self, sync::watch, time::sleep},
+    tokio::{
+        self,
+        sync::{watch, Mutex},
+        time::sleep,
+    },
 };
 
 use std::{
     io::ErrorKind,
     sync::{
         atomic::{AtomicU16, Ordering},
-        Once, OnceLock,
+        Arc, Once, OnceLock,
     },
     time::Duration,
 };
@@ -28,10 +32,9 @@ use websocket::{error::RuntimeError, Args};
 
 static INIT: Once = Once::new();
 
-static NEXT_NATS_PORT: OnceLock<AtomicU16> = OnceLock::new();
 static NEXT_WEBSOCKET_PORT: OnceLock<AtomicU16> = OnceLock::new();
 
-fn setup() -> (u16, u16) {
+fn setup() -> u16 {
     INIT.call_once(|| {
         SimpleLogger::new()
             .with_level(log::LevelFilter::Trace)
@@ -41,21 +44,17 @@ fn setup() -> (u16, u16) {
         let mut rng = rand::rng();
 
         // choose start ports from the ephemeral port range
-        let nats_start = rng.random_range(49152..65500);
         let websocket_start = rng.random_range(49152..65500);
-
-        NEXT_NATS_PORT.set(AtomicU16::new(nats_start)).unwrap();
         NEXT_WEBSOCKET_PORT
             .set(AtomicU16::new(websocket_start))
             .unwrap();
     });
 
-    let nats_port = NEXT_NATS_PORT.get().unwrap().fetch_add(1, Ordering::SeqCst);
     let websocket_port = NEXT_WEBSOCKET_PORT
         .get()
         .unwrap()
         .fetch_add(1, Ordering::SeqCst);
-    return (nats_port, websocket_port);
+    return websocket_port;
 }
 
 fn make_test_args(nats_port: u16, websocket_port: u16) -> Args {
@@ -73,13 +72,22 @@ async fn publish_and_check(
     num_clients: u8,
     disconnect_client: Option<u8>, // which client to disconnect
 ) {
-    let (nats_port, mut websocket_port) = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
-    let nats_publisher = NatsPublisherForTesting::new(nats_port).await;
+    let initial_websocket_port = setup();
+    let websocket_port: Arc<Mutex<u16>> = Arc::new(Mutex::new(initial_websocket_port));
+
+    let nats_server = NatsServerForTesting::new().await;
+    let nats_publisher = NatsPublisherForTesting::new(nats_server.port).await;
+
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let websocket_port_clone = websocket_port.clone();
     let websocket_handle = tokio::spawn(async move {
         loop {
-            let args = make_test_args(nats_port, websocket_port);
+            let port: u16;
+            {
+                port = *websocket_port_clone.lock().await;
+            }
+
+            let args = make_test_args(nats_server.port, port);
             match websocket::run(args, shutdown_rx.clone()).await {
                 Ok(_) => break,
                 Err(e) => match e {
@@ -89,11 +97,12 @@ async fn publish_and_check(
                                 .get()
                                 .unwrap()
                                 .fetch_add(1, Ordering::SeqCst);
-                            println!(
+                            warn!(
                                 "Port {} seems to be already in use. Trying port {} next..",
-                                websocket_port, new_port
+                                port, new_port
                             );
-                            websocket_port = new_port;
+                            let mut port = websocket_port_clone.lock().await;
+                            *port = new_port;
                         }
                         _ => panic!("Couldn not start websocket tool: {}", e),
                     },
@@ -105,17 +114,17 @@ async fn publish_and_check(
     // allow the websocket tool to start
     sleep(Duration::from_secs(1)).await;
 
+    let port = websocket_port.lock().await;
     let mut clients = vec![];
     for _ in 0..num_clients {
-        let (ws_stream, _) =
-            tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{}", websocket_port))
-                .await
-                .expect("Should be able to connect to websocket");
+        let (ws_stream, _) = tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{}", port))
+            .await
+            .expect("Should be able to connect to websocket");
         clients.push(ws_stream)
     }
 
     for event in events.iter() {
-        println!("publishing: {:?}", event);
+        log::debug!("publishing: {:?}", event);
         nats_publisher
             .publish(subject.to_string(), event.encode_to_vec())
             .await;

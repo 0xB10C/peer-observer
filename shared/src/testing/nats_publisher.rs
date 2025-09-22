@@ -4,8 +4,10 @@ pub struct NatsPublisherForTesting {
 
 impl NatsPublisherForTesting {
     pub async fn new(port: u16) -> Self {
+        let addr = format!("127.0.0.1:{}", port);
+        log::debug!("The testing NATS publisher is connecting to {}..", addr);
         Self {
-            client: async_nats::connect(format!("127.0.0.1:{}", port))
+            client: async_nats::connect(addr)
                 .await
                 .expect("should be able to connect to NATS server"),
         }
