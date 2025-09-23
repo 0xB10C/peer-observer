@@ -6,6 +6,7 @@ members = [
   "extractors/ebpf",
   "extractors/rpc",
   "extractors/p2p",
+  "extractors/log",
   "tools/logger",
   "tools/websocket",
   "tools/metrics",
