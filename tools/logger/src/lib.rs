@@ -9,6 +9,10 @@ use shared::protobuf::event_msg::{self, EventMsg};
 use shared::tokio::sync::watch;
 use shared::{async_nats, clap};
 
+use crate::error::RuntimeError;
+
+mod error;
+
 // Note: when modifying this struct, make sure to also update the usage
 // instructions in the README of this tool.
 /// A peer-observer tool that logs all received event messages.
@@ -68,7 +72,7 @@ impl Args {
     }
 }
 
-pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) {
+pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
     if args.show_all() {
         log::info!("logging all events: {}", args.show_all());
     } else {
@@ -82,26 +86,17 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) {
         log::info!("logging p2p_extractor events: {}", args.p2p_extractor);
     }
 
-    // TODO: handle unwraps
     log::debug!("Connecting to NATS-server at {}", args.nats_address);
-    let nc = async_nats::connect(args.nats_address.clone())
-        .await
-        .unwrap();
-    let mut sub = nc.subscribe("*").await.unwrap();
+    let nc = async_nats::connect(args.nats_address.clone()).await?;
+    let mut sub = nc.subscribe("*").await?;
     log::info!("Connected to NATS-server at {}", args.nats_address);
 
     loop {
         shared::tokio::select! {
             maybe_msg = sub.next() => {
                 if let Some(msg) = maybe_msg {
-                    match event_msg::EventMsg::decode(msg.payload) {
-                        Ok(event) =>  {
-                            log_event(event, args.clone());
-                        },
-                        Err(e) => {
-                            log::warn!("Could not decode protobuf message as EventMsg: {}", e);
-                        }
-                    }
+                    let event = event_msg::EventMsg::decode(msg.payload)?;
+                    log_event(event, args.clone());
                 } else {
                     break; // subscription ended
                 }
@@ -123,6 +118,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) {
             }
         }
     }
+    Ok(())
 }
 
 fn log_event(event_msg: EventMsg, args: Args) {
@@ -132,7 +128,11 @@ fn log_event(event_msg: EventMsg, args: Args) {
             if log_all || args.messages {
                 log::info!(
                     "message: {} {} id={} (conn_type={:?}): {}",
-                    if msg.meta.inbound { "inbound" } else { "outbound" },
+                    if msg.meta.inbound {
+                        "inbound"
+                    } else {
+                        "outbound"
+                    },
                     if msg.meta.inbound { "from" } else { "to" },
                     msg.meta.peer_id,
                     msg.meta.conn_type,
