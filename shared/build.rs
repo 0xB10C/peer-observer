@@ -9,15 +9,12 @@ fn main() {
     if let Err(e) = prost_build::Config::new()
         .compile_well_known_types()
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
-        .compile_protos(
-            &["../protobuf/proto-types/event_msg.proto"],
-            &["../protobuf/proto-types/"],
-        )
+        .compile_protos(&["../protobuf/event_msg.proto"], &["../protobuf/"])
     {
         println!("Error while compiling protos: {}", e);
         panic!("Failed to code-gen the Rust structs from the Protobuf definitions");
     }
-    println!("cargo:rerun-if-changed=../protobuf/proto-types/event_msg.proto");
+    println!("cargo:rerun-if-changed=../protobuf/event_msg.proto");
 
     // Generate check functions for IP addresses
     gen_ip_match_fn(
