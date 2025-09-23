@@ -70,6 +70,30 @@ impl Args {
             || self.rpc
             || self.p2p_extractor)
     }
+
+    pub fn new(
+        nats_address: String,
+        log_level: log::Level,
+        messages: bool,
+        connections: bool,
+        addrman: bool,
+        mempool: bool,
+        validation: bool,
+        rpc: bool,
+        p2p_extractor: bool,
+    ) -> Self {
+        Self {
+            nats_address,
+            log_level,
+            messages,
+            connections,
+            addrman,
+            mempool,
+            validation,
+            rpc,
+            p2p_extractor,
+        }
+    }
 }
 
 pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
@@ -157,7 +181,7 @@ fn log_event(event_msg: EventMsg, args: Args) {
         }
         Event::Validation(v) => {
             if log_all || args.validation {
-                log::info!("validation {}", v.event.unwrap());
+                log::info!("validation: {}", v.event.unwrap());
             }
         }
         Event::Rpc(r) => {
