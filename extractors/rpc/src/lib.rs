@@ -59,6 +59,10 @@ pub struct Args {
     /// Disable quering and publishing of `getpeerinfo` data.
     #[arg(long, default_value_t = false)]
     pub disable_getpeerinfo: bool,
+
+    /// Disable quering and publishing of `getmempoolinfo` data.
+    #[arg(long, default_value_t = false)]
+    pub disable_getmempoolinfo: bool,
 }
 
 impl Args {
@@ -69,6 +73,7 @@ impl Args {
         rpc_cookie_file: String,
         query_interval: u64,
         disable_getpeerinfo: bool,
+        disable_getmempoolinfo: bool,
     ) -> Args {
         Self {
             nats_address,
@@ -79,6 +84,7 @@ impl Args {
             rpc_cookie_file: Some(rpc_cookie_file),
             query_interval,
             disable_getpeerinfo,
+            disable_getmempoolinfo,
             // when adding more disable_* args, make sure to update the disable_all below
         }
     }
@@ -106,11 +112,15 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     );
 
     log::info!(
-        "Querying getpeerinfo enabled: {}",
+        "Querying getpeerinfo enabled:    {}",
         !args.disable_getpeerinfo
     );
+    log::info!(
+        "Querying getmempoolinfo enabled: {}",
+        !args.disable_getmempoolinfo
+    );
     // check if we have at least one RPC to query
-    let disable_all = args.disable_getpeerinfo;
+    let disable_all = args.disable_getpeerinfo && args.disable_getmempoolinfo;
     if disable_all {
         log::warn!("No RPC configured to be queried!");
     }
@@ -121,6 +131,11 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
                 if !args.disable_getpeerinfo {
                     if let Err(e) = getpeerinfo(&rpc_client, &nats_client).await {
                         log::error!("Could not fetch and publish 'getpeerinfo': {}", e)
+                    }
+                }
+                if !args.disable_getmempoolinfo {
+                    if let Err(e) = getmempoolinfo(&rpc_client, &nats_client).await {
+                        log::error!("Could not fetch and publish 'getmempoolinfo': {}", e)
                     }
                 }
             }
@@ -152,6 +167,22 @@ async fn getpeerinfo(
 
     let proto = EventMsg::new(Event::Rpc(rpc::RpcEvent {
         event: Some(rpc::rpc_event::Event::PeerInfos(peer_info.into())),
+    }))?;
+
+    nats_client
+        .publish(Subject::Rpc.to_string(), proto.encode_to_vec().into())
+        .await?;
+    Ok(())
+}
+
+async fn getmempoolinfo(
+    rpc_client: &Client,
+    nats_client: &async_nats::Client,
+) -> Result<(), FetchOrPublishError> {
+    let mempool_info = rpc_client.get_mempool_info()?;
+
+    let proto = EventMsg::new(Event::Rpc(rpc::RpcEvent {
+        event: Some(rpc::rpc_event::Event::MempoolInfo(mempool_info.into())),
     }))?;
 
     nats_client
