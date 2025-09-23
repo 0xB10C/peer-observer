@@ -39,6 +39,8 @@ Options:
           Interval (in seconds) in which to query from the Bitcoin Core RPC endpoint [default: 10]
       --disable-getpeerinfo
           Disable quering and publishing of `getpeerinfo` data
+      --disable-getmempoolinfo
+          Disable quering and publishing of `getmempoolinfo` data
   -h, --help
           Print help
   -V, --version

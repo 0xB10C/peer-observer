@@ -7,7 +7,7 @@ use shared::{
     log::{self, info},
     prost::Message,
     protobuf::event_msg::{EventMsg, event_msg::Event},
-    protobuf::rpc::rpc_event::Event::PeerInfos,
+    protobuf::rpc::rpc_event::Event::{MempoolInfo, PeerInfos},
     simple_logger::SimpleLogger,
     testing::nats_server::NatsServerForTesting,
     tokio::{self, sync::watch},
@@ -36,6 +36,7 @@ fn make_test_args(
     rpc_url: String,
     cookie_file: String,
     disable_getpeerinfo: bool,
+    disable_getmempoolinfo: bool,
 ) -> Args {
     Args::new(
         format!("127.0.0.1:{}", nats_port),
@@ -44,6 +45,7 @@ fn make_test_args(
         cookie_file,
         QUERY_INTERVAL_SECONDS,
         disable_getpeerinfo,
+        disable_getmempoolinfo,
     )
 }
 
@@ -74,7 +76,11 @@ fn setup_two_connected_nodes() -> (corepc_node::Node, corepc_node::Node) {
     (node1, node2)
 }
 
-async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
+async fn check(
+    disable_getpeerinfo: bool,
+    disable_getmempoolinfo: bool,
+    check_expected: fn(Event) -> (),
+) {
     setup();
     let (node1, _node2) = setup_two_connected_nodes();
     let nats_server = NatsServerForTesting::new().await;
@@ -86,6 +92,7 @@ async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
             node1.rpc_url().replace("http://", ""),
             node1.params.cookie_file.display().to_string(),
             disable_getpeerinfo,
+            disable_getmempoolinfo,
         );
         rpc_extractor::run(args, shutdown_rx.clone())
             .await
@@ -113,7 +120,7 @@ async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
 async fn test_integration_rpc_getpeerinfo() {
     println!("test that we receive getpeerinfo RPC events");
 
-    check(false, |event| {
+    check(false, true, |event| {
         match event {
             Event::Rpc(r) => {
                 if let Some(ref e) = r.event {
@@ -125,13 +132,46 @@ async fn test_integration_rpc_getpeerinfo() {
                             assert_eq!(peer.connection_type, "inbound");
 
                             return;
-                        } // TODO: once we have more RPCs, we are going to need this.
-                          //_ => panic!("unexpected RPC data {:?}", r.event),
+                        }
+                        _ => panic!("unexpected RPC data {:?}", r.event),
                     }
                 }
             }
             _ => panic!("unexpected event {:?}", event),
         }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_rpc_getmempoolinfo() {
+    println!("test that we receive getmempoolinfo RPC events");
+
+    check(true, false, |event| match event {
+        Event::Rpc(r) => {
+            if let Some(ref e) = r.event {
+                match e {
+                    MempoolInfo(info) => {
+                        assert_eq!(info.loaded, true);
+                        assert_eq!(info.size, 0);
+                        assert_eq!(info.usage, 0);
+                        assert_eq!(info.bytes, 0);
+                        assert_eq!(info.total_fee, 0.0);
+                        assert_eq!(info.max_mempool, 300000000);
+                        // These will change between v29 and v30, so don't hardcode something here. 
+                        assert!(info.mempoolminfee > 0.0);
+                        assert!(info.minrelaytxfee > 0.0);
+                        assert!(info.incrementalrelayfee > 0.0);
+                        
+                        assert_eq!(info.unbroadcastcount, 0);
+                        assert_eq!(info.fullrbf, true);
+                        return;
+                    }
+                    _ => panic!("unexpected RPC data {:?}", r.event),
+                }
+            }
+        }
+        _ => panic!("unexpected event {:?}", event),
     })
     .await;
 }
