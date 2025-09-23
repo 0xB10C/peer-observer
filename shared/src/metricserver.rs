@@ -17,10 +17,11 @@ const LOG_TARGET: &str = "metricserver";
 
 pub fn start(prometheus_address: &str, registry: Option<Registry>) -> Result<(), io::Error> {
     let listener = TcpListener::bind(prometheus_address)?;
+    let local_addr = listener.local_addr()?;
     log::info!(
         target: LOG_TARGET,
         "Started Prometheus metric server listening on {}.",
-        prometheus_address
+        local_addr
     );
     thread::spawn(move || {
         for incoming_request in listener.incoming() {

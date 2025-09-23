@@ -68,7 +68,6 @@ pub async fn run(
     let metrics = metrics::Metrics::new();
 
     metricserver::start(&args.metrics_address, Some(metrics.registry.clone()))?;
-    log::info!(target: LOG_TARGET, "metrics-server listening on: {}", args.metrics_address);
 
     let nc = async_nats::connect(args.nats_address).await?;
     let mut sub = nc.subscribe("*").await?;
