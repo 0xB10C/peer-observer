@@ -131,8 +131,8 @@ fn log_event(event_msg: EventMsg, args: Args) {
         Event::Msg(msg) => {
             if log_all || args.messages {
                 log::info!(
-                    "{} {} id={} (conn_type={:?}): {}",
-                    if msg.meta.inbound { "<--" } else { "-->" },
+                    "message: {} {} id={} (conn_type={:?}): {}",
+                    if msg.meta.inbound { "inbound" } else { "outbound" },
                     if msg.meta.inbound { "from" } else { "to" },
                     msg.meta.peer_id,
                     msg.meta.conn_type,
@@ -142,32 +142,32 @@ fn log_event(event_msg: EventMsg, args: Args) {
         }
         Event::Conn(c) => {
             if log_all || args.connections {
-                log::info!("# CONN {}", c.event.unwrap());
+                log::info!("connection: {}", c.event.unwrap());
             }
         }
         Event::Addrman(a) => {
             if log_all || args.addrman {
-                log::info!("@Addrman {}", a.event.unwrap());
+                log::info!("addrman: {}", a.event.unwrap());
             }
         }
         Event::Mempool(m) => {
             if log_all || args.mempool {
-                log::info!("$Mempool {}", m.event.unwrap());
+                log::info!("mempool: {}", m.event.unwrap());
             }
         }
         Event::Validation(v) => {
             if log_all || args.validation {
-                log::info!("+Validation {}", v.event.unwrap());
+                log::info!("validation {}", v.event.unwrap());
             }
         }
         Event::Rpc(r) => {
             if log_all || args.rpc {
-                log::info!("!RPC {}", r.event.unwrap());
+                log::info!("rpc: {}", r.event.unwrap());
             }
         }
         Event::P2pExtractorEvent(p) => {
             if log_all || args.p2p_extractor {
-                log::info!("%P2P {}", p.event.unwrap());
+                log::info!("p2p event: {}", p.event.unwrap());
             }
         }
     }
