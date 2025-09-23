@@ -5,6 +5,7 @@ package rpc;
 message RPCEvent {
   oneof event {
     PeerInfos peer_infos = 1;
+    MempoolInfo mempool_info = 2;
   }
 }
 
@@ -53,4 +54,22 @@ message PeerInfo {
   required string   connection_type         = 36; // Type of connection: e.g. outbound-full-relay, block-relay-only, inbound, manual, addr-fetch, feeler
   required string   transport_protocol_type = 37; // Type of transport protocol (v1, v2)
   // session ID is not implemented, since I'm not sure we need them?
+}
+
+// A getmempoolinfo RPC result: Returns details on the active state of the TX memory pool.
+message MempoolInfo {
+  required bool     loaded                  = 1; // True if the initial load attempt of the persisted mempool finished
+  required int64    size                    = 2; // Current tx count
+  required int64    bytes                   = 3; // Sum of all virtual transaction sizes as defined in BIP 141. Differs from actual serialized size because witness data is discounted
+  required int64   usage                    = 4; // Total memory usage for the mempool
+  required double   total_fee               = 5; // Total fees for the mempool in BTC, ignoring modified fees through prioritisetransaction
+  required int64    max_mempool             = 6; // Maximum memory usage for the mempool
+  required double   mempoolminfee           = 7; // Minimum fee rate in BTC/kvB for tx to be accepted. Is the maximum of minrelaytxfee and minimum mempool fee
+  required double   minrelaytxfee           = 8; // Current minimum relay fee for transactions
+  required double   incrementalrelayfee     = 9; // minimum fee rate increment for mempool limiting or replacement in BTC/kvB
+  required int64    unbroadcastcount        = 10; // Current number of transactions that haven't passed initial broadcast yet
+  required bool     fullrbf                 = 11; // True if the mempool accepts RBF without replaceability signaling inspection (DEPRECATED)
+  // These were both added in v30.0, but aren't in v29. Can be added later, if needed
+  // required bool     permitbaremultisig      = 12; // True if the mempool accepts transactions with bare multisig outputs
+  // required uint32   maxdatacarriersize      = 13; // Maximum number of bytes that can be used by OP_RETURN outputs in the mempool
 }

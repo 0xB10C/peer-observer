@@ -1,4 +1,6 @@
-use corepc_client::types::v26::{GetPeerInfo as RPCGetPeerInfo, PeerInfo as RPCPeerInfo};
+use corepc_client::types::v26::{
+    GetMempoolInfo, GetPeerInfo as RPCGetPeerInfo, PeerInfo as RPCPeerInfo,
+};
 use std::fmt;
 
 // structs are generated via the rpc.proto file
@@ -29,6 +31,7 @@ impl fmt::Display for rpc_event::Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             rpc_event::Event::PeerInfos(infos) => write!(f, "{}", infos),
+            rpc_event::Event::MempoolInfo(info) => write!(f, "{}", info),
         }
     }
 }
@@ -74,5 +77,35 @@ impl From<RPCPeerInfo> for PeerInfo {
             transport_protocol_type: info.transport_protocol_type,
             version: info.version,
         }
+    }
+}
+
+impl From<GetMempoolInfo> for MempoolInfo {
+    fn from(info: GetMempoolInfo) -> Self {
+        MempoolInfo {
+            bytes: info.bytes,
+            fullrbf: info.full_rbf,
+            incrementalrelayfee: info.incremental_relay_fee,
+            loaded: info.loaded,
+            max_mempool: info.max_mempool,
+            mempoolminfee: info.mempool_min_fee,
+            minrelaytxfee: info.min_relay_tx_fee,
+            size: info.size,
+            total_fee: info.total_fee,
+            usage: info.usage,
+            unbroadcastcount: info.unbroadcast_count,
+            // maxdatacarriersize: info.max_datacarrier_size,
+            // permitbaremultisig: info.permit_bare_multisig,
+        }
+    }
+}
+
+impl fmt::Display for MempoolInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MempoolInfo(size={}txn, bytes={}vB, usage={}b)",
+            self.size, self.bytes, self.usage
+        )
     }
 }
