@@ -87,8 +87,10 @@ pub async fn run(
         });
     }
 
-    log::info!("Starting websocket server on {}", args.websocket_address);
+    log::debug!("Starting websocket server on {}...", args.websocket_address);
     let server = TcpListener::bind(args.websocket_address).await?;
+    let local_addr = server.local_addr()?;
+    log::info!("Started websocket server on {}", local_addr);
 
     // Accept WebSocket clients
     loop {

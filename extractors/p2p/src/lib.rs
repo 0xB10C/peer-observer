@@ -149,7 +149,8 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
 
     log::debug!("Starting TCP listener on {}..", args.p2p_address);
     let listener = TcpListener::bind(args.p2p_address.clone()).await?;
-    log::info!("P2P-extractor listening on {}", args.p2p_address);
+    let local_addr = listener.local_addr()?;
+    log::info!("P2P-extractor listening on {}", local_addr);
 
     loop {
         shared::tokio::select! {
