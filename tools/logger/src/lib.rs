@@ -57,7 +57,7 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn should_show_all(&self) -> bool {
+    pub fn show_all(&self) -> bool {
         !(self.messages
             || self.connections
             || self.addrman
@@ -69,11 +69,27 @@ impl Args {
 }
 
 pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) {
+    if args.show_all() {
+        log::info!("logging all events: {}", args.show_all());
+    } else {
+        log::info!("logging all events:           {}", args.show_all());
+        log::info!("logging P2P messages:         {}", args.messages);
+        log::info!("logging P2P connections:      {}", args.connections);
+        log::info!("logging addrman events:       {}", args.addrman);
+        log::info!("logging mempool events:       {}", args.mempool);
+        log::info!("logging validation events:    {}", args.validation);
+        log::info!("logging rpc events:           {}", args.rpc);
+        log::info!("logging p2p_extractor events: {}", args.p2p_extractor);
+    }
+
     // TODO: handle unwraps
+    log::debug!("Connecting to NATS-server at {}", args.nats_address);
     let nc = async_nats::connect(args.nats_address.clone())
         .await
         .unwrap();
     let mut sub = nc.subscribe("*").await.unwrap();
+    log::info!("Connected to NATS-server at {}", args.nats_address);
+
     loop {
         shared::tokio::select! {
             maybe_msg = sub.next() => {
@@ -110,7 +126,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) {
 }
 
 fn log_event(event_msg: EventMsg, args: Args) {
-    let log_all = args.should_show_all();
+    let log_all = args.show_all();
     match event_msg.event.unwrap() {
         Event::Msg(msg) => {
             if log_all || args.messages {
