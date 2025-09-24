@@ -210,6 +210,9 @@ pub struct Metrics {
     pub validation_block_connected_latest_inputs: IntGauge,
     pub validation_block_connected_latest_transactions: IntGauge,
     pub validation_block_connected_connection_time: IntCounter,
+
+    // RPC-extractor
+    // getpeeinfo
     pub rpc_peer_info_list_peers_gmax_ban: IntGauge,
     pub rpc_peer_info_list_peers_monero_ban: IntGauge,
     pub rpc_peer_info_list_peers_tor_exit: IntGauge,
@@ -237,6 +240,18 @@ pub struct Metrics {
     pub rpc_peer_info_minping_mean: Gauge,
     pub rpc_peer_info_sub1satvb_relay: IntGauge,
     pub rpc_peer_info_connection_divserity_inbound_ipv4: Gauge,
+    // getmempoolinfo
+    pub rpc_mempoolinfo_mempool_loaded: IntGauge,
+    pub rpc_mempoolinfo_transaction_count: IntGauge,
+    pub rpc_mempoolinfo_transaction_fees: Gauge,
+    pub rpc_mempoolinfo_transaction_vbyte: IntGauge,
+    pub rpc_mempoolinfo_memory_usage: IntGauge,
+    pub rpc_mempoolinfo_memory_max: IntGauge,
+    pub rpc_mempoolinfo_min_mempool_feerate: Gauge,
+    pub rpc_mempoolinfo_min_relay_tx_feerate: Gauge,
+    pub rpc_mempoolinfo_incremental_relay_feerate: Gauge,
+
+    // P2P-extractor
     pub p2pextractor_ping_duration_nanoseconds: IntGauge,
 }
 
@@ -299,6 +314,9 @@ impl Metrics {
         ig!(validation_block_connected_latest_inputs, "Last connected block inputs.", registry);
         ig!(validation_block_connected_latest_transactions, "Last connected block transactions.", registry);
         ic!(validation_block_connected_connection_time, "Last connected block connection time in µs", registry);
+
+        // RPC-extractor
+        // getpeerinfo
         ig!(rpc_peer_info_list_peers_gmax_ban, "Number of peers connected to us that are on the 2018 ban list by gmax.", registry);
         ig!(rpc_peer_info_list_peers_monero_ban, "Number of peers connected to us that are on the monero banlist.", registry);
         ig!(rpc_peer_info_list_peers_tor_exit, "Number of peers connected to us that are on the list of tor exit nodes.", registry);
@@ -326,8 +344,18 @@ impl Metrics {
         g!(rpc_peer_info_minping_mean, "Mean min_ping (in milliseconds) of all connected peers.", registry);
         ig!(rpc_peer_info_sub1satvb_relay, "Number of peers that relay sub-1 sat/vbyte transactions.", registry);
         g!(rpc_peer_info_connection_divserity_inbound_ipv4, "Diversity of IPv4 inbound connections by /16 (higher is better). Calculated: <number of distinct /16 IPv4 inbound connection subnets>/<number of inbound IPv4 peers>", registry);
+        // getmempoolinfo
+        ig!(rpc_mempoolinfo_mempool_loaded, "1 if the initial load attempt of the persisted mempool finished", registry);
+        ig!(rpc_mempoolinfo_transaction_count, "Number of transactions in the mempool.", registry);
+        g!(rpc_mempoolinfo_transaction_fees, "Sum of transaction fees in the mempool.", registry);
+        ig!(rpc_mempoolinfo_transaction_vbyte, "Sum of all virtual transaction sizes as defined in BIP 141. Differs from actual serialized size because witness data is discounted.", registry);
+        ig!(rpc_mempoolinfo_memory_usage, "Total memory usage of the mempool data structure in bytes.", registry);
+        ig!(rpc_mempoolinfo_memory_max, "Max memory usage of the mempool data structure in bytes.", registry);
+        g!(rpc_mempoolinfo_min_mempool_feerate, "(mempoolminfee) Minimum fee rate in BTC/kvB for tx to be accepted. Is the maximum of minrelaytxfee and minimum mempool fee", registry);
+        g!(rpc_mempoolinfo_min_relay_tx_feerate, "(minrelaytxfee) Current minimum relay fee for transactions", registry);
+        g!(rpc_mempoolinfo_incremental_relay_feerate, "(incrementalrelayfee) minimum fee rate increment for mempool limiting or replacement in BTC/kvB", registry);
 
-        // RPC-extractor
+        // P2P-extractor
         ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
 
         Self {
@@ -386,6 +414,9 @@ impl Metrics {
             validation_block_connected_latest_inputs,
             validation_block_connected_latest_transactions,
             validation_block_connected_connection_time,
+
+            // RPC-extractor
+            // getpeerinfo
             rpc_peer_info_list_peers_gmax_ban,
             rpc_peer_info_list_peers_monero_ban,
             rpc_peer_info_list_peers_tor_exit,
@@ -413,7 +444,21 @@ impl Metrics {
             rpc_peer_info_minping_mean,
             rpc_peer_info_sub1satvb_relay,
             rpc_peer_info_connection_divserity_inbound_ipv4,
+
+            // getmempoolinfo
+            rpc_mempoolinfo_mempool_loaded,
+            rpc_mempoolinfo_transaction_count,
+            rpc_mempoolinfo_transaction_fees,
+            rpc_mempoolinfo_transaction_vbyte,
+            rpc_mempoolinfo_memory_usage,
+            rpc_mempoolinfo_memory_max,
+            rpc_mempoolinfo_min_mempool_feerate,
+            rpc_mempoolinfo_min_relay_tx_feerate,
+            rpc_mempoolinfo_incremental_relay_feerate,
+
+            // P2P-extractor
             p2pextractor_ping_duration_nanoseconds,
+
         }
     }
 }

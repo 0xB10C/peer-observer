@@ -154,6 +154,25 @@ fn handle_event(
 
 fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
     match e {
+        rpc_event::Event::MempoolInfo(info) => {
+            metrics
+                .rpc_mempoolinfo_mempool_loaded
+                .set(if info.loaded { 1 } else { 0 });
+            metrics.rpc_mempoolinfo_transaction_count.set(info.size);
+            metrics.rpc_mempoolinfo_transaction_fees.set(info.total_fee);
+            metrics.rpc_mempoolinfo_transaction_vbyte.set(info.bytes);
+            metrics.rpc_mempoolinfo_memory_usage.set(info.usage);
+            metrics.rpc_mempoolinfo_memory_max.set(info.max_mempool);
+            metrics
+                .rpc_mempoolinfo_min_mempool_feerate
+                .set(info.mempoolminfee);
+            metrics
+                .rpc_mempoolinfo_min_relay_tx_feerate
+                .set(info.minrelaytxfee);
+            metrics
+                .rpc_mempoolinfo_incremental_relay_feerate
+                .set(info.incrementalrelayfee);
+        }
         rpc_event::Event::PeerInfos(info) => {
             let mut on_gmax_banlist = 0;
             let mut on_monero_banlist = 0;
