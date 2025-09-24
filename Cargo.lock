@@ -482,8 +482,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2ce205b817339b55d93bdb41d66704cfc5299f89576ab24107bd2abf4c29c1e"
 dependencies = [
  "bitcoin",
- "corepc-types",
- "jsonrpc",
+ "corepc-types 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "corepc-client"
+version = "0.9.0"
+source = "git+https://github.com/rust-bitcoin/corepc?rev=3a9c52ad5a1ecb47a64342471b6cf8bbbe800780#3a9c52ad5a1ecb47a64342471b6cf8bbbe800780"
+dependencies = [
+ "bitcoin",
+ "corepc-types 0.9.0 (git+https://github.com/rust-bitcoin/corepc?rev=3a9c52ad5a1ecb47a64342471b6cf8bbbe800780)",
+ "jsonrpc 0.18.0 (git+https://github.com/rust-bitcoin/corepc?rev=3a9c52ad5a1ecb47a64342471b6cf8bbbe800780)",
  "log",
  "serde",
  "serde_json",
@@ -497,7 +510,7 @@ checksum = "76025e0755bc411fda75e0912a0a0e511d13b54988bf05b90d7681f0c7570b67"
 dependencies = [
  "anyhow",
  "bitcoin_hashes",
- "corepc-client",
+ "corepc-client 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "log",
  "minreq",
@@ -513,6 +526,16 @@ name = "corepc-types"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f0231e773ddcfebb8eb8627a16553de56ab064a03843d847f409107ad661f25"
+dependencies = [
+ "bitcoin",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "corepc-types"
+version = "0.9.0"
+source = "git+https://github.com/rust-bitcoin/corepc?rev=3a9c52ad5a1ecb47a64342471b6cf8bbbe800780#3a9c52ad5a1ecb47a64342471b6cf8bbbe800780"
 dependencies = [
  "bitcoin",
  "serde",
@@ -1200,6 +1223,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3662a38d341d77efecb73caf01420cfa5aa63c0253fd7bc05289ef9f6616e1bf"
 dependencies = [
  "base64 0.13.1",
+ "minreq",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "jsonrpc"
+version = "0.18.0"
+source = "git+https://github.com/rust-bitcoin/corepc?rev=3a9c52ad5a1ecb47a64342471b6cf8bbbe800780#3a9c52ad5a1ecb47a64342471b6cf8bbbe800780"
+dependencies = [
+ "base64 0.22.1",
  "minreq",
  "serde",
  "serde_json",
@@ -2129,7 +2163,7 @@ dependencies = [
  "base32",
  "bitcoin",
  "clap",
- "corepc-client",
+ "corepc-client 0.9.0 (git+https://github.com/rust-bitcoin/corepc?rev=3a9c52ad5a1ecb47a64342471b6cf8bbbe800780)",
  "corepc-node",
  "futures",
  "hex",
