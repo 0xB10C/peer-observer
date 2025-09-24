@@ -61,7 +61,7 @@ message MempoolInfo {
   required bool     loaded                  = 1; // True if the initial load attempt of the persisted mempool finished
   required int64    size                    = 2; // Current tx count
   required int64    bytes                   = 3; // Sum of all virtual transaction sizes as defined in BIP 141. Differs from actual serialized size because witness data is discounted
-  required int64   usage                    = 4; // Total memory usage for the mempool
+  required int64    usage                   = 4; // Total memory usage for the mempool
   required double   total_fee               = 5; // Total fees for the mempool in BTC, ignoring modified fees through prioritisetransaction
   required int64    max_mempool             = 6; // Maximum memory usage for the mempool
   required double   mempoolminfee           = 7; // Minimum fee rate in BTC/kvB for tx to be accepted. Is the maximum of minrelaytxfee and minimum mempool fee

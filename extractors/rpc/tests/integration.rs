@@ -158,11 +158,11 @@ async fn test_integration_rpc_getmempoolinfo() {
                         assert_eq!(info.bytes, 0);
                         assert_eq!(info.total_fee, 0.0);
                         assert_eq!(info.max_mempool, 300000000);
-                        // These will change between v29 and v30, so don't hardcode something here. 
+                        // These will change between v29 and v30, so don't hardcode something here.
                         assert!(info.mempoolminfee > 0.0);
                         assert!(info.minrelaytxfee > 0.0);
                         assert!(info.incrementalrelayfee > 0.0);
-                        
+
                         assert_eq!(info.unbroadcastcount, 0);
                         assert_eq!(info.fullrbf, true);
                         return;

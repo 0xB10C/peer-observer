@@ -20,7 +20,7 @@ use shared::{
         },
         p2p_extractor,
         primitive::{self, inventory_item::Item, Address, InventoryItem},
-        rpc::{self, PeerInfo, PeerInfos},
+        rpc::{self, MempoolInfo, PeerInfo, PeerInfos},
         validation::{self, BlockConnected},
     },
     rand::{self, Rng},
@@ -1978,6 +1978,43 @@ async fn test_integration_metrics_rpc_peerinfo_ipv4_inbound_diversity() {
         Subject::Rpc,
         r#"
         peerobserver_rpc_peer_info_connection_divserity_inbound_ipv4 0.6666666666666666
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_rpc_mempolinfo() {
+    println!("test that the mempoolinfo metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Rpc(rpc::RpcEvent {
+            event: Some(rpc::rpc_event::Event::MempoolInfo(MempoolInfo {
+                loaded: true,
+                size: 1000,
+                bytes: 2000,
+                usage: 3000,
+                total_fee: 4000.1,
+                max_mempool: 5000,
+                incrementalrelayfee: 6.0001,
+                mempoolminfee: 7.2,
+                minrelaytxfee: 8.3,
+                unbroadcastcount: 0, // not covered
+                fullrbf: false,      // not covered
+            })),
+        }))
+        .unwrap()],
+        Subject::Rpc,
+        r#"
+        peerobserver_rpc_mempoolinfo_incremental_relay_feerate 6.0001
+        peerobserver_rpc_mempoolinfo_memory_max 5000
+        peerobserver_rpc_mempoolinfo_memory_usage 3000
+        peerobserver_rpc_mempoolinfo_mempool_loaded 1
+        peerobserver_rpc_mempoolinfo_min_mempool_feerate 7.2
+        peerobserver_rpc_mempoolinfo_min_relay_tx_feerate 8.3
+        peerobserver_rpc_mempoolinfo_transaction_count 1000
+        peerobserver_rpc_mempoolinfo_transaction_fees 4000.1
+        peerobserver_rpc_mempoolinfo_transaction_vbyte 2000
         "#,
     )
     .await;
