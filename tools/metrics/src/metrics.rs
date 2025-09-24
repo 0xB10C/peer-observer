@@ -204,6 +204,7 @@ pub struct Metrics {
     pub mempool_replaced_vbytes: IntCounter,
     pub mempool_rejected: IntCounterVec,
     pub mempool_removed: IntCounterVec,
+    pub log_events: IntCounter,
     pub validation_block_connected_latest_height: IntGauge,
     pub validation_block_connected_latest_connection_time: IntGauge,
     pub validation_block_connected_latest_sigops: IntGauge,
@@ -308,6 +309,7 @@ impl Metrics {
         ic!(mempool_replaced_vbytes, "Number of vbytes replaced in the mempool.", registry);
         icv!(mempool_rejected, "Number of rejected transactions with their rejection reason.", [LABEL_MEMPOOL_REASON], registry);
         icv!(mempool_removed, "Number of removed transactions with their removal reason.", [LABEL_MEMPOOL_REASON], registry);
+        ic!(log_events, "Number of log events received.", registry);
         ig!(validation_block_connected_latest_height, "Last connected block height.", registry);
         ig!(validation_block_connected_latest_connection_time, "Last connected block connection time in µs", registry);
         ig!(validation_block_connected_latest_sigops, "Last connected block sigops.", registry);
@@ -408,6 +410,7 @@ impl Metrics {
             mempool_replaced_vbytes,
             mempool_rejected,
             mempool_removed,
+            log_events,
             validation_block_connected_latest_height,
             validation_block_connected_latest_connection_time,
             validation_block_connected_latest_sigops,

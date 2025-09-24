@@ -58,6 +58,10 @@ pub struct Args {
     /// If passed, show p2p-extractor events
     #[arg(long)]
     pub p2p_extractor: bool,
+
+    /// If passed, show log-extractor events
+    #[arg(long)]
+    pub log_extractor: bool,
 }
 
 impl Args {
@@ -68,7 +72,8 @@ impl Args {
             || self.mempool
             || self.validation
             || self.rpc
-            || self.p2p_extractor)
+            || self.p2p_extractor
+            || self.log_extractor)
     }
 
     pub fn new(
@@ -81,6 +86,7 @@ impl Args {
         validation: bool,
         rpc: bool,
         p2p_extractor: bool,
+        log_extractor: bool,
     ) -> Self {
         Self {
             nats_address,
@@ -92,6 +98,7 @@ impl Args {
             validation,
             rpc,
             p2p_extractor,
+            log_extractor,
         }
     }
 }
@@ -108,6 +115,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
         log::info!("logging validation events:    {}", args.validation);
         log::info!("logging rpc events:           {}", args.rpc);
         log::info!("logging p2p_extractor events: {}", args.p2p_extractor);
+        log::info!("logging log_extractor events: {}", args.log_extractor);
     }
 
     log::debug!("Connecting to NATS-server at {}", args.nats_address);
@@ -192,6 +200,11 @@ fn log_event(event_msg: EventMsg, args: Args) {
         Event::P2pExtractorEvent(p) => {
             if log_all || args.p2p_extractor {
                 log::info!("p2p event: {}", p.event.unwrap());
+            }
+        }
+        Event::LogExtractorEvent(l) => {
+            if log_all || args.log_extractor {
+                log::info!("log event: {}", l.event.unwrap());
             }
         }
     }

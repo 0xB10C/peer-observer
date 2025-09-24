@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package log_extractor;
+
+message LogEvent {
+  oneof event {
+    UnknownLogMessage unknown_log_message = 1;
+  }
+}
+
+// A log message that does not match any known format.
+message UnknownLogMessage {
+  required string raw_message = 1; // Raw log message.
+}

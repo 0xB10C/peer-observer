@@ -17,6 +17,7 @@ use shared::protobuf::net_msg::{message::Msg, reject::RejectReason};
 use shared::protobuf::p2p_extractor::p2p_extractor_event;
 use shared::protobuf::rpc::rpc_event;
 use shared::protobuf::validation::validation_event;
+use shared::protobuf::log_extractor::log_event;
 use shared::tokio::sync::watch;
 use shared::util::{self, is_on_linkinglion_banlist};
 use shared::{async_nats, clap};
@@ -144,6 +145,11 @@ fn handle_event(
             Event::P2pExtractorEvent(p) => {
                 if let Some(e) = p.event {
                     handle_p2p_extractor_event(&e, metrics);
+                }
+            }
+            Event::LogExtractorEvent(l) => {
+                if let Some(e) = l.event {
+                    handle_log_event(&e, metrics);
                 }
             }
         }
@@ -808,6 +814,14 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
                 }
             }
             _ => (),
+        }
+    }
+}
+
+fn handle_log_event(e: &log_event::Event, metrics: metrics::Metrics) {
+    match e {
+        log_event::Event::UnknownLogMessage(_) => {
+            metrics.log_events.inc();
         }
     }
 }
