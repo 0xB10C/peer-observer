@@ -22,3 +22,6 @@ pub mod p2p_extractor;
 
 /// Protobuf types for rpc-extractor events.
 pub mod rpc;
+
+/// Protobuf types for log-extractor events.
+pub mod log_extractor;

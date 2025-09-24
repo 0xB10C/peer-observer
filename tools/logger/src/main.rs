@@ -54,6 +54,10 @@ struct Args {
     /// If passed, show p2p-extractor events
     #[arg(long)]
     p2p_extractor: bool,
+
+    /// If passed, show log extractor events
+    #[arg(long)]
+    log_extractor: bool,
 }
 
 impl Args {
@@ -80,6 +84,7 @@ async fn main() {
     let validation = args.validation;
     let rpc = args.rpc;
     let p2p_extractor = args.p2p_extractor;
+    let log_extractor = args.log_extractor;
     simple_logger::init_with_level(args.log_level).unwrap();
 
     // TODO: handle unwraps
@@ -129,6 +134,11 @@ async fn main() {
                     Event::P2pExtractorEvent(p) => {
                         if should_show_all || p2p_extractor {
                             log::info!("%P2P {}", p.event.unwrap());
+                        }
+                    }
+                    Event::LogExtractorEvent(l) => {
+                        if should_show_all || log_extractor {
+                            log::info!("^Log {}", l.event.unwrap());
                         }
                     }
                 }
