@@ -20,9 +20,9 @@ tokio = { version = "1.47.0", features = ["rt-multi-thread", "process", "signal"
 futures = "0.3.31"
 rand = "0.9.2"
 
-corepc-node = { version = "0.9.0", features = ["download", "29_0"] }
 # using https://github.com/rust-bitcoin/corepc/commit/3a9c52ad5a1ecb47a64342471b6cf8bbbe800780 util 0.10.0 is taged
-# to have https://github.com/rust-bitcoin/corepc/pull/367 (see https://github.com/0xB10C/peer-observer/issues/260) 
+# to have https://github.com/rust-bitcoin/corepc/pull/367 (see https://github.com/0xB10C/peer-observer/issues/260)
+corepc-node = { git = "https://github.com/rust-bitcoin/corepc", rev = "3a9c52ad5a1ecb47a64342471b6cf8bbbe800780", features = ["download", "29_0"] }
 corepc-client = { git = "https://github.com/rust-bitcoin/corepc", rev = "3a9c52ad5a1ecb47a64342471b6cf8bbbe800780", features = ["client-sync"]}
 
 [build-dependencies]
