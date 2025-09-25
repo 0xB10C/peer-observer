@@ -1,13 +1,18 @@
-use shared::clap::{Parser};
-use shared::{log};
-use shared::tokio::sync::watch;
-use shared::{clap};
+use error::RuntimeError;
+use shared::async_nats::{self};
+use shared::clap;
+use shared::clap::Parser;
+use shared::log;
+use shared::nats_subjects::Subject;
+use shared::prost::Message;
+use shared::protobuf::event_msg::EventMsg;
+use shared::protobuf::event_msg::event_msg::Event;
+use shared::protobuf::log_extractor;
 use shared::tokio::fs::File;
 use shared::tokio::io::{AsyncBufReadExt, BufReader};
+use shared::tokio::sync::watch;
 
 mod error;
-
-use error::{RuntimeError};
 
 /// TODO: Update
 /// The peer-observer log-extractor periodically queries data from the
@@ -27,10 +32,7 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn new(
-        nats_address: String,
-        log_level: log::Level,
-    ) -> Args {
+    pub fn new(nats_address: String, log_level: log::Level) -> Args {
         Self {
             nats_address,
             log_level,
@@ -39,9 +41,9 @@ impl Args {
 }
 
 pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
-    // log::debug!("Connecting to NATS server at {}..", args.nats_address);
-    // let nats_client = async_nats::connect(&args.nats_address).await?;
-    // log::info!("Connected to NATS server at {}", &args.nats_address);
+    log::debug!("Connecting to NATS server at {}..", args.nats_address);
+    let nats_client = async_nats::connect(&args.nats_address).await?;
+    log::info!("Connected to NATS server at {}", &args.nats_address);
 
     log::info!("Opening bitcoind log pipe...");
     let file = File::open("bitcoind_pipe").await?;
@@ -53,11 +55,8 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
         shared::tokio::select! {
             line = lines.next_line() => {
                 match line {
-                    Ok(Some(line)) => println!("{}", line),
-                    Ok(None) => {
-                        log::info!("End of log pipe reached.");
-                        break;
-                    }
+                    Ok(Some(line)) => process_log(&nats_client, &line).await,
+                    Ok(None) => (),
                     Err(e) => return Err(e.into()),
                 }
             },
@@ -80,4 +79,34 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     }
 
     Ok(())
+}
+
+async fn process_log(nats_client: &async_nats::Client, line: &str) {
+    match EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+        event: Some(log_extractor::log_event::Event::UnknownLogMessage(
+            log_extractor::UnknownLogMessage {
+                raw_message: line.to_string(),
+            },
+        )),
+    })) {
+        Ok(proto) => {
+            if let Err(e) = nats_client
+                .publish(
+                    Subject::LogExtractor.to_string(),
+                    proto.encode_to_vec().into(),
+                )
+                .await
+            {
+                log::error!("could not publish log into NATS: {}", e);
+            } else {
+                log::trace!("published log into NATS: {:?}", proto);
+            }
+        }
+        Err(e) => {
+            log::error!(
+                "Could not create new EventMsg due to SystemTimeError: {}",
+                e
+            );
+        }
+    };
 }
