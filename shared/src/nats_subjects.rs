@@ -7,6 +7,7 @@ const NATS_SUBJECT_NETCONN: &str = "netconn";
 const NATS_SUBJECT_VALIDATION: &str = "validation";
 const NATS_SUBJECT_RPC: &str = "rpc";
 const NATS_SUBJECT_P2P_EXTRACTOR: &str = "p2p-extractor";
+const NATS_SUBJECT_LOG_EXTRACTOR: &str = "log-extractor";
 
 pub enum Subject {
     Addrman,
@@ -16,6 +17,7 @@ pub enum Subject {
     Validation,
     Rpc,
     P2PExtractor,
+    LogExtractor,
 }
 
 impl fmt::Display for Subject {
@@ -28,6 +30,7 @@ impl fmt::Display for Subject {
             Subject::Validation => write!(f, "{}", NATS_SUBJECT_VALIDATION),
             Subject::Rpc => write!(f, "{}", NATS_SUBJECT_RPC),
             Subject::P2PExtractor => write!(f, "{}", NATS_SUBJECT_P2P_EXTRACTOR),
+            Subject::LogExtractor => write!(f, "{}", NATS_SUBJECT_LOG_EXTRACTOR),
         }
     }
 }
