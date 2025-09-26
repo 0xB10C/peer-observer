@@ -34,6 +34,30 @@ const NETWORK_ONION = 3;
 const NETWORK_I2P = 4;
 const NETWORK_CJDNS = 5;
 
+
+function networkToString(network) {
+  switch (network) {
+    case NETWORK_IPV4:
+      return "IPv4"
+      break;
+    case NETWORK_IPV6:
+      return "IPv6"
+      break;
+    case NETWORK_ONION:
+      return "Onion"
+      break;
+    case NETWORK_I2P:
+      return "I2P"
+      break;
+    case NETWORK_CJDNS:
+      return "CJDNS"
+      break;
+    default:
+      return "unknown"
+      break;
+  }
+}
+
 function networkFromAddress(address) {
   if (address.includes(".onion") || address.includes("127.0.0.1")) {
     return NETWORK_ONION;
