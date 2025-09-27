@@ -19,11 +19,21 @@ mod error;
 /// Bitcoin Core Log endpoint and publishes the results as events into
 /// a NATS pub-sub queue.
 #[derive(Parser, Debug)]
+#[clap(group(
+    clap::ArgGroup::new("pipe")
+        .required(true)
+        .multiple(false)
+        .args(&["bitcoind_pipe"]),
+))]
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// Address of the NATS server where the extractor will publish messages to.
     #[arg(short, long, default_value = "127.0.0.1:4222")]
     pub nats_address: String,
+
+    /// Path to the bitcoind log pipe (named pipe / FIFO).
+    #[arg(short, long)]
+    pub bitcoind_pipe: String,
 
     /// The log level the extractor should run with. Valid log levels are "trace",
     /// "debug", "info", "warn", "error". See https://docs.rs/log/latest/log/enum.Level.html.
@@ -32,22 +42,23 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn new(nats_address: String, log_level: log::Level) -> Args {
+    pub fn new(nats_address: String, bitcoind_pipe: String, log_level: log::Level) -> Args {
         Self {
             nats_address,
+            bitcoind_pipe,
             log_level,
         }
     }
 }
 
 pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(), RuntimeError> {
-    log::debug!("Connecting to NATS server at {}..", args.nats_address);
+    log::debug!("Connecting to NATS server at {}...", &args.nats_address);
     let nats_client = async_nats::connect(&args.nats_address).await?;
     log::info!("Connected to NATS server at {}", &args.nats_address);
 
-    log::info!("Opening bitcoind log pipe...");
-    let file = File::open("bitcoind_pipe").await?;
-    log::info!("Opened bitcoind log pipe");
+    log::info!("Opening bitcoind log pipe at {}...", &args.bitcoind_pipe);
+    let file = File::open(&args.bitcoind_pipe).await?;
+    log::info!("Opened bitcoind log pipe at {}", &args.bitcoind_pipe);
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
 
