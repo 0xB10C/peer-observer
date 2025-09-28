@@ -30,6 +30,9 @@ pub mod testing;
 /// Utillity functions shared among peer-observer tools
 pub mod util;
 
+/// Log matchers for the different types of log messages.
+pub mod log_matchers;
+
 #[cfg(test)]
 mod tests {
     #[test]

@@ -15,6 +15,7 @@ impl fmt::Display for log_extractor::log_event::Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             log_extractor::log_event::Event::UnknownLogMessage(message) => write!(f, "{}", message),
+            log_extractor::log_event::Event::BlockConnectedLog(block) => write!(f, "{:?}", block),
         }
     }
 }
