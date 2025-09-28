@@ -3,7 +3,7 @@ use shared::async_nats::{self};
 use shared::clap;
 use shared::clap::Parser;
 use shared::log;
-use shared::log_matchers::match_log;
+use shared::log_matchers::parse_log_event;
 use shared::nats_subjects::Subject;
 use shared::prost::Message;
 use shared::protobuf::event_msg::EventMsg;
@@ -14,9 +14,8 @@ use shared::tokio::sync::watch;
 
 mod error;
 
-/// TODO: Update
-/// The peer-observer log-extractor periodically queries data from the
-/// Bitcoin Core Log endpoint and publishes the results as events into
+/// The peer-observer log-extractor reads lines from a bitcoind log
+/// pipe (named pipe / FIFO) and publishes the results as events into
 /// a NATS pub-sub queue.
 #[derive(Parser, Debug)]
 #[clap(group(
@@ -93,7 +92,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
 }
 
 async fn process_log(nats_client: &async_nats::Client, line: &str) {
-    match EventMsg::new(Event::LogExtractorEvent(match_log(line))) {
+    match EventMsg::new(Event::LogExtractorEvent(parse_log_event(line))) {
         Ok(proto) => {
             if let Err(e) = nats_client
                 .publish(
