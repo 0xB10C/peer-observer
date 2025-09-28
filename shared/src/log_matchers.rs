@@ -148,8 +148,8 @@ lazy_static! {
             .unwrap();
 }
 
-pub fn match_log(line: &str) -> LogEvent {
-    let (timestamp, category, message) = base_parser(line);
+pub fn parse_log_event(line: &str) -> LogEvent {
+    let (timestamp, category, message) = parse_common_log_data(line);
 
     let matchers: Vec<fn(&str) -> Option<Event>> = vec![BlockConnectedLog::parse_event];
     for matcher in &matchers {
@@ -172,7 +172,7 @@ pub fn match_log(line: &str) -> LogEvent {
     }
 }
 
-fn base_parser(line: &str) -> (u64, LogDebugCategory, String) {
+fn parse_common_log_data(line: &str) -> (u64, LogDebugCategory, String) {
     let re = Regex::new(r"^([^ ]+)\s+(?:\[([^\]]+)\]\s+)?(.+)$").unwrap();
     let caps = re.captures(line);
     if caps.is_none() {
