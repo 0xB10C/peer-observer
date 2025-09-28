@@ -3,11 +3,11 @@ use shared::async_nats::{self};
 use shared::clap;
 use shared::clap::Parser;
 use shared::log;
+use shared::log_matchers::match_log;
 use shared::nats_subjects::Subject;
 use shared::prost::Message;
 use shared::protobuf::event_msg::EventMsg;
 use shared::protobuf::event_msg::event_msg::Event;
-use shared::protobuf::log_extractor;
 use shared::tokio::fs::File;
 use shared::tokio::io::{AsyncBufReadExt, BufReader};
 use shared::tokio::sync::watch;
@@ -93,13 +93,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
 }
 
 async fn process_log(nats_client: &async_nats::Client, line: &str) {
-    match EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
-        event: Some(log_extractor::log_event::Event::UnknownLogMessage(
-            log_extractor::UnknownLogMessage {
-                raw_message: line.to_string(),
-            },
-        )),
-    })) {
+    match EventMsg::new(Event::LogExtractorEvent(match_log(line))) {
         Ok(proto) => {
             if let Err(e) = nats_client
                 .publish(

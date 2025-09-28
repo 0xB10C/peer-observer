@@ -823,5 +823,8 @@ fn handle_log_event(e: &log_event::Event, metrics: metrics::Metrics) {
         log_event::Event::UnknownLogMessage(_) => {
             metrics.log_events.inc();
         }
+        log_event::Event::BlockConnectedLog(_) => {
+            metrics.log_block_connected_events.inc();
+        }
     }
 }
