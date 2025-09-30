@@ -2,13 +2,14 @@ use error::RuntimeError;
 use shared::async_nats::{self};
 use shared::clap;
 use shared::clap::Parser;
+use shared::libc;
 use shared::log;
 use shared::log_matchers::parse_log_event;
 use shared::nats_subjects::Subject;
 use shared::prost::Message;
 use shared::protobuf::event_msg::EventMsg;
 use shared::protobuf::event_msg::event_msg::Event;
-use shared::tokio::fs::File;
+use shared::tokio::fs::{File, OpenOptions};
 use shared::tokio::io::{AsyncBufReadExt, BufReader};
 use shared::tokio::sync::watch;
 
@@ -56,11 +57,12 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     log::info!("Connected to NATS server at {}", &args.nats_address);
 
     log::info!("Opening bitcoind log pipe at {}...", &args.bitcoind_pipe);
-    let file = File::open(&args.bitcoind_pipe).await?;
+    let file = open_pipe(&args.bitcoind_pipe, shutdown_rx.clone()).await?;
     log::info!("Opened bitcoind log pipe at {}", &args.bitcoind_pipe);
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
 
+    log::info!("Started reading lines from bitcoind log pipe at {}", &args.bitcoind_pipe);
     loop {
         shared::tokio::select! {
             line = lines.next_line() => {
@@ -113,4 +115,37 @@ async fn process_log(nats_client: &async_nats::Client, line: &str) {
             );
         }
     };
+}
+
+async fn open_pipe(path: &str, shutdown_rx: watch::Receiver<bool>) -> Result<File, std::io::Error> {
+    loop {
+
+        if *shutdown_rx.borrow() {
+            log::info!("open_pipe received shutdown signal.");
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Interrupted,
+                "shutdown signal received",
+            ));
+        }
+
+        if !std::path::Path::new(path).exists() {
+            log::warn!("Pipe {} does not exist, retrying in 1s", path);
+            shared::tokio::time::sleep(shared::tokio::time::Duration::from_secs(1)).await;
+            continue;
+        }
+
+        match OpenOptions::new()
+            .read(true)
+            .write(false)
+            .custom_flags(libc::O_NONBLOCK)
+            .open(path)
+            .await
+        {
+            Ok(f) => return Ok(f),
+            Err(e) => {
+                log::warn!("Failed to open pipe {}, retrying in 1s: {}", path, e);
+                shared::tokio::time::sleep(shared::tokio::time::Duration::from_secs(1)).await;
+            }
+        }
+    }
 }
