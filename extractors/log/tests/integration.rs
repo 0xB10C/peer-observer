@@ -1,10 +1,11 @@
 #![cfg(feature = "nats_integration_tests")]
 #![cfg(feature = "node_integration_tests")]
 
+use log_extractor::Args;
 use shared::{
     async_nats, corepc_node,
     futures::StreamExt,
-    log::{self, info},
+    log,
     prost::Message,
     protobuf::{
         event_msg::{EventMsg, event_msg::Event},
@@ -14,10 +15,7 @@ use shared::{
     testing::nats_server::NatsServerForTesting,
     tokio::{self, sync::watch},
 };
-
-use std::{sync::Once};
-
-use log_extractor::Args;
+use std::sync::Once;
 
 static INIT: Once = Once::new();
 
@@ -38,11 +36,11 @@ fn spawn_pipe(log_path: String, pipe_path: String) -> () {
         .expect("Failed to create named pipe");
     log::info!("Created named pipe at {}", &pipe_path);
 
-    // Start tail -F from debug.log to the pipe
-    log::info!("Running: bash -c 'tail -F {} > {}'", log_path, pipe_path);
+    // Start tail -f from debug.log to the pipe
+    log::info!("Running: bash -c 'tail -f {} > {}'", log_path, pipe_path);
     tokio::process::Command::new("bash")
         .arg("-c")
-        .arg(format!("tail -F {} > {}", log_path, pipe_path))
+        .arg(format!("tail -f {} > {}", log_path, pipe_path))
         .spawn()
         .expect("Failed to spawn tail");
 }
@@ -56,15 +54,15 @@ fn make_test_args(nats_port: u16, bitcoind_pipe: String) -> Args {
 }
 
 fn setup_node(conf: corepc_node::Conf) -> corepc_node::Node {
-    info!("env BITCOIND_EXE={:?}", std::env::var("BITCOIND_EXE"));
-    info!("exe_path={:?}", corepc_node::exe_path());
+    log::info!("env BITCOIND_EXE={:?}", std::env::var("BITCOIND_EXE"));
+    log::info!("exe_path={:?}", corepc_node::exe_path());
 
     if let Ok(exe_path) = corepc_node::exe_path() {
-        info!("Using bitcoind at '{}'", exe_path);
+        log::info!("Using bitcoind at '{}'", exe_path);
         return corepc_node::Node::with_conf(exe_path, &conf).unwrap();
     }
 
-    info!("Trying to download a bitcoind..");
+    log::info!("Trying to download a bitcoind..");
     return corepc_node::Node::from_downloaded_with_conf(&conf).unwrap();
 }
 
@@ -88,15 +86,11 @@ async fn check(check_expected: fn(Event) -> ()) {
     let nats_server = NatsServerForTesting::new().await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
-    let node1_workdir = node1.workdir().to_str().unwrap().to_string();
-
     let log_extractor_handle = tokio::spawn(async move {
+        let node1_workdir = node1.workdir().to_str().unwrap().to_string();
         let log_path = format!("{}/regtest/debug.log", node1_workdir);
         let pipe_path = format!("{}/bitcoind_pipe", node1_workdir);
-        let _tail_handle = spawn_pipe(log_path, pipe_path.clone());
-
-        // Wait a bit for tail to start
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        spawn_pipe(log_path, pipe_path.clone());
 
         let args = make_test_args(nats_server.port, pipe_path.to_string());
 
@@ -123,25 +117,27 @@ async fn check(check_expected: fn(Event) -> ()) {
 }
 
 #[tokio::test]
-async fn test_integration_log() {
+async fn test_integration_logextractor_log_events() {
     println!("test that we receive log events");
 
-    check(|event| match event {
-        Event::LogExtractorEvent(r) => {
-            if let Some(ref e) = r.event {
-                match e {
-                    log_event::Event::UnknownLogMessage(unknown_log_message) => println!(
-                        "Received unknown log message: {}",
-                        unknown_log_message.raw_message
-                    ),
-                    log_event::Event::BlockConnectedLog(block_connected_log) => println!(
-                        "Received BlockConnectedLog: block_hash={}, block_height={}",
-                        block_connected_log.block_hash, block_connected_log.block_height
-                    ),
+    check(|event| {
+        let mut received_events = false;
+        match event {
+            Event::LogExtractorEvent(r) => {
+                if let Some(ref e) = r.event {
+                    match e {
+                        log_event::Event::UnknownLogMessage(unknown_log_message) => {
+                            received_events = true;
+                            assert!(unknown_log_message.raw_message.len() > 0);
+                        }
+                        _ => (),
+                    }
                 }
             }
-        }
-        _ => panic!("unexpected event {:?}", event),
+            _ => panic!("unexpected event {:?}", event),
+        };
+
+        assert!(received_events, "Did not receive any log events");
     })
     .await;
 }
