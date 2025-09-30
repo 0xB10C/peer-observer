@@ -69,7 +69,13 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
                 match line {
                     Ok(Some(line)) => process_log(&nats_client, &line).await,
                     Ok(None) => (),
-                    Err(e) => return Err(e.into()),
+                    Err(e) => {
+                        if e.kind() == std::io::ErrorKind::WouldBlock {
+                            // Non-blocking read with no data available, continue
+                            continue;
+                        }
+                        return Err(e.into());
+                    }
                 }
             },
             res = shutdown_rx.changed() => {
