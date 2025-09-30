@@ -2089,6 +2089,7 @@ dependencies = [
  "futures",
  "hex",
  "lazy_static",
+ "libc",
  "log",
  "prometheus",
  "prost",
