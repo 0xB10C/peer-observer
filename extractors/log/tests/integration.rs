@@ -6,57 +6,52 @@ use shared::{
     futures::StreamExt,
     log::{self, info},
     prost::Message,
-    protobuf::event_msg::{EventMsg, event_msg::Event},
-    protobuf::rpc::rpc_event::Event::PeerInfos,
-    rand::{self, Rng},
+    protobuf::{
+        event_msg::{EventMsg, event_msg::Event},
+        log_extractor::log_event,
+    },
     simple_logger::SimpleLogger,
     testing::nats_server::NatsServerForTesting,
     tokio::{self, sync::watch},
 };
 
-use std::sync::{
-    Once, OnceLock,
-    atomic::{AtomicU16, Ordering},
-};
+use std::{sync::Once};
 
-use rpc_extractor::Args;
+use log_extractor::Args;
 
 static INIT: Once = Once::new();
-static NEXT_NATS_PORT: OnceLock<AtomicU16> = OnceLock::new();
 
-// 1 second query interval for fast tests
-const QUERY_INTERVAL_SECONDS: u64 = 1;
-
-fn setup() -> u16 {
+fn setup() -> () {
     INIT.call_once(|| {
         SimpleLogger::new()
             .with_level(log::LevelFilter::Trace)
             .init()
             .unwrap();
-
-        let mut rng = rand::rng();
-
-        // choose start ports from the ephemeral port range
-        let nats_start = rng.random_range(49152..65500);
-        NEXT_NATS_PORT.set(AtomicU16::new(nats_start)).unwrap();
     });
-    let nats_port = NEXT_NATS_PORT.get().unwrap().fetch_add(1, Ordering::SeqCst);
-    nats_port
 }
 
-fn make_test_args(
-    nats_port: u16,
-    rpc_url: String,
-    cookie_file: String,
-    disable_getpeerinfo: bool,
-) -> Args {
+fn spawn_pipe(log_path: String, pipe_path: String) -> () {
+    // Create pipe
+    std::process::Command::new("mkfifo")
+        .arg(&pipe_path)
+        .status()
+        .expect("Failed to create named pipe");
+    log::info!("Created named pipe at {}", &pipe_path);
+
+    // Start tail -F from debug.log to the pipe
+    log::info!("Running: bash -c 'tail -F {} > {}'", log_path, pipe_path);
+    tokio::process::Command::new("bash")
+        .arg("-c")
+        .arg(format!("tail -F {} > {}", log_path, pipe_path))
+        .spawn()
+        .expect("Failed to spawn tail");
+}
+
+fn make_test_args(nats_port: u16, bitcoind_pipe: String) -> Args {
     Args::new(
         format!("127.0.0.1:{}", nats_port),
+        bitcoind_pipe,
         log::Level::Trace,
-        rpc_url,
-        cookie_file,
-        QUERY_INTERVAL_SECONDS,
-        disable_getpeerinfo,
     )
 }
 
@@ -87,25 +82,30 @@ fn setup_two_connected_nodes() -> (corepc_node::Node, corepc_node::Node) {
     (node1, node2)
 }
 
-async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
+async fn check(check_expected: fn(Event) -> ()) {
+    setup();
     let (node1, _node2) = setup_two_connected_nodes();
-    let nats_port = setup();
-    let _nats_server = NatsServerForTesting::new(nats_port).await;
+    let nats_server = NatsServerForTesting::new().await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
-    let rpc_extractor_handle = tokio::spawn(async move {
-        let args = make_test_args(
-            nats_port,
-            node1.rpc_url().replace("http://", ""),
-            node1.params.cookie_file.display().to_string(),
-            disable_getpeerinfo,
-        );
-        rpc_extractor::run(args, shutdown_rx.clone())
+    let node1_workdir = node1.workdir().to_str().unwrap().to_string();
+
+    let log_extractor_handle = tokio::spawn(async move {
+        let log_path = format!("{}/regtest/debug.log", node1_workdir);
+        let pipe_path = format!("{}/bitcoind_pipe", node1_workdir);
+        let _tail_handle = spawn_pipe(log_path, pipe_path.clone());
+
+        // Wait a bit for tail to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        let args = make_test_args(nats_server.port, pipe_path.to_string());
+
+        log_extractor::run(args, shutdown_rx.clone())
             .await
-            .expect("rpc extractor failed");
+            .expect("log extractor failed");
     });
 
-    let nc = async_nats::connect(format!("127.0.0.1:{}", nats_port))
+    let nc = async_nats::connect(format!("127.0.0.1:{}", nats_server.port))
         .await
         .unwrap();
     let mut sub = nc.subscribe("*").await.unwrap();
@@ -119,32 +119,29 @@ async fn check(disable_getpeerinfo: bool, check_expected: fn(Event) -> ()) {
     }
 
     shutdown_tx.send(true).unwrap();
-    rpc_extractor_handle.await.unwrap();
+    log_extractor_handle.await.unwrap();
 }
 
 #[tokio::test]
-async fn test_integration_rpc_getpeerinfo() {
-    println!("test that we receive getpeerinfo RPC events");
+async fn test_integration_log() {
+    println!("test that we receive log events");
 
-    check(false, |event| {
-        match event {
-            Event::Rpc(r) => {
-                if let Some(ref e) = r.event {
-                    match e {
-                        PeerInfos(p) => {
-                            // we expect 1 peer to be connected
-                            assert_eq!(p.infos.len(), 1);
-                            let peer = p.infos.first().expect("we have expactly one peer here");
-                            assert_eq!(peer.connection_type, "inbound");
-
-                            return;
-                        } // TODO: once we have more RPCs, we are going to need this.
-                          //_ => panic!("unexpected RPC data {:?}", r.event),
-                    }
+    check(|event| match event {
+        Event::LogExtractorEvent(r) => {
+            if let Some(ref e) = r.event {
+                match e {
+                    log_event::Event::UnknownLogMessage(unknown_log_message) => println!(
+                        "Received unknown log message: {}",
+                        unknown_log_message.raw_message
+                    ),
+                    log_event::Event::BlockConnectedLog(block_connected_log) => println!(
+                        "Received BlockConnectedLog: block_hash={}, block_height={}",
+                        block_connected_log.block_hash, block_connected_log.block_height
+                    ),
                 }
             }
-            _ => panic!("unexpected event {:?}", event),
         }
+        _ => panic!("unexpected event {:?}", event),
     })
     .await;
 }
