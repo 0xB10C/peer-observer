@@ -111,7 +111,17 @@ async fn publish_and_check(events: &[EventMsg], subject: Subject, expected: &str
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     let logger_handle = tokio::spawn(async move {
-        let args = make_test_args(nats_server.port, true, true, true, true, true, true, true, true);
+        let args = make_test_args(
+            nats_server.port,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+        );
         logger::run(args, shutdown_rx.clone()).await.unwrap();
     });
     // allow the logger tool to start
