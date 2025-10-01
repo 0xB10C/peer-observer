@@ -1,5 +1,3 @@
-// TODO: Update
-
 # `log` extractor
 
 > publishes data fetched from log files
