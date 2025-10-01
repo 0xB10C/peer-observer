@@ -7,13 +7,13 @@ pub extern crate corepc_client;
 pub extern crate corepc_node;
 pub extern crate futures;
 pub extern crate lazy_static;
+pub extern crate libc;
 pub extern crate log;
 pub extern crate prometheus;
 pub extern crate prost;
 pub extern crate rand;
 pub extern crate simple_logger;
 pub extern crate tokio;
-pub extern crate libc;
 
 /// Mappings and implementation for the protobuf types used in NATS
 /// to communicate between the extractors and tools.

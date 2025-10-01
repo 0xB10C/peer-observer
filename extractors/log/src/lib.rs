@@ -62,7 +62,10 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
 
-    log::info!("Started reading lines from bitcoind log pipe at {}", &args.bitcoind_pipe);
+    log::info!(
+        "Started reading lines from bitcoind log pipe at {}",
+        &args.bitcoind_pipe
+    );
     loop {
         shared::tokio::select! {
             line = lines.next_line() => {
@@ -125,7 +128,6 @@ async fn process_log(nats_client: &async_nats::Client, line: &str) {
 
 async fn open_pipe(path: &str, shutdown_rx: watch::Receiver<bool>) -> Result<File, std::io::Error> {
     loop {
-
         if *shutdown_rx.borrow() {
             log::info!("open_pipe received shutdown signal.");
             return Err(std::io::Error::new(
