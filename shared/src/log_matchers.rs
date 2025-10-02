@@ -1,10 +1,10 @@
 use crate::protobuf::log_extractor::log_event::Event;
-use crate::protobuf::log_extractor::{BlockConnectedLog, LogEvent, UnknownLogMessage};
+use crate::protobuf::log_extractor::{
+    BlockConnectedLog, LogDebugCategory, LogEvent, UnknownLogMessage,
+};
 use chrono::DateTime;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::fmt;
-use std::str::FromStr;
 
 static BLOCK_HASH_PATTERN: &str = r"[0-9a-f]{64}";
 static ISO8601_DATE_REGEX: &str = r"(\d{4})-(\d{2})-(\d{2})T(\d{2})\:(\d{2})\:(\d{2})Z";
@@ -20,113 +20,6 @@ lazy_static! {
         BLOCK_HASH_PATTERN
     ))
     .unwrap();
-}
-
-pub enum LogDebugCategory {
-    Unknown,
-    Addrman,
-    Bench,
-    Blockstorage,
-    Cmpctblock,
-    Coindb,
-    Estimatefee,
-    Http,
-    I2p,
-    Ipc,
-    Leveldb,
-    Libevent,
-    Mempool,
-    Mempoolrej,
-    Net,
-    Proxy,
-    Prune,
-    Qt,
-    Rand,
-    Reindex,
-    Rpc,
-    Scan,
-    Selectcoins,
-    Tor,
-    Txpackages,
-    Txreconciliation,
-    Validation,
-    Walletdb,
-    Zmq,
-}
-
-impl FromStr for LogDebugCategory {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "addrman" => Ok(LogDebugCategory::Addrman),
-            "bench" => Ok(LogDebugCategory::Bench),
-            "blockstorage" => Ok(LogDebugCategory::Blockstorage),
-            "cmpctblock" => Ok(LogDebugCategory::Cmpctblock),
-            "coindb" => Ok(LogDebugCategory::Coindb),
-            "estimatefee" => Ok(LogDebugCategory::Estimatefee),
-            "http" => Ok(LogDebugCategory::Http),
-            "i2p" => Ok(LogDebugCategory::I2p),
-            "ipc" => Ok(LogDebugCategory::Ipc),
-            "leveldb" => Ok(LogDebugCategory::Leveldb),
-            "libevent" => Ok(LogDebugCategory::Libevent),
-            "mempool" => Ok(LogDebugCategory::Mempool),
-            "mempoolrej" => Ok(LogDebugCategory::Mempoolrej),
-            "net" => Ok(LogDebugCategory::Net),
-            "proxy" => Ok(LogDebugCategory::Proxy),
-            "prune" => Ok(LogDebugCategory::Prune),
-            "qt" => Ok(LogDebugCategory::Qt),
-            "rand" => Ok(LogDebugCategory::Rand),
-            "reindex" => Ok(LogDebugCategory::Reindex),
-            "rpc" => Ok(LogDebugCategory::Rpc),
-            "scan" => Ok(LogDebugCategory::Scan),
-            "selectcoins" => Ok(LogDebugCategory::Selectcoins),
-            "tor" => Ok(LogDebugCategory::Tor),
-            "txpackages" => Ok(LogDebugCategory::Txpackages),
-            "txreconciliation" => Ok(LogDebugCategory::Txreconciliation),
-            "validation" => Ok(LogDebugCategory::Validation),
-            "walletdb" => Ok(LogDebugCategory::Walletdb),
-            "zmq" => Ok(LogDebugCategory::Zmq),
-            _ => Ok(LogDebugCategory::Unknown),
-        }
-    }
-}
-
-impl fmt::Display for LogDebugCategory {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            LogDebugCategory::Addrman => "addrman",
-            LogDebugCategory::Bench => "bench",
-            LogDebugCategory::Blockstorage => "blockstorage",
-            LogDebugCategory::Cmpctblock => "cmpctblock",
-            LogDebugCategory::Coindb => "coindb",
-            LogDebugCategory::Estimatefee => "estimatefee",
-            LogDebugCategory::Http => "http",
-            LogDebugCategory::I2p => "i2p",
-            LogDebugCategory::Ipc => "ipc",
-            LogDebugCategory::Leveldb => "leveldb",
-            LogDebugCategory::Libevent => "libevent",
-            LogDebugCategory::Mempool => "mempool",
-            LogDebugCategory::Mempoolrej => "mempoolrej",
-            LogDebugCategory::Net => "net",
-            LogDebugCategory::Proxy => "proxy",
-            LogDebugCategory::Prune => "prune",
-            LogDebugCategory::Qt => "qt",
-            LogDebugCategory::Rand => "rand",
-            LogDebugCategory::Reindex => "reindex",
-            LogDebugCategory::Rpc => "rpc",
-            LogDebugCategory::Scan => "scan",
-            LogDebugCategory::Selectcoins => "selectcoins",
-            LogDebugCategory::Tor => "tor",
-            LogDebugCategory::Txpackages => "txpackages",
-            LogDebugCategory::Txreconciliation => "txreconciliation",
-            LogDebugCategory::Validation => "validation",
-            LogDebugCategory::Walletdb => "walletdb",
-            LogDebugCategory::Zmq => "zmq",
-            LogDebugCategory::Unknown => "unknown",
-        };
-        write!(f, "{}", s)
-    }
 }
 
 trait LogMatcher {
@@ -164,8 +57,8 @@ pub fn parse_log_event(line: &str) -> LogEvent {
     for matcher in &matchers {
         if let Some(event) = matcher(&message) {
             return LogEvent {
-                timestamp,
-                category: category.to_string(),
+                log_timestamp: timestamp,
+                category: category.into(),
                 event: Some(event),
             };
         }
@@ -173,8 +66,8 @@ pub fn parse_log_event(line: &str) -> LogEvent {
 
     // if no matcher succeeds, return unknown
     LogEvent {
-        timestamp,
-        category: category.to_string(),
+        log_timestamp: timestamp,
+        category: category.into(),
         event: Some(Event::UnknownLogMessage(UnknownLogMessage {
             raw_message: message,
         })),
@@ -195,10 +88,11 @@ fn parse_common_log_data(line: &str) -> (u64, LogDebugCategory, String) {
         Ok(dt) => dt.timestamp() as u64,
         Err(_) => 0,
     };
-    let log_type = match category.and_then(|cat| LogDebugCategory::from_str(cat).ok()) {
-        Some(cat) => cat,
-        None => LogDebugCategory::Unknown,
-    };
+    let log_type =
+        match category.and_then(|cat| LogDebugCategory::from_str_name(&cat.to_uppercase())) {
+            Some(cat) => cat,
+            None => LogDebugCategory::Unknown,
+        };
 
     (timestamp, log_type, caps[3].to_string())
 }
