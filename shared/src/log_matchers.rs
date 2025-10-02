@@ -6,6 +6,22 @@ use regex::Regex;
 use std::fmt;
 use std::str::FromStr;
 
+static BLOCK_HASH_PATTERN: &str = r"[0-9a-f]{64}";
+static ISO8601_DATE_REGEX: &str = r"(\d{4})-(\d{2})-(\d{2})T(\d{2})\:(\d{2})\:(\d{2})Z";
+
+lazy_static! {
+    static ref LOG_LINE_REGEX: Regex = Regex::new(&format!(
+        r"^({})\s+(?:\[([^\]]+)\]\s+)?(.+)$",
+        ISO8601_DATE_REGEX
+    ))
+    .unwrap();
+    static ref BLOCK_CONNECTED_REGEX: Regex = Regex::new(&format!(
+        r"Enqueuing BlockConnected: block hash=({}) block height=(\d+)",
+        BLOCK_HASH_PATTERN
+    ))
+    .unwrap();
+}
+
 pub enum LogDebugCategory {
     Unknown,
     Addrman,
@@ -139,13 +155,6 @@ impl LogMatcher for BlockConnectedLog {
             block_height,
         }))
     }
-}
-
-lazy_static! {
-    static ref LOG_LINE_REGEX: Regex = Regex::new(r"^([^ ]+)\s+(?:\[([^\]]+)\]\s+)?(.+)$").unwrap();
-    static ref BLOCK_CONNECTED_REGEX: Regex =
-        Regex::new(r"Enqueuing BlockConnected: block hash=([0-9a-fA-F]+) block height=(\d+)")
-            .unwrap();
 }
 
 pub fn parse_log_event(line: &str) -> LogEvent {
