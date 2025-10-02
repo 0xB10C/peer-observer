@@ -36,7 +36,6 @@ impl LogMatcher for UnknownLogMessage {
 }
 
 impl LogMatcher for BlockConnectedLog {
-    // 2025-09-27T01:52:01Z [validation] Enqueuing BlockConnected: block hash=41109f31c8ca4d8683ab5571ba462292ddb8486dee6ecd2e62901accc7952f0b block height=437
     fn parse_event(line: &str) -> Option<Event> {
         let Some(caps) = BLOCK_CONNECTED_REGEX.captures(&line) else {
             return None;
@@ -69,9 +68,7 @@ pub fn parse_log_event(line: &str) -> LogEvent {
     LogEvent {
         log_timestamp: timestamp,
         category: category.into(),
-        event: Some(Event::UnknownLogMessage(UnknownLogMessage {
-            raw_message: message,
-        })),
+        event: UnknownLogMessage::parse_event(&message),
     }
 }
 
@@ -122,3 +119,62 @@ fn parse_common_log_data(line: &str) -> (u64, LogDebugCategory, String) {
 // TODO: net_msg::message::Msg::Version
 // TODO: net_msg::message::Msg::Feefilter
 // TODO: net_msg::message::Msg::Reject
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_matcher_unknown_log_message() {
+        let log = "2025-10-02T02:31:14Z Verification progress: 50%";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.log_timestamp, 1759372274);
+        assert_eq!(log_event.category, LogDebugCategory::Unknown as i32);
+
+        if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
+            assert_eq!(unknown_log.raw_message, "Verification progress: 50%");
+            return;
+        }
+
+        panic!("Expected UnknownLogMessage event");
+    }
+
+    #[test]
+    fn test_log_matcher_unknown_log_message_with_category() {
+        let log = "2025-10-02T02:31:21Z [net] Flushed 0 addresses to peers.dat  2ms";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.log_timestamp, 1759372281);
+        assert_eq!(log_event.category, LogDebugCategory::Net as i32);
+
+        if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
+            assert_eq!(
+                unknown_log.raw_message,
+                "Flushed 0 addresses to peers.dat  2ms"
+            );
+            return;
+        }
+
+        panic!("Expected UnknownLogMessage event");
+    }
+
+    #[test]
+    fn test_log_matcher_block_connected() {
+        let log = "2025-09-27T01:52:01Z [validation] Enqueuing BlockConnected: block hash=41109f31c8ca4d8683ab5571ba462292ddb8486dee6ecd2e62901accc7952f0b block height=437";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.category, LogDebugCategory::Validation as i32);
+
+        if let Some(Event::BlockConnectedLog(event)) = log_event.event {
+            assert_eq!(
+                event.block_hash,
+                "41109f31c8ca4d8683ab5571ba462292ddb8486dee6ecd2e62901accc7952f0b"
+            );
+            assert_eq!(event.block_height, 437);
+            return;
+        }
+
+        panic!("Expected BlockConnectedLog event");
+    }
+}
