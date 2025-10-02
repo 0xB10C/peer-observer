@@ -3,12 +3,44 @@ syntax = "proto2";
 package log_extractor;
 
 message LogEvent {
-  required uint64 timestamp = 1;
-  required string category = 2; // e.g., "validation", "net", etc.
+  required uint64 log_timestamp = 1;
+  required LogDebugCategory category = 2;
   oneof event {
     UnknownLogMessage unknown_log_message = 3;
     BlockConnectedLog block_connected_log = 4;
   }
+}
+
+enum LogDebugCategory {
+    UNKNOWN = 0;
+    ADDRMAN = 1;
+    BENCH = 2;
+    BLOCKSTORAGE = 3;
+    CMPCTBLOCK = 4;
+    COINDB = 5;
+    ESTIMATEFEE = 6;
+    HTTP = 7;
+    I2P = 8;
+    IPC = 9;
+    LEVELDB = 10;
+    LIBEVENT = 11;
+    MEMPOOL = 12;
+    MEMPOOLREJ = 13;
+    NET = 14;
+    PROXY = 15;
+    PRUNE = 16;
+    QT = 17;
+    RAND = 18;
+    REINDEX = 19;
+    RPC = 20;
+    SCAN = 21;
+    SELECTCOINS = 22;
+    TOR = 23;
+    TXPACKAGES = 24;
+    TXRECONCILIATION = 25;
+    VALIDATION = 26;
+    WALLETDB = 27;
+    ZMQ = 28;
 }
 
 // A log message that does not match any known format.
