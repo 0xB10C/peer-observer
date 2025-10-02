@@ -7,7 +7,6 @@ pub extern crate corepc_client;
 pub extern crate corepc_node;
 pub extern crate futures;
 pub extern crate lazy_static;
-pub extern crate libc;
 pub extern crate log;
 pub extern crate prometheus;
 pub extern crate prost;
