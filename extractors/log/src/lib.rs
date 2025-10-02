@@ -2,7 +2,6 @@ use error::RuntimeError;
 use shared::async_nats::{self};
 use shared::clap;
 use shared::clap::Parser;
-use shared::libc;
 use shared::log;
 use shared::log_matchers::parse_log_event;
 use shared::nats_subjects::Subject;
@@ -14,6 +13,9 @@ use shared::tokio::io::{AsyncBufReadExt, BufReader};
 use shared::tokio::sync::watch;
 
 mod error;
+
+// from libc crate
+pub const O_NONBLOCK: i32 = 2048;
 
 /// The peer-observer log-extractor reads lines from a bitcoind log
 /// pipe (named pipe / FIFO) and publishes the results as events into
@@ -145,7 +147,7 @@ async fn open_pipe(path: &str, shutdown_rx: watch::Receiver<bool>) -> Result<Fil
         match OpenOptions::new()
             .read(true)
             .write(false)
-            .custom_flags(libc::O_NONBLOCK)
+            .custom_flags(O_NONBLOCK)
             .open(path)
             .await
         {

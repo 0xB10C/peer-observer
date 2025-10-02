@@ -2,9 +2,10 @@ use crate::protobuf::log_extractor::log_event::Event;
 use crate::protobuf::log_extractor::{
     BlockConnectedLog, LogDebugCategory, LogEvent, UnknownLogMessage,
 };
-use chrono::DateTime;
 use lazy_static::lazy_static;
 use regex::Regex;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 
 static BLOCK_HASH_PATTERN: &str = r"[0-9a-f]{64}";
 static ISO8601_DATE_REGEX: &str = r"(\d{4})-(\d{2})-(\d{2})T(\d{2})\:(\d{2})\:(\d{2})Z";
@@ -84,8 +85,8 @@ fn parse_common_log_data(line: &str) -> (u64, LogDebugCategory, String) {
     let caps = caps.unwrap();
     let timestamp_str = &caps[1];
     let category = caps.get(2).map(|m| m.as_str());
-    let timestamp = match DateTime::parse_from_rfc3339(timestamp_str) {
-        Ok(dt) => dt.timestamp() as u64,
+    let timestamp = match OffsetDateTime::parse(timestamp_str, &Rfc3339) {
+        Ok(dt) => dt.unix_timestamp() as u64,
         Err(_) => 0,
     };
     let log_type =
