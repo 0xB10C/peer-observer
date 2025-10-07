@@ -10,6 +10,7 @@ use shared::prost::Message;
 use shared::protobuf::addrman::addrman_event;
 use shared::protobuf::event_msg;
 use shared::protobuf::event_msg::event_msg::Event;
+use shared::protobuf::log_extractor::log_event;
 use shared::protobuf::mempool::mempool_event;
 use shared::protobuf::net_conn::connection_event;
 use shared::protobuf::net_msg;
@@ -144,6 +145,11 @@ fn handle_event(
             Event::P2pExtractorEvent(p) => {
                 if let Some(e) = p.event {
                     handle_p2p_extractor_event(&e, metrics);
+                }
+            }
+            Event::LogExtractorEvent(l) => {
+                if let Some(e) = l.event {
+                    handle_log_event(&e, metrics);
                 }
             }
         }
@@ -808,6 +814,17 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
                 }
             }
             _ => (),
+        }
+    }
+}
+
+fn handle_log_event(e: &log_event::Event, metrics: metrics::Metrics) {
+    match e {
+        log_event::Event::UnknownLogMessage(_) => {
+            metrics.log_events.inc();
+        }
+        log_event::Event::BlockConnectedLog(_) => {
+            metrics.log_block_connected_events.inc();
         }
     }
 }
