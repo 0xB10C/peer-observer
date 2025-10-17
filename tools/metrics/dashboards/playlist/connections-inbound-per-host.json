@@ -18,6 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 46,
   "links": [],
   "panels": [
     {
@@ -55,6 +56,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -70,7 +72,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -96,10 +98,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -107,8 +111,8 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "avg_over_time(peerobserver_conn_inbound_current[1h])",
+          "editorMode": "code",
+          "expr": "sum(avg_over_time(peerobserver_conn_inbound_current[1h])) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "interval": "",
@@ -122,7 +126,9 @@
       "type": "timeseries"
     }
   ],
-  "schemaVersion": 39,
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "connections"
@@ -138,6 +144,5 @@
   "timezone": "browser",
   "title": "[connections] current inbound connections per host",
   "uid": "cdhprcwaivta8c",
-  "version": 1,
-  "weekStart": ""
+  "version": 1
 }

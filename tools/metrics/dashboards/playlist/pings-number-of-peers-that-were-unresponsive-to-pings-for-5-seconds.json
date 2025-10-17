@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 653,
+  "id": 29,
   "links": [],
   "panels": [
     {
@@ -56,6 +56,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -70,7 +71,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -101,7 +103,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.3",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -109,8 +111,8 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "avg_over_time(peerobserver_rpc_peer_info_ping_wait_larger_5_seconds_block_peers[10m])",
+          "editorMode": "code",
+          "expr": "sum(avg_over_time(peerobserver_rpc_peer_info_ping_wait_larger_5_seconds_block_peers[10m])) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "{{host}}",
@@ -124,7 +126,7 @@
     }
   ],
   "preload": false,
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "ping"
@@ -140,5 +142,5 @@
   "timezone": "utc",
   "title": "[ping] number of peers that didn't respond to our ping in 5 seconds",
   "uid": "8fefdec1-97ca-46b0-bcb1-f51fa5a18852",
-  "version": 6
+  "version": 1
 }

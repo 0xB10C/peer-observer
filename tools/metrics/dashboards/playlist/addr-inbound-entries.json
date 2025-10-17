@@ -18,6 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 37,
   "links": [],
   "panels": [
     {
@@ -56,6 +57,7 @@
               "type": "symlog"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -71,7 +73,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -97,10 +99,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -109,7 +113,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "increase(peerobserver_p2p_addrv2_addresses_sum{direction=\"inbound\"}[1h])",
+          "expr": "sum(increase(peerobserver_p2p_addrv2_addresses_sum{direction=\"inbound\"}[1h])) by (host)",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -161,6 +165,7 @@
               "type": "symlog"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -176,7 +181,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -202,10 +207,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -214,7 +221,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "increase(peerobserver_p2p_addr_addresses_sum{direction=\"inbound\"}[1h])",
+          "expr": "sum(increase(peerobserver_p2p_addr_addresses_sum{direction=\"inbound\"}[1h])) by (host)",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -230,8 +237,9 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "",
-  "schemaVersion": 39,
+  "schemaVersion": 42,
   "tags": [
     "addr",
     "big-playlist"
@@ -247,6 +255,5 @@
   "timezone": "browser",
   "title": "[addr] inbound addr entries",
   "uid": "ddukz6s4vr1moc",
-  "version": 4,
-  "weekStart": ""
+  "version": 1
 }

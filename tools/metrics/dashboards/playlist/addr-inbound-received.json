@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 481,
+  "id": 23,
   "links": [],
   "panels": [
     {
@@ -83,7 +83,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.1.0",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -93,7 +93,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "increase(peerobserver_p2p_addrv2_addresses_sum{direction=\"inbound\"}[5m])",
+          "expr": "sum(increase(peerobserver_p2p_addrv2_addresses_sum{direction=\"inbound\"}[5m])) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -168,7 +168,7 @@
           "reverse": false
         }
       },
-      "pluginVersion": "11.1.0",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -178,7 +178,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "increase(peerobserver_p2p_addr_addresses_sum{direction=\"inbound\"}[5m])",
+          "expr": "sum(increase(peerobserver_p2p_addr_addresses_sum{direction=\"inbound\"}[5m])) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -192,7 +192,9 @@
       "type": "heatmap"
     }
   ],
-  "schemaVersion": 39,
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
   "tags": [
     "addr",
     "big-playlist"
@@ -208,6 +210,5 @@
   "timezone": "browser",
   "title": "[addr] inbound addresses received via addr(v2)",
   "uid": "bdmnosspyejggc",
-  "version": 6,
-  "weekStart": ""
+  "version": 1
 }

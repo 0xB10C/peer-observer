@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 654,
+  "id": 57,
   "links": [],
   "panels": [
     {
@@ -56,6 +56,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -70,7 +71,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue"
+                "color": "blue",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -101,7 +103,7 @@
           "sort": "desc"
         }
       },
-      "pluginVersion": "12.0.3",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -110,7 +112,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "-avg_over_time(peerobserver_rpc_peer_info_timeoffset_minus10s[10m])",
+          "expr": "sum(-avg_over_time(peerobserver_rpc_peer_info_timeoffset_minus10s[10m])) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "-{{host}}",
@@ -125,7 +127,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "avg_over_time(peerobserver_rpc_peer_info_timeoffset_plus10s[10m])",
+          "expr": "sum(avg_over_time(peerobserver_rpc_peer_info_timeoffset_plus10s[10m])) by (host)",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -140,7 +142,7 @@
     }
   ],
   "preload": false,
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "timeoffset"
@@ -156,5 +158,5 @@
   "timezone": "utc",
   "title": "[timeoffset] number of peers with a timeoffset with more than 10s and less than -10s",
   "uid": "e0c9cc44-8f94-4704-bb6a-2782995889bb",
-  "version": 3
+  "version": 1
 }
