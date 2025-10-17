@@ -21,9 +21,9 @@ $ curl 127.0.0.1:8001/metrics
 # HELP peerobserver_conn_closed Number of closed connections.
 # TYPE peerobserver_conn_closed counter
 peerobserver_conn_closed 14
-# HELP peerobserver_conn_closed_age_seconds Age (in seconds) of closed connections. The age of each closed connection is added to the metric.
-# TYPE peerobserver_conn_closed_age_seconds counter
-peerobserver_conn_closed_age_seconds 16
+# HELP peerobserver_conn_closed_age Age (in seconds) of closed connections. The age of each closed connection is added to the metric.
+# TYPE peerobserver_conn_closed_age counter
+peerobserver_conn_closed_age 16
 # HELP peerobserver_conn_closed_network Number of closed connections by network.
 # TYPE peerobserver_conn_closed_network counter
 peerobserver_conn_closed_network{network="1"} 14
