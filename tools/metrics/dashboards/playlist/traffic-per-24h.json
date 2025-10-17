@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 425,
+  "id": 21,
   "links": [],
   "panels": [
     {
@@ -38,7 +38,8 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 100,
             "gradientMode": "none",
             "hideFrom": {
@@ -47,13 +48,14 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -69,7 +71,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -96,10 +98,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -107,16 +111,15 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "increase(bitcoin_total_bytes_recv[1d])",
+          "expr": "sum(increase(peerobserver_p2p_message_bytes{direction=\"inbound\"}[1d])) by (host)",
           "hide": false,
           "instant": false,
-          "interval": "1d",
           "legendFormat": "{{host}}",
           "range": true,
-          "refId": "A"
+          "refId": "B"
         }
       ],
-      "title": "total inbound traffic per day",
+      "title": "total inbound traffic per 24h",
       "type": "timeseries"
     },
     {
@@ -136,7 +139,8 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
             "fillOpacity": 100,
             "gradientMode": "none",
             "hideFrom": {
@@ -145,13 +149,14 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "stepBefore",
             "lineWidth": 1,
             "pointSize": 1,
             "scaleDistribution": {
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -167,7 +172,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -194,10 +199,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -205,22 +212,22 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "increase(bitcoin_total_bytes_sent[1d])",
+          "expr": "sum(increase(peerobserver_p2p_message_bytes{direction=\"outbound\"}[1d])) by (host)",
           "hide": false,
           "instant": false,
-          "interval": "1d",
-          "legendFormat": "{{host}}",
+          "legendFormat": "__auto",
           "range": true,
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "title": "total outbound traffic per day",
       "type": "timeseries"
     }
   ],
-  "schemaVersion": 39,
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
   "tags": [
-    "p2p",
     "traffic",
     "big-playlist"
   ],
@@ -233,8 +240,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "[p2p] total in- and outbound traffic per day",
+  "title": "[traffic] total in- and outbound traffic per 24h",
   "uid": "fdko9acsaq70ga",
-  "version": 2,
-  "weekStart": ""
+  "version": 1
 }
