@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 644,
+  "id": 39,
   "links": [],
   "panels": [
     {
@@ -55,6 +55,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -69,7 +70,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -100,7 +102,7 @@
           "sort": "desc"
         }
       },
-      "pluginVersion": "12.0.3",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -108,8 +110,8 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "avg_over_time(peerobserver_rpc_peer_info_list_peers_linkinglion[1h])",
+          "editorMode": "code",
+          "expr": "sum(avg_over_time(peerobserver_rpc_peer_info_list_peers_linkinglion[1h])) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "interval": "",
@@ -124,7 +126,7 @@
     }
   ],
   "preload": false,
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "connections",
@@ -141,5 +143,5 @@
   "timezone": "utc",
   "title": "[connections] ip-list LinkingLion banlist",
   "uid": "a42f39be-74bd-4461-af2e-8e32c554e419",
-  "version": 4
+  "version": 1
 }

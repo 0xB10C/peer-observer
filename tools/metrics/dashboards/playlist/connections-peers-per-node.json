@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 664,
+  "id": 27,
   "links": [],
   "panels": [
     {
@@ -55,6 +55,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -69,7 +70,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               }
             ]
           }
@@ -96,7 +98,7 @@
           "sort": "desc"
         }
       },
-      "pluginVersion": "12.0.3",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -104,7 +106,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "peerobserver_rpc_peer_info_num_peers",
+          "expr": "sum(peerobserver_rpc_peer_info_num_peers) by (host)",
           "legendFormat": "{{host}}",
           "range": true,
           "refId": "A"
@@ -115,7 +117,7 @@
     }
   ],
   "preload": false,
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "connections"
@@ -131,5 +133,5 @@
   "timezone": "utc",
   "title": "[connections] number of peers per node",
   "uid": "b05dff03-6227-4759-aa1a-e31d89b8628a",
-  "version": 5
+  "version": 1
 }

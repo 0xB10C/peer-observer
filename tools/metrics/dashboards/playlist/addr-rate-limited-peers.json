@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 640,
+  "id": 18,
   "links": [],
   "panels": [
     {
@@ -43,7 +43,7 @@
         "content": "# addr processing rate-limited\n\nThis dashboard shows the number of peers (per honeypot node/host) that had at least one address rate-limited and not processed.\nThis was introduced in [PR 22387: Rate limit the processing of rumoured addresses](https://github.com/bitcoin/bitcoin/pull/22387).\n",
         "mode": "markdown"
       },
-      "pluginVersion": "12.0.3",
+      "pluginVersion": "12.2.0",
       "title": "",
       "transparent": true,
       "type": "text"
@@ -63,7 +63,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -98,7 +99,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.3",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -106,8 +107,8 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "peerobserver_rpc_peer_info_addr_ratelimited_peers",
+          "editorMode": "code",
+          "expr": "sum(peerobserver_rpc_peer_info_addr_ratelimited_peers) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "{{host}}",
@@ -121,7 +122,7 @@
     }
   ],
   "preload": false,
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "addr-rate-limiting",
@@ -138,5 +139,5 @@
   "timezone": "utc",
   "title": "[addr] addr rate-limited peers",
   "uid": "9ba67dc0-17e5-4333-9b18-10258f9cf7ba",
-  "version": 11
+  "version": 1
 }

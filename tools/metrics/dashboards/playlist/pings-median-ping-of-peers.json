@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 650,
+  "id": 41,
   "links": [],
   "panels": [
     {
@@ -57,6 +57,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -72,7 +73,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               }
             ]
           },
@@ -100,7 +102,7 @@
           "sort": "desc"
         }
       },
-      "pluginVersion": "12.0.3",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -108,8 +110,8 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "avg_over_time(peerobserver_rpc_peer_info_ping_median[10m])",
+          "editorMode": "code",
+          "expr": "sum(avg_over_time(peerobserver_rpc_peer_info_ping_median[10m])) by (host)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "{{host}}",
@@ -123,7 +125,7 @@
     }
   ],
   "preload": false,
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "ping"
@@ -139,5 +141,5 @@
   "timezone": "utc",
   "title": "[ping] median ping of peers (averaged over 10min)",
   "uid": "1f87d5d4-36f9-40cd-afd4-d262e984a4c6",
-  "version": 3
+  "version": 1
 }

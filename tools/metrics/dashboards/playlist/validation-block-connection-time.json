@@ -25,6 +25,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 36,
   "links": [],
   "panels": [
     {
@@ -62,6 +63,7 @@
               "type": "log"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -78,7 +80,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "#EAB839",
@@ -158,11 +160,12 @@
           "utc"
         ],
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "10.4.2",
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -170,9 +173,9 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "disableTextWrap": false,
-          "editorMode": "builder",
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "peerobserver_validation_block_connected_latest_connection_time",
+          "expr": "sum(peerobserver_validation_block_connected_latest_connection_time) by (host)",
           "format": "time_series",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -203,8 +206,9 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "",
-  "schemaVersion": 39,
+  "schemaVersion": 42,
   "tags": [
     "big-playlist",
     "validation"
@@ -220,6 +224,5 @@
   "timezone": "utc",
   "title": "[validation] block connection time",
   "uid": "bdgc3bcjec268b",
-  "version": 1,
-  "weekStart": ""
+  "version": 1
 }
