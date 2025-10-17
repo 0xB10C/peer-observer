@@ -18,8 +18,34 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 94,
   "links": [],
   "panels": [
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "The age of closed connections can show when e.g. many old connections are closed at the same time.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "12.2.0",
+      "title": "",
+      "type": "text"
+    },
     {
       "datasource": {
         "default": true,
@@ -60,6 +86,7 @@
               "type": "symlog"
             },
             "showPoints": "never",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -75,7 +102,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -84,10 +111,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 14,
+        "h": 15,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "id": 1,
       "options": {
@@ -98,10 +125,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -109,7 +138,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "increase(peerobserver_conn_closed_age_seconds[12h]) / 12",
+          "expr": "increase(peerobserver_conn_closed_age[12h]) / 12",
           "instant": false,
           "interval": "1h",
           "legendFormat": "{{host}}",
@@ -117,7 +146,7 @@
           "refId": "A"
         }
       ],
-      "title": "Connection age of closed connections (per hour)",
+      "title": "Total connection age of closed connections (per hour)",
       "type": "timeseries"
     },
     {
@@ -159,6 +188,7 @@
               "type": "symlog"
             },
             "showPoints": "never",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -174,7 +204,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -183,10 +213,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 14,
+        "h": 15,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 17
       },
       "id": 2,
       "options": {
@@ -197,10 +227,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
+      "pluginVersion": "12.2.0",
       "targets": [
         {
           "datasource": {
@@ -208,7 +240,7 @@
             "uid": "P1809F7CD0C75ACF3"
           },
           "editorMode": "code",
-          "expr": "increase(peerobserver_conn_closed_age_seconds[12h]) / increase(peerobserver_conn_closed[12h])",
+          "expr": "increase(peerobserver_conn_closed_age[12h]) / increase(peerobserver_conn_closed[12h])",
           "instant": false,
           "interval": "1h",
           "legendFormat": "{{host}}",
@@ -216,11 +248,13 @@
           "refId": "A"
         }
       ],
-      "title": "Average connection age of closed connections",
+      "title": "Average connection age of closed connections (averaged over 12h)",
       "type": "timeseries"
     }
   ],
-  "schemaVersion": 39,
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
   "tags": [
     "connections",
     "big-playlist"
@@ -236,6 +270,5 @@
   "timezone": "browser",
   "title": "[connections] Age of closed connections",
   "uid": "cdussjeydqhhca",
-  "version": 8,
-  "weekStart": ""
+  "version": 1
 }
