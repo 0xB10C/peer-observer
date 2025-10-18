@@ -7,7 +7,6 @@ use regex::Regex;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
-
 const NANOS_PER_SECOND: i128 = 1_000_000_000;
 const NANOS_PER_MICRO: i128 = 1_000;
 
@@ -101,7 +100,12 @@ fn parse_common_log_data(line: &str) -> (u64, u32, LogDebugCategory, String) {
             None => LogDebugCategory::Unknown,
         };
 
-    (timestamp_unix, timestamp_micro, log_type, caps[3].to_string())
+    (
+        timestamp_unix,
+        timestamp_micro,
+        log_type,
+        caps[3].to_string(),
+    )
 }
 
 // TODO: mempool_event::Event::Added
