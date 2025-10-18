@@ -253,6 +253,8 @@ pub struct Metrics {
 
     // P2P-extractor
     pub p2pextractor_ping_duration_nanoseconds: IntGauge,
+    pub log_events: IntCounter,
+    pub log_block_connected_events: IntCounter,
 }
 
 impl Metrics {
@@ -358,6 +360,10 @@ impl Metrics {
         // P2P-extractor
         ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
 
+        // log-extractor
+        ic!(log_events, "Number of log events received.", registry);
+        ic!(log_block_connected_events, "Number of block connected log events received.", registry);
+
         Self {
             registry,
             runtime_start_timestamp,
@@ -459,6 +465,9 @@ impl Metrics {
             // P2P-extractor
             p2pextractor_ping_duration_nanoseconds,
 
+            // log-extractor
+            log_events,
+            log_block_connected_events,
         }
     }
 }
