@@ -7,13 +7,17 @@ use regex::Regex;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
+
+const NANOS_PER_SECOND: i128 = 1_000_000_000;
+const NANOS_PER_MICRO: i128 = 1_000;
+
 static BLOCK_HASH_PATTERN: &str = r"[0-9a-f]{64}";
-static ISO8601_DATE_REGEX: &str = r"(\d{4})-(\d{2})-(\d{2})T(\d{2})\:(\d{2})\:(\d{2})Z";
+static RFC3339_DATE_REGEX: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z";
 
 lazy_static! {
     static ref LOG_LINE_REGEX: Regex = Regex::new(&format!(
         r"^({})\s+(?:\[([^\]]+)\]\s+)?(.+)$",
-        ISO8601_DATE_REGEX
+        RFC3339_DATE_REGEX
     ))
     .unwrap();
     static ref BLOCK_CONNECTED_REGEX: Regex = Regex::new(&format!(
@@ -51,13 +55,14 @@ impl LogMatcher for BlockConnectedLog {
 }
 
 pub fn parse_log_event(line: &str) -> LogEvent {
-    let (timestamp, category, message) = parse_common_log_data(line);
+    let (timestamp, timestamp_micro, category, message) = parse_common_log_data(line);
 
     let matchers: Vec<fn(&str) -> Option<Event>> = vec![BlockConnectedLog::parse_event];
     for matcher in &matchers {
         if let Some(event) = matcher(&message) {
             return LogEvent {
                 log_timestamp: timestamp,
+                log_timestamp_micro: timestamp_micro,
                 category: category.into(),
                 event: Some(event),
             };
@@ -67,32 +72,36 @@ pub fn parse_log_event(line: &str) -> LogEvent {
     // if no matcher succeeds, return unknown
     LogEvent {
         log_timestamp: timestamp,
+        log_timestamp_micro: timestamp_micro,
         category: category.into(),
         event: UnknownLogMessage::parse_event(&message),
     }
 }
 
-fn parse_common_log_data(line: &str) -> (u64, LogDebugCategory, String) {
-    let re = Regex::new(r"^([^ ]+)\s+(?:\[([^\]]+)\]\s+)?(.+)$").unwrap();
-    let caps = re.captures(line);
+fn parse_common_log_data(line: &str) -> (u64, u32, LogDebugCategory, String) {
+    let caps = LOG_LINE_REGEX.captures(line);
     if caps.is_none() {
-        return (0, LogDebugCategory::Unknown, String::new());
+        return (0, 0, LogDebugCategory::Unknown, String::new());
     }
 
     let caps = caps.unwrap();
     let timestamp_str = &caps[1];
     let category = caps.get(2).map(|m| m.as_str());
-    let timestamp = match OffsetDateTime::parse(timestamp_str, &Rfc3339) {
-        Ok(dt) => dt.unix_timestamp() as u64,
+
+    let timestamp_nano = match OffsetDateTime::parse(timestamp_str, &Rfc3339) {
+        Ok(dt) => dt.unix_timestamp_nanos(),
         Err(_) => 0,
     };
+    let timestamp_unix = (timestamp_nano / NANOS_PER_SECOND) as u64;
+    let timestamp_micro = ((timestamp_nano % NANOS_PER_SECOND) / NANOS_PER_MICRO) as u32;
+
     let log_type =
         match category.and_then(|cat| LogDebugCategory::from_str_name(&cat.to_uppercase())) {
             Some(cat) => cat,
             None => LogDebugCategory::Unknown,
         };
 
-    (timestamp, log_type, caps[3].to_string())
+    (timestamp_unix, timestamp_micro, log_type, caps[3].to_string())
 }
 
 // TODO: mempool_event::Event::Added
@@ -130,6 +139,7 @@ mod tests {
         let log_event = parse_log_event(log);
 
         assert_eq!(log_event.log_timestamp, 1759372274);
+        assert_eq!(log_event.log_timestamp_micro, 0);
         assert_eq!(log_event.category, LogDebugCategory::Unknown as i32);
 
         if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
@@ -176,5 +186,21 @@ mod tests {
         }
 
         panic!("Expected BlockConnectedLog event");
+    }
+
+    #[test]
+    fn test_log_matcher_with_logtimemicros_option() {
+        let log = "2025-10-17T23:52:01.358911Z [validation] Random message";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.log_timestamp, 1760745121);
+        assert_eq!(log_event.log_timestamp_micro, 358911);
+        assert_eq!(log_event.category, LogDebugCategory::Validation as i32);
+
+        if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
+            assert_eq!(unknown_log.raw_message, "Random message");
+            return;
+        }
+        panic!("Expected UnknownLogMessage event");
     }
 }
