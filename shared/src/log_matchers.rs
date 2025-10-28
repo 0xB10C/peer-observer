@@ -9,15 +9,37 @@ use time::OffsetDateTime;
 
 const NANOS_PER_MICRO: i128 = 1_000;
 
-static BLOCK_HASH_PATTERN: &str = r"[0-9a-f]{64}";
+/// Regular expression for matching RFC3339-compliant timestamps.
+///
+/// Matches a timestamp string with the following components:
+/// - `\d{4}-\d{2}-\d{2}`: Matches a date in `YYYY-MM-DD` format (four digits for year, two for month, two for day).
+/// - `T`: Matches the literal `T` separator between date and time.
+/// - `\d{2}:\d{2}:\d{2}`: Matches a time in `HH:MM:SS` format (two digits each for hours, minutes, seconds).
+/// - `(?:\.\d{1,6})?`: Optionally matches a fractional second part:
+///   - `(?:...)`: Non-capturing group for the decimal part.
+///   - `\.\d{1,6}`: Matches a decimal point followed by 1 to 6 digits.
+/// - `Z`: Matches the literal `Z` indicating UTC timezone.
 static RFC3339_DATE_REGEX: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z";
 
+static BLOCK_HASH_PATTERN: &str = r"[0-9a-f]{64}";
+
 lazy_static! {
+    /// Regular expression for parsing default infos from log lines.
+    ///
+    /// Matches a log line with the following components:
+    /// - `^({})`: Captures an RFC3339-compliant timestamp (defined by `RFC3339_DATE_REGEX`) at the start of the line.
+    /// - `\s+`: Matches one or more whitespace characters after the timestamp.
+    /// - `(?:\[([^\]]+)\]\s+)?`: Optionally captures content within square brackets (debug category):
+    ///   - `(?:...)`: Non-capturing group for the bracketed content and trailing whitespace.
+    ///   - `[^\]]+`: Matches one or more characters that are not `]`.
+    ///   - `\s+`: Matches trailing whitespace after the brackets (if present).
+    /// - `(.+)$`: Captures the remaining log message content until the end of the line
     static ref LOG_LINE_REGEX: Regex = Regex::new(&format!(
         r"^({})\s+(?:\[([^\]]+)\]\s+)?(.+)$",
         RFC3339_DATE_REGEX
     ))
     .unwrap();
+
     static ref BLOCK_CONNECTED_REGEX: Regex = Regex::new(&format!(
         r"Enqueuing BlockConnected: block hash=({}) block height=(\d+)",
         BLOCK_HASH_PATTERN
