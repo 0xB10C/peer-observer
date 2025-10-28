@@ -3,12 +3,11 @@ syntax = "proto2";
 package log_extractor;
 
 message LogEvent {
-  required uint64 log_timestamp = 1; // unix timestamp in seconds
-  required uint32 log_timestamp_micro = 2; // microseconds part of the timestamp
-  required LogDebugCategory category = 3;
+  required uint64 log_timestamp = 1; // unix timestamp in microseconds
+  required LogDebugCategory category = 2;
   oneof event {
-    UnknownLogMessage unknown_log_message = 4;
-    BlockConnectedLog block_connected_log = 5;
+    UnknownLogMessage unknown_log_message = 3;
+    BlockConnectedLog block_connected_log = 4;
   }
 }
 

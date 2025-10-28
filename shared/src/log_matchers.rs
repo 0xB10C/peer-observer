@@ -7,7 +7,6 @@ use regex::Regex;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
-const NANOS_PER_SECOND: i128 = 1_000_000_000;
 const NANOS_PER_MICRO: i128 = 1_000;
 
 static BLOCK_HASH_PATTERN: &str = r"[0-9a-f]{64}";
@@ -54,14 +53,13 @@ impl LogMatcher for BlockConnectedLog {
 }
 
 pub fn parse_log_event(line: &str) -> LogEvent {
-    let (timestamp, timestamp_micro, category, message) = parse_common_log_data(line);
+    let (timestamp_micro, category, message) = parse_common_log_data(line);
 
     let matchers: Vec<fn(&str) -> Option<Event>> = vec![BlockConnectedLog::parse_event];
     for matcher in &matchers {
         if let Some(event) = matcher(&message) {
             return LogEvent {
-                log_timestamp: timestamp,
-                log_timestamp_micro: timestamp_micro,
+                log_timestamp: timestamp_micro,
                 category: category.into(),
                 event: Some(event),
             };
@@ -70,17 +68,16 @@ pub fn parse_log_event(line: &str) -> LogEvent {
 
     // if no matcher succeeds, return unknown
     LogEvent {
-        log_timestamp: timestamp,
-        log_timestamp_micro: timestamp_micro,
+        log_timestamp: timestamp_micro,
         category: category.into(),
         event: UnknownLogMessage::parse_event(&message),
     }
 }
 
-fn parse_common_log_data(line: &str) -> (u64, u32, LogDebugCategory, String) {
+fn parse_common_log_data(line: &str) -> (u64, LogDebugCategory, String) {
     let caps = LOG_LINE_REGEX.captures(line);
     if caps.is_none() {
-        return (0, 0, LogDebugCategory::Unknown, String::new());
+        return (0, LogDebugCategory::Unknown, String::new());
     }
 
     let caps = caps.unwrap();
@@ -91,8 +88,7 @@ fn parse_common_log_data(line: &str) -> (u64, u32, LogDebugCategory, String) {
         Ok(dt) => dt.unix_timestamp_nanos(),
         Err(_) => 0,
     };
-    let timestamp_unix = (timestamp_nano / NANOS_PER_SECOND) as u64;
-    let timestamp_micro = ((timestamp_nano % NANOS_PER_SECOND) / NANOS_PER_MICRO) as u32;
+    let timestamp_micro = (timestamp_nano / NANOS_PER_MICRO) as u64;
 
     let log_type =
         match category.and_then(|cat| LogDebugCategory::from_str_name(&cat.to_uppercase())) {
@@ -100,12 +96,7 @@ fn parse_common_log_data(line: &str) -> (u64, u32, LogDebugCategory, String) {
             None => LogDebugCategory::Unknown,
         };
 
-    (
-        timestamp_unix,
-        timestamp_micro,
-        log_type,
-        caps[3].to_string(),
-    )
+    (timestamp_micro, log_type, caps[3].to_string())
 }
 
 // TODO: mempool_event::Event::Added
@@ -142,8 +133,7 @@ mod tests {
         let log = "2025-10-02T02:31:14Z Verification progress: 50%";
         let log_event = parse_log_event(log);
 
-        assert_eq!(log_event.log_timestamp, 1759372274);
-        assert_eq!(log_event.log_timestamp_micro, 0);
+        assert_eq!(log_event.log_timestamp, 1759372274000000);
         assert_eq!(log_event.category, LogDebugCategory::Unknown as i32);
 
         if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
@@ -159,7 +149,7 @@ mod tests {
         let log = "2025-10-02T02:31:21Z [net] Flushed 0 addresses to peers.dat  2ms";
         let log_event = parse_log_event(log);
 
-        assert_eq!(log_event.log_timestamp, 1759372281);
+        assert_eq!(log_event.log_timestamp, 1759372281000000);
         assert_eq!(log_event.category, LogDebugCategory::Net as i32);
 
         if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
@@ -197,8 +187,7 @@ mod tests {
         let log = "2025-10-17T23:52:01.358911Z [validation] Random message";
         let log_event = parse_log_event(log);
 
-        assert_eq!(log_event.log_timestamp, 1760745121);
-        assert_eq!(log_event.log_timestamp_micro, 358911);
+        assert_eq!(log_event.log_timestamp, 1760745121358911);
         assert_eq!(log_event.category, LogDebugCategory::Validation as i32);
 
         if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
