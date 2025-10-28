@@ -41,7 +41,7 @@ lazy_static! {
     .unwrap();
 
     static ref BLOCK_CONNECTED_REGEX: Regex = Regex::new(&format!(
-        r"Enqueuing BlockConnected: block hash=({}) block height=(\d+)",
+        r"BlockConnected: block hash=({}) block height=(\d+)",
         BLOCK_HASH_PATTERN
     ))
     .unwrap();
@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn test_log_matcher_block_connected() {
+    fn test_log_matcher_block_connected_with_enqueuing() {
         let log = "2025-09-27T01:52:01Z [validation] Enqueuing BlockConnected: block hash=41109f31c8ca4d8683ab5571ba462292ddb8486dee6ecd2e62901accc7952f0b block height=437";
         let log_event = parse_log_event(log);
 
@@ -198,6 +198,25 @@ mod tests {
                 "41109f31c8ca4d8683ab5571ba462292ddb8486dee6ecd2e62901accc7952f0b"
             );
             assert_eq!(event.block_height, 437);
+            return;
+        }
+
+        panic!("Expected BlockConnectedLog event");
+    }
+
+    #[test]
+    fn test_log_matcher_block_connected() {
+        let log = "2025-09-27T01:52:01Z [validation] BlockConnected: block hash=6022a9138d879a9d525dba16a0e7d85eda9874736c1aed5c8da0c23ee878db4f block height=5";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.category, LogDebugCategory::Validation as i32);
+
+        if let Some(Event::BlockConnectedLog(event)) = log_event.event {
+            assert_eq!(
+                event.block_hash,
+                "6022a9138d879a9d525dba16a0e7d85eda9874736c1aed5c8da0c23ee878db4f"
+            );
+            assert_eq!(event.block_height, 5);
             return;
         }
 
