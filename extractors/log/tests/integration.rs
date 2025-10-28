@@ -3,7 +3,7 @@
 
 use log_extractor::Args;
 use shared::{
-    async_nats, corepc_node,
+    async_nats, bitcoin, corepc_node,
     futures::StreamExt,
     log,
     prost::Message,
@@ -13,8 +13,13 @@ use shared::{
     },
     simple_logger::SimpleLogger,
     testing::nats_server::NatsServerForTesting,
-    tokio::{self, sync::watch},
+    tokio::{
+        self,
+        sync::watch,
+        time::{Duration, sleep},
+    },
 };
+use std::str::FromStr;
 use std::sync::Once;
 
 static INIT: Once = Once::new();
@@ -66,10 +71,14 @@ fn setup_node(conf: corepc_node::Conf) -> corepc_node::Node {
     return corepc_node::Node::from_downloaded_with_conf(&conf).unwrap();
 }
 
-fn setup_two_connected_nodes() -> (corepc_node::Node, corepc_node::Node) {
+fn setup_two_connected_nodes(node1_args: Vec<&str>) -> (corepc_node::Node, corepc_node::Node) {
     // node1 listens for p2p connections
     let mut node1_conf = corepc_node::Conf::default();
     node1_conf.p2p = corepc_node::P2P::Yes;
+    for arg in node1_args {
+        log::info!("Running node1 with arg: {}", arg);
+        node1_conf.args.push(arg);
+    }
     let node1 = setup_node(node1_conf);
 
     // node2 connects to node1
@@ -80,14 +89,18 @@ fn setup_two_connected_nodes() -> (corepc_node::Node, corepc_node::Node) {
     (node1, node2)
 }
 
-async fn check(check_expected: fn(Event) -> ()) {
+async fn check(
+    args: Vec<&str>,
+    test_setup: fn(&corepc_node::Client),
+    check_event: fn(Event) -> bool,
+) {
     setup();
-    let (node1, _node2) = setup_two_connected_nodes();
+    let (node1, _node2) = setup_two_connected_nodes(args);
     let nats_server = NatsServerForTesting::new().await;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
+    let node1_workdir = node1.workdir().to_str().unwrap().to_string();
     let log_extractor_handle = tokio::spawn(async move {
-        let node1_workdir = node1.workdir().to_str().unwrap().to_string();
         let log_path = format!("{}/regtest/debug.log", node1_workdir);
         let pipe_path = format!("{}/bitcoind_pipe", node1_workdir);
         spawn_pipe(log_path, pipe_path.clone());
@@ -104,11 +117,16 @@ async fn check(check_expected: fn(Event) -> ()) {
         .unwrap();
     let mut sub = nc.subscribe("*").await.unwrap();
 
+    test_setup(&node1.client);
+
+    sleep(Duration::from_secs(1)).await;
+
     while let Some(msg) = sub.next().await {
         let unwrapped = EventMsg::decode(msg.payload).unwrap();
         if let Some(event) = unwrapped.event {
-            check_expected(event);
-            break;
+            if check_event(event) {
+                break;
+            }
         }
     }
 
@@ -120,24 +138,90 @@ async fn check(check_expected: fn(Event) -> ()) {
 async fn test_integration_logextractor_log_events() {
     println!("test that we receive log events");
 
-    check(|event| {
-        let mut received_events = false;
-        match event {
-            Event::LogExtractorEvent(r) => {
-                if let Some(ref e) = r.event {
-                    match e {
-                        log_event::Event::UnknownLogMessage(unknown_log_message) => {
-                            received_events = true;
-                            assert!(unknown_log_message.raw_message.len() > 0);
+    check(
+        vec![],
+        |_node1| (),
+        |event| {
+            match event {
+                Event::LogExtractorEvent(r) => {
+                    if let Some(ref e) = r.event {
+                        match e {
+                            _ => {
+                                return true;
+                            }
                         }
-                        _ => (),
                     }
                 }
-            }
-            _ => panic!("unexpected event {:?}", event),
-        };
+                _ => panic!("unexpected event {:?}", event),
+            };
 
-        assert!(received_events, "Did not receive any log events");
-    })
+            false
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_logextractor_unknown_log_events() {
+    println!("test that we receive unknown log events");
+
+    check(
+        vec![],
+        |_node1| (),
+        |event| {
+            match event {
+                Event::LogExtractorEvent(r) => {
+                    if let Some(ref e) = r.event {
+                        match e {
+                            log_event::Event::UnknownLogMessage(unknown_log_message) => {
+                                assert!(unknown_log_message.raw_message.len() > 0);
+                                log::info!("UnknownLogMessage {:?}", unknown_log_message);
+                                return true;
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                _ => panic!("unexpected event {:?}", event),
+            };
+            false
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_logextractor_block_connected() {
+    println!("test that we receive block connected log events");
+
+    check(
+        vec!["-debug=validation"],
+        |node1| {
+            let address: bitcoin::address::Address =
+                bitcoin::address::Address::from_str("bcrt1qs758ursh4q9z627kt3pp5yysm78ddny6txaqgw")
+                    .unwrap()
+                    .require_network(bitcoin::Network::Regtest)
+                    .unwrap();
+            node1.generate_to_address(1, &address).unwrap();
+        },
+        |event| {
+            match event {
+                Event::LogExtractorEvent(r) => {
+                    if let Some(ref e) = r.event {
+                        match e {
+                            log_event::Event::BlockConnectedLog(block_connected) => {
+                                assert!(block_connected.block_height > 0);
+                                log::info!("BlockConnectedLog {:?}", block_connected);
+                                return true;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => panic!("unexpected event {:?}", event),
+            };
+            false
+        },
+    )
     .await;
 }
