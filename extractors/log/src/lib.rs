@@ -17,9 +17,9 @@ mod error;
 // from libc crate
 pub const O_NONBLOCK: i32 = 2048;
 
-/// The peer-observer log-extractor reads lines from a bitcoind log
-/// pipe (named pipe / FIFO) and publishes the results as events into
-/// a NATS pub-sub queue.
+/// The peer-observer log-extractor reads lines from a pipe to a Bitcoin node
+/// debug.log pipe (named pipe / FIFO) and publishes parsed lines as events
+/// into a NATS pub-sub queue.
 #[derive(Parser, Debug)]
 #[clap(group(
     clap::ArgGroup::new("pipe")
