@@ -9,6 +9,7 @@ use shared::{
     protobuf::{
         addrman::{self, InsertNew, InsertTried},
         event_msg::{event_msg::Event, EventMsg},
+        log_extractor::{self, LogDebugCategory},
         mempool::{self, Added},
         net_conn::{self, Connection, InboundConnection},
         net_msg::{self, message::Msg, Metadata, Ping, Pong},
@@ -468,6 +469,58 @@ async fn test_integration_logger_p2pextractor_ping_duration() {
         Subject::Validation,
         r#"
         p2p event: PingDuration(1234567ns)
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_logger_logextractor_unknown_log() {
+    println!("test that log-extractor unknown events are logged");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Unknown.into(),
+                log_timestamp: 1234,
+                event: Some(log_extractor::log_event::Event::UnknownLogMessage(
+                    log_extractor::UnknownLogMessage {
+                        raw_message: "test".to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::LogExtractor,
+        r#"
+        log event: UnknownLogMessage(test)
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_logger_logextractor_blockconnected_log() {
+    println!("test that log-extractor BlockConnected events are logged");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Validation.into(),
+                log_timestamp: 345,
+                event: Some(log_extractor::log_event::Event::BlockConnectedLog(
+                    log_extractor::BlockConnectedLog {
+                        block_height: 1337,
+                        block_hash:
+                            "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f".to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::LogExtractor,
+        r#"
+        log event: BlockConnected(hash=000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f, height=1337)
         "#,
     )
     .await;
