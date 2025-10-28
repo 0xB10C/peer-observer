@@ -225,3 +225,25 @@ async fn test_integration_logextractor_block_connected() {
     )
     .await;
 }
+
+#[tokio::test]
+async fn test_integration_logextractor_logtimemicros() {
+    println!("test that we can parse -logtimemicros timestamps");
+
+    check(
+        vec!["-logtimemicros=1"],
+        |_node1| {},
+        |event| {
+            match event {
+                Event::LogExtractorEvent(r) => {
+                    // When using -logtimemicros=1, the timestamp % 1000 should
+                    // (most of the time) be != 0 (or >0). 1 in 1000 cases, it will
+                    // be 0, but we test multiple messages.
+                    return r.log_timestamp % 1000 > 0;
+                }
+                _ => panic!("unexpected event {:?}", event),
+            };
+        },
+    )
+    .await;
+}
