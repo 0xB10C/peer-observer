@@ -211,7 +211,7 @@ async fn test_integration_logextractor_block_connected() {
                         match e {
                             log_event::Event::BlockConnectedLog(block_connected) => {
                                 assert!(block_connected.block_height > 0);
-                                log::info!("BlockConnectedLog {:?}", block_connected);
+                                log::info!("BlockConnectedLog event {}", block_connected);
                                 return true;
                             }
                             _ => {}
