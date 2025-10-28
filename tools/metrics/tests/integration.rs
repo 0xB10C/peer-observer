@@ -10,6 +10,7 @@ use shared::{
     protobuf::{
         addrman::{self, InsertNew, InsertTried},
         event_msg::{event_msg::Event, EventMsg},
+        log_extractor::{self, LogDebugCategory},
         mempool::{self, Added, Rejected, Removed, Replaced},
         net_conn::{
             self, ClosedConnection, Connection, EvictedInboundConnection, InboundConnection,
@@ -2036,6 +2037,93 @@ async fn test_integration_metrics_p2pextractor_ping_duration() {
         Subject::Validation,
         r#"
         peerobserver_p2pextractor_ping_duration_nanoseconds 1234567
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_logextractor_logevents() {
+    println!("test that log-extractor log events metric work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Unknown.into(),
+                log_timestamp: 1234,
+                event: Some(log_extractor::log_event::Event::UnknownLogMessage(
+                    log_extractor::UnknownLogMessage {
+                        raw_message: "test1".to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Unknown.into(),
+                log_timestamp: 1234,
+                event: Some(log_extractor::log_event::Event::UnknownLogMessage(
+                    log_extractor::UnknownLogMessage {
+                        raw_message: "test2".to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::LogExtractor,
+        r#"
+        peerobserver_log_events 2
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_logextractor_blockconnected_events() {
+    println!("test that log-extractor block connected log events metric work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Validation.into(),
+                log_timestamp: 345,
+                event: Some(log_extractor::log_event::Event::BlockConnectedLog(
+                    log_extractor::BlockConnectedLog {
+                        block_height: 1234,
+                        block_hash:
+                            "b00000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+                                .to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Validation.into(),
+                log_timestamp: 3452,
+                event: Some(log_extractor::log_event::Event::BlockConnectedLog(
+                    log_extractor::BlockConnectedLog {
+                        block_height: 2222,
+                        block_hash:
+                            "a00000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26d"
+                                .to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Unknown.into(),
+                log_timestamp: 1234,
+                event: Some(log_extractor::log_event::Event::UnknownLogMessage(
+                    log_extractor::UnknownLogMessage {
+                        raw_message: "test2".to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::LogExtractor,
+        r#"
+        peerobserver_log_block_connected_events 2
+        peerobserver_log_events 3
         "#,
     )
     .await;
