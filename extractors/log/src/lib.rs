@@ -8,9 +8,13 @@ use shared::nats_subjects::Subject;
 use shared::prost::Message;
 use shared::protobuf::event_msg::EventMsg;
 use shared::protobuf::event_msg::event_msg::Event;
-use shared::tokio::fs::{File, OpenOptions};
-use shared::tokio::io::{AsyncBufReadExt, BufReader};
-use shared::tokio::sync::watch;
+use shared::tokio::{
+    self,
+    fs::{File, OpenOptions},
+    io::{AsyncBufReadExt, BufReader},
+    sync::watch,
+    time,
+};
 
 mod error;
 
@@ -69,7 +73,7 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
         &args.bitcoind_pipe
     );
     loop {
-        shared::tokio::select! {
+        tokio::select! {
             line = lines.next_line() => {
                 match line {
                     Ok(Some(line)) => process_log(&nats_client, &line).await,
@@ -130,7 +134,9 @@ async fn process_log(nats_client: &async_nats::Client, line: &str) {
 }
 
 async fn open_pipe(path: &str, shutdown_rx: watch::Receiver<bool>) -> Result<File, std::io::Error> {
-    loop {
+    // Fail after MAX_RETRIES if the pipe doesn't exist yet.
+    const MAX_RETRIES: i32 = 30;
+    for retries in 0..=MAX_RETRIES {
         if *shutdown_rx.borrow() {
             log::info!("open_pipe received shutdown signal.");
             return Err(std::io::Error::new(
@@ -140,23 +146,22 @@ async fn open_pipe(path: &str, shutdown_rx: watch::Receiver<bool>) -> Result<Fil
         }
 
         if !std::path::Path::new(path).exists() {
-            log::warn!("Pipe {} does not exist, retrying in 1s", path);
-            shared::tokio::time::sleep(shared::tokio::time::Duration::from_secs(1)).await;
-            continue;
-        }
-
-        match OpenOptions::new()
-            .read(true)
-            .write(false)
-            .custom_flags(O_NONBLOCK)
-            .open(path)
-            .await
-        {
-            Ok(f) => return Ok(f),
-            Err(e) => {
-                log::warn!("Failed to open pipe {}, retrying in 1s: {}", path, e);
-                shared::tokio::time::sleep(shared::tokio::time::Duration::from_secs(1)).await;
-            }
+            log::warn!(
+                "Pipe {} does not exist yet, retrying in 1s (retry: {}/{})",
+                path,
+                retries,
+                MAX_RETRIES
+            );
+            time::sleep(time::Duration::from_secs(1)).await;
+        } else {
+            break;
         }
     }
+
+    OpenOptions::new()
+        .read(true)
+        .write(false)
+        .custom_flags(O_NONBLOCK)
+        .open(path)
+        .await
 }

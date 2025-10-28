@@ -1,5 +1,5 @@
 use log_extractor::Args;
-use shared::log::error;
+use shared::log;
 use shared::tokio::{self, signal, sync::watch};
 use shared::{clap::Parser, simple_logger};
 
@@ -14,10 +14,16 @@ async fn main() {
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let log_handle = tokio::spawn(log_extractor::run(args, shutdown_rx));
 
-    signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
-    let _ = shutdown_tx.send(true);
-
-    if let Err(e) = log_handle.await {
-        error!("log_extractor task failed: {:?}", e);
+    tokio::select! {
+        _ = signal::ctrl_c() => {
+            log::info!("Received Ctrl+C. Stopping...");
+            let _ = shutdown_tx.send(true);
+        }
+        result = log_handle => {
+            match result.unwrap() {
+                Ok(_) => log::info!("log_extractor task completed."),
+                Err(e) => log::error!("log_extractor task failed: {e}"),
+            }
+        }
     }
 }
