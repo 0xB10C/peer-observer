@@ -77,10 +77,17 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
             line = lines.next_line() => {
                 match line {
                     Ok(Some(line)) => process_log(&nats_client, &line).await,
-                    Ok(None) => (),
+                    Ok(None) => {
+                        // Since we use O_NONBLOCK, we need to wait here for a
+                        // bit to avoid spinning here if we don't have anything
+                        // to read.
+                        time::sleep(time::Duration::from_millis(25)).await;
+                    },
                     Err(e) => {
                         if e.kind() == std::io::ErrorKind::WouldBlock {
-                            // Non-blocking read with no data available, continue
+                            // Non-blocking read with no data available: briefly
+                            // sleep to avoid spinning here and then continue.
+                            time::sleep(time::Duration::from_millis(25)).await;
                             continue;
                         }
                         return Err(e.into());
@@ -161,6 +168,9 @@ async fn open_pipe(path: &str, shutdown_rx: watch::Receiver<bool>) -> Result<Fil
     OpenOptions::new()
         .read(true)
         .write(false)
+        // We need to use O_NONBLOCK here, otherwise a pipe without a writer
+        // will block the tokio async routine on next_line() and we can't
+        // e.g. CTRL+C anymore.
         .custom_flags(O_NONBLOCK)
         .open(path)
         .await
