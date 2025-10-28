@@ -58,6 +58,7 @@ NATS server. Each extractor connects to a different interface:
 | ebpf          | uses tracepoints for real-time events | [extractors/ebpf/](extractors/ebpf) |
 | rpc           | periodically fetches RPC for events   | [extractors/rpc/](extractors/rpc)   |
 | p2p           |Bitcoin P2P events from an inbound node| [extractors/p2p/](extractors/p2p)   |
+| log           | parses the debug.log of a node        | [extractors/log/](extractors/log)   |
 
 ## Tools
 
@@ -89,7 +90,7 @@ I'll do my best to add more documentation.
 
 ### Integration tests
 
-To run the integration tests, run with the feature `nats_integration_tests` and 
+To run the integration tests, run with the feature `nats_integration_tests` and
 `node_integration_tests`. If you are not using the nix-shell, you need to set the
 `NATS_SERVER_BINARY` to the path to your `nats-server` binary. Addtionally,
 `BITCOIND_EXE` can be set to a custom `bitcoind` binary. By default, a recent
