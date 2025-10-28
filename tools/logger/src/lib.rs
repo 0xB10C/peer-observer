@@ -6,6 +6,7 @@ use shared::log;
 use shared::prost::Message;
 use shared::protobuf::event_msg::event_msg::Event;
 use shared::protobuf::event_msg::{self, EventMsg};
+use shared::protobuf::log_extractor::LogDebugCategory;
 use shared::tokio::sync::watch;
 use shared::{async_nats, clap};
 
@@ -204,7 +205,15 @@ fn log_event(event_msg: EventMsg, args: Args) {
         }
         Event::LogExtractorEvent(l) => {
             if log_all || args.log_extractor {
-                log::info!("log event: {}", l.event.unwrap());
+                log::info!(
+                    "log event: {} [{}] {}",
+                    l.log_timestamp,
+                    LogDebugCategory::try_from(l.category)
+                        .unwrap_or(LogDebugCategory::Unknown)
+                        .as_str_name()
+                        .to_lowercase(),
+                    l.event.unwrap()
+                );
             }
         }
     }

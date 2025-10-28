@@ -493,7 +493,7 @@ async fn test_integration_logger_logextractor_unknown_log() {
         ],
         Subject::LogExtractor,
         r#"
-        log event: UnknownLogMessage(test)
+        log event: 1234 [unknown] UnknownLogMessage(test)
         "#,
     )
     .await;
@@ -520,7 +520,7 @@ async fn test_integration_logger_logextractor_blockconnected_log() {
         ],
         Subject::LogExtractor,
         r#"
-        log event: BlockConnected(hash=000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f, height=1337)
+        log event: 345 [validation] BlockConnected(hash=000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f, height=1337)
         "#,
     )
     .await;
