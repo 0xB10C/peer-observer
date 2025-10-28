@@ -253,6 +253,8 @@ pub struct Metrics {
 
     // P2P-extractor
     pub p2pextractor_ping_duration_nanoseconds: IntGauge,
+
+    // log-extractor
     pub log_events: IntCounter,
     pub log_block_connected_events: IntCounter,
 }

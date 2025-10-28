@@ -819,10 +819,9 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
 }
 
 fn handle_log_event(e: &log_event::Event, metrics: metrics::Metrics) {
+    metrics.log_events.inc();
     match e {
-        log_event::Event::UnknownLogMessage(_) => {
-            metrics.log_events.inc();
-        }
+        log_event::Event::UnknownLogMessage(_) => {}
         log_event::Event::BlockConnectedLog(_) => {
             metrics.log_block_connected_events.inc();
         }
