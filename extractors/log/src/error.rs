@@ -8,7 +8,6 @@ use std::io;
 pub enum RuntimeError {
     SetLogger(SetLoggerError),
     Io(io::Error),
-    Corepc(shared::corepc_client::client_sync::Error),
     NatsConnect(shared::async_nats::error::Error<ConnectErrorKind>),
 }
 
@@ -17,7 +16,6 @@ impl fmt::Display for RuntimeError {
         match self {
             RuntimeError::SetLogger(e) => write!(f, "set logger error {}", e),
             RuntimeError::Io(e) => write!(f, "IO error {}", e),
-            RuntimeError::Corepc(e) => write!(f, "RPC client error {}", e),
             RuntimeError::NatsConnect(e) => write!(f, "NATS connection error {}", e),
         }
     }
@@ -28,7 +26,6 @@ impl error::Error for RuntimeError {
         match *self {
             RuntimeError::SetLogger(ref e) => Some(e),
             RuntimeError::Io(ref e) => Some(e),
-            RuntimeError::Corepc(ref e) => Some(e),
             RuntimeError::NatsConnect(ref e) => Some(e),
         }
     }
@@ -43,12 +40,6 @@ impl From<SetLoggerError> for RuntimeError {
 impl From<io::Error> for RuntimeError {
     fn from(e: io::Error) -> Self {
         RuntimeError::Io(e)
-    }
-}
-
-impl From<shared::corepc_client::client_sync::Error> for RuntimeError {
-    fn from(e: shared::corepc_client::client_sync::Error) -> Self {
-        RuntimeError::Corepc(e)
     }
 }
 
