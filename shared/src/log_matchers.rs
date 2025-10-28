@@ -237,4 +237,49 @@ mod tests {
         }
         panic!("Expected UnknownLogMessage event");
     }
+
+    #[test]
+    fn test_log_matcher_with_broken_timestamp() {
+        let log = "2025--17T23:52:01.358911Z [validation] Random message";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.log_timestamp, 0);
+        assert_eq!(log_event.category, LogDebugCategory::Unknown as i32);
+
+        if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
+            assert_eq!(unknown_log.raw_message, "");
+            return;
+        }
+        panic!("Expected UnknownLogMessage event");
+    }
+
+    #[test]
+    fn test_log_matcher_with_broken_timestamp2() {
+        let log = "2025-99-99T99:99:99.358911Z [validation] Random message";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.log_timestamp, 0);
+        assert_eq!(log_event.category, LogDebugCategory::Validation as i32);
+
+        if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
+            assert_eq!(unknown_log.raw_message, "Random message");
+            return;
+        }
+        panic!("Expected UnknownLogMessage event");
+    }
+
+    #[test]
+    fn test_log_matcher_with_unknown_category() {
+        let log = "2025-22-17T23:52:01.358911Z [This-Is-N0t-a-valid-category] Random message";
+        let log_event = parse_log_event(log);
+
+        assert_eq!(log_event.log_timestamp, 0);
+        assert_eq!(log_event.category, LogDebugCategory::Unknown as i32);
+
+        if let Some(Event::UnknownLogMessage(unknown_log)) = log_event.event {
+            assert_eq!(unknown_log.raw_message, "Random message");
+            return;
+        }
+        panic!("Expected UnknownLogMessage event");
+    }
 }
