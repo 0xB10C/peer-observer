@@ -247,3 +247,45 @@ async fn test_integration_logextractor_logtimemicros() {
     )
     .await;
 }
+
+#[tokio::test]
+async fn test_integration_logextractor_extralogging() {
+    println!("test that we can parse -logthreadnames=1 and -logsourcelocations=1 lines too");
+
+    check(
+        vec![
+            "-debug=validation",
+            "-logthreadnames=1",
+            "-logsourcelocations=1",
+            "-logips=1",
+            "-logtimemicros=1",
+        ],
+        |node1| {
+            let address: bitcoin::address::Address =
+                bitcoin::address::Address::from_str("bcrt1qs758ursh4q9z627kt3pp5yysm78ddny6txaqgw")
+                    .unwrap()
+                    .require_network(bitcoin::Network::Regtest)
+                    .unwrap();
+            node1.generate_to_address(1, &address).unwrap();
+        },
+        |event| {
+            match event {
+                Event::LogExtractorEvent(r) => {
+                    if let Some(ref e) = r.event {
+                        match e {
+                            log_event::Event::BlockConnectedLog(block_connected) => {
+                                assert!(block_connected.block_height > 0);
+                                log::info!("BlockConnectedLog event {}", block_connected);
+                                return true;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => panic!("unexpected event {:?}", event),
+            };
+            false
+        },
+    )
+    .await;
+}
