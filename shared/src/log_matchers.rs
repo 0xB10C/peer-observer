@@ -108,6 +108,19 @@ impl LogMatcher for BlockCheckedLog {
     }
 }
 
+impl BlockCheckedLog {
+    pub fn is_mutated_block(&self) -> bool {
+        matches!(
+            self.state.as_str(),
+            "bad-txnmrklroot"
+                | "bad-txns-duplicate"
+                | "bad-witness-nonce-size"
+                | "bad-witness-merkle-match"
+                | "unexpected-witness"
+        )
+    }
+}
+
 pub fn parse_log_event(line: &str) -> LogEvent {
     let (timestamp_micro, category, message) = parse_common_log_data(line);
 
