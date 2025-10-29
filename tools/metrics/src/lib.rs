@@ -825,6 +825,15 @@ fn handle_log_event(e: &log_event::Event, metrics: metrics::Metrics) {
         log_event::Event::BlockConnectedLog(_) => {
             metrics.log_block_connected_events.inc();
         }
-        log_event::Event::BlockCheckedLog(_) => {},
+        log_event::Event::BlockCheckedLog(block) => {
+            metrics.log_block_checked_events.inc();
+
+            if block.is_mutated_block() {
+                metrics
+                    .log_mutated_blocks
+                    .with_label_values(&[&block.state])
+                    .inc();
+            }
+        }
     }
 }
