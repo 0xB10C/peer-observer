@@ -49,7 +49,7 @@ pub const BUCKETS_INV_SIZE: [f64; 46] = [
     50_000f64,
 ];
 
-pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 32] = [
+pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 64] = [
     0_f64,  // 0 NODE_NONE
     1_f64,  // 1 NODE_NETWORK
     2_f64,  // 2 NODE_GETUTXO
@@ -63,7 +63,10 @@ pub const BUCKETS_ADDR_SERVICE_BITS: [f64; 32] = [
     10_f64, // 512
     11_f64, // 1024 NODE_NETWORK_LIMITED
     12_f64, 13_f64, 14_f64, 15_f64, 16_f64, 17_f64, 18_f64, 19_f64, 20_f64, 21_f64, 22_f64, 23_f64,
-    24_f64, 25_f64, 26_f64, 27_f64, 28_f64, 29_f64, 30_f64, 31_f64,
+    24_f64, 25_f64, 26_f64, 27_f64, 28_f64, 29_f64, 30_f64, 31_f64, 32_f64, 33_f64, 34_f64, 35_f64,
+    36_f64, 37_f64, 38_f64, 39_f64, 40_f64, 41_f64, 42_f64, 43_f64, 44_f64, 45_f64, 46_f64, 47_f64,
+    48_f64, 49_f64, 50_f64, 51_f64, 52_f64, 53_f64, 54_f64, 55_f64, 56_f64, 57_f64, 58_f64, 59_f64,
+    60_f64, 61_f64, 62_f64, 63_f64,
 ];
 
 // Buckets for addr(v2) message timestamp offset in seconds.

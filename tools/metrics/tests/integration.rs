@@ -344,6 +344,12 @@ async fn test_integration_metrics_p2p_addr() {
                         timestamp: timestamp_now,
                         address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
                     },
+                    Address {
+                        port: 2412,
+                        services: u64::MAX,
+                        timestamp: timestamp_now,
+                        address: Some(primitive::address::Address::Ipv4(String::from("127.0.0.1"))),
+                    },
                 ]
                 .to_vec(),
             })),
@@ -353,7 +359,7 @@ async fn test_integration_metrics_p2p_addr() {
         r#"
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="0"} 0
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="1"} 0
-        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="2"} 1
+        peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="2"} 0
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="3"} 1
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="4"} 1
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="5"} 1
@@ -382,45 +388,78 @@ async fn test_integration_metrics_p2p_addr() {
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="999"} 1
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="1000"} 1
         peerobserver_p2p_addr_addresses_bucket{direction="inbound",le="+Inf"} 1
-        peerobserver_p2p_addr_addresses_sum{direction="inbound"} 2
+        peerobserver_p2p_addr_addresses_sum{direction="inbound"} 3
         peerobserver_p2p_addr_addresses_count{direction="inbound"} 1
         peerobserver_p2p_addr_services{direction="inbound",services="1234"} 1
+        peerobserver_p2p_addr_services{direction="inbound",services="18446744073709551615"} 1
         peerobserver_p2p_addr_services{direction="inbound",services="2311"} 1
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="0"} 1
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="1"} 3
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="2"} 4
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="3"} 4
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="4"} 5
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="5"} 5
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="6"} 6
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="7"} 7
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="8"} 8
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="9"} 8
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="10"} 9
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="11"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="12"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="13"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="14"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="15"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="16"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="17"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="18"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="19"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="20"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="21"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="22"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="23"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="24"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="25"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="26"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="27"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="28"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="29"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="30"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="31"} 10
-        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="+Inf"} 10
-        peerobserver_p2p_addr_services_bits_sum{direction="inbound"} 50
-        peerobserver_p2p_addr_services_bits_count{direction="inbound"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="0"} 2
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="1"} 5
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="2"} 7
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="3"} 8
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="4"} 10
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="5"} 11
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="6"} 13
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="7"} 15
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="8"} 17
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="9"} 18
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="10"} 20
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="11"} 22
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="12"} 23
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="13"} 24
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="14"} 25
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="15"} 26
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="16"} 27
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="17"} 28
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="18"} 29
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="19"} 30
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="20"} 31
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="21"} 32
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="22"} 33
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="23"} 34
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="24"} 35
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="25"} 36
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="26"} 37
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="27"} 38
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="28"} 39
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="29"} 40
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="30"} 41
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="31"} 42
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="32"} 43
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="33"} 44
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="34"} 45
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="35"} 46
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="36"} 47
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="37"} 48
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="38"} 49
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="39"} 50
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="40"} 51
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="41"} 52
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="42"} 53
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="43"} 54
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="44"} 55
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="45"} 56
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="46"} 57
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="47"} 58
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="48"} 59
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="49"} 60
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="50"} 61
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="51"} 62
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="52"} 63
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="53"} 64
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="54"} 65
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="55"} 66
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="56"} 67
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="57"} 68
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="58"} 69
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="59"} 70
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="60"} 71
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="61"} 72
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="62"} 73
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="63"} 74
+        peerobserver_p2p_addr_services_bits_bucket{direction="inbound",le="+Inf"} 74
+        peerobserver_p2p_addr_services_bits_sum{direction="inbound"} 2066
+        peerobserver_p2p_addr_services_bits_count{direction="inbound"} 74
         peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="0"} 0
         peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="1"} 0
         peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="2"} 0
@@ -450,35 +489,36 @@ async fn test_integration_metrics_p2p_addr() {
         peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="future",le="+Inf"} 1
         peerobserver_p2p_addr_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="future"} 200
         peerobserver_p2p_addr_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="future"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="0"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="64"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="128"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="256"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="512"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1024"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2048"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4096"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8192"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16384"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32768"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="65536"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="131072"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="262144"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="524288"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1048576"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2097152"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4194304"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8388608"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16777216"} 1
-        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="+Inf"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="0"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="64"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="128"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="256"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="512"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1024"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2048"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4096"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8192"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16384"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="32768"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="65536"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="131072"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="262144"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="524288"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="1048576"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="2097152"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="4194304"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="8388608"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="16777216"} 2
+        peerobserver_p2p_addr_timestamp_offset_seconds_bucket{direction="inbound",timestamp_offset="past",le="+Inf"} 2
         peerobserver_p2p_addr_timestamp_offset_seconds_sum{direction="inbound",timestamp_offset="past"} 0
-        peerobserver_p2p_addr_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="past"} 1
+        peerobserver_p2p_addr_timestamp_offset_seconds_count{direction="inbound",timestamp_offset="past"} 2
+        peerobserver_p2p_invs_outbound_large 0
         peerobserver_p2p_message_bytes{connection_type="1",direction="inbound",message="addr"} 1234
         peerobserver_p2p_message_count{connection_type="1",direction="inbound",message="addr"} 1
         "#,
