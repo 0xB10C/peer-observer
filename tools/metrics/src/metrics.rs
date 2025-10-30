@@ -35,6 +35,7 @@ pub const LABEL_RPC_CONNECTION_TYPE: &str = "connection_type";
 pub const LABEL_RPC_PROTOCOL_VERSION: &str = "protocol_version";
 pub const LABEL_RPC_ASN: &str = "ASN";
 
+pub const LABEL_LOG_CATEGORY: &str = "category";
 pub const LABEL_LOG_MUTATED_BLOCK_STATUS: &str = "status";
 
 pub const BUCKETS_ADDR_ADDRESS_COUNT: [f64; 30] = [
@@ -260,7 +261,7 @@ pub struct Metrics {
     pub p2pextractor_ping_duration_nanoseconds: IntGauge,
 
     // log-extractor
-    pub log_events: IntCounter,
+    pub log_events: IntCounterVec,
     pub log_block_connected_events: IntCounter,
     pub log_block_checked_events: IntCounter,
     pub log_mutated_blocks: IntCounterVec,
@@ -370,7 +371,7 @@ impl Metrics {
         ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
 
         // log-extractor
-        ic!(log_events, "Number of log events received.", registry);
+        icv!(log_events, "Number of log events received by category.", [LABEL_LOG_CATEGORY], registry);
         ic!(log_block_connected_events, "Number of block connected log events received.", registry);
         ic!(log_block_checked_events, "Number of block checked log events received.", registry);
         icv!(log_mutated_blocks, "Number of mutated blocks detected by status.", [LABEL_LOG_MUTATED_BLOCK_STATUS], registry);

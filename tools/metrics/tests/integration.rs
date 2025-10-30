@@ -2111,7 +2111,7 @@ async fn test_integration_metrics_logextractor_logevents() {
         ],
         Subject::LogExtractor,
         r#"
-        peerobserver_log_events 2
+        peerobserver_log_events{category="unknown"} 2
         "#,
     )
     .await;
@@ -2163,7 +2163,8 @@ async fn test_integration_metrics_logextractor_blockconnected_events() {
         Subject::LogExtractor,
         r#"
         peerobserver_log_block_connected_events 2
-        peerobserver_log_events 3
+        peerobserver_log_events{category="unknown"} 1
+        peerobserver_log_events{category="validation"} 2
         "#,
     )
     .await;
