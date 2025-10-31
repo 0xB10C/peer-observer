@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 14,
+  "id": 16,
   "links": [],
   "panels": [
     {
@@ -91,9 +91,9 @@
         "showValue": "auto",
         "stacking": "normal",
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
         },
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 100
@@ -107,7 +107,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "increase(peerobserver_log_events[$__rate_interval])",
+          "expr": "increase(peerobserver_log_events[1m])",
           "fullMetaSearch": false,
           "includeNullMetadata": false,
           "legendFormat": "{{category}}",
@@ -116,7 +116,7 @@
           "useBackend": false
         }
       ],
-      "title": "Logs by category x Time",
+      "title": "Logs by category (1min)",
       "type": "barchart"
     },
     {
@@ -244,7 +244,7 @@
           "useBackend": false
         }
       ],
-      "title": "Mutated blocks",
+      "title": "Mutated blocks (all time)",
       "type": "barchart"
     },
     {
@@ -318,7 +318,7 @@
         "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         },
         "xTickLabelRotation": 0,
@@ -334,7 +334,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "increase(peerobserver_log_mutated_blocks[$__rate_interval])",
+          "expr": "increase(peerobserver_log_mutated_blocks[1m])",
           "fullMetaSearch": false,
           "includeNullMetadata": false,
           "instant": false,
@@ -344,7 +344,7 @@
           "useBackend": false
         }
       ],
-      "title": "Mutated blocks",
+      "title": "Mutated blocks (1min)",
       "type": "barchart"
     }
   ],
@@ -356,12 +356,12 @@
     "list": []
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "Logs",
   "uid": "5f1da208-e8fe-4375-9c27-060ccd77184a",
-  "version": 15
+  "version": 9
 }
