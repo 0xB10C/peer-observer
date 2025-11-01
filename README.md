@@ -11,13 +11,18 @@ extracted data. The `extractors` and `tools` are connected with a [nats.io]-base
 PUB-SUB connection via a NATS server. The exchanged messages are serialized
 protobuf structures.
 
-The `ebpf` extractor uses the Bitcoin Core tracepoints to extract
+The `ebpf-extractor` uses the Bitcoin Core tracepoints to extract
 events like received and send P2P messages, open and closed P2P connections, mempool
 changes, and more. This is implemented using the USDT capabilites of [libbpf-rs].
 The Bitcoin P2P protocol messages are deserialized using [rust-bitcoin].
 
-The `rpc` extractor periodically queries the Bitcoin Core RPC interface using
+The `rpc-extractor` periodically queries the Bitcoin Core RPC interface using
 [corepc]. Results are published to NATS as RPC events.
+
+The `p2p-extractor` receives an inbound connection from a Bitcoin node and publishes
+selected P2P measurements as events into a NATS pub-sub queue.
+
+The `log-extractor` publishes them parsed `debug.log` log messages as events to NATS.
 
 The tools are written in Python or Rust (or any other language that supports NATS
 and protobuf). They subscribe to the NATS server. For example, the `logger` tool
@@ -27,20 +32,25 @@ Python tools can make use of the `protobuf/python-types` to deserialize the Prot
 messages while Rust tools can use the types from the `shared` Rust module.
 
 ```
-                                                              ┌──────────────────────┐
-                                           protobuf           │ Tools                │
-            Tracepoints                    messages           │                      │
-            via libbpf                   ┌──────────┬─────────┼──►logger             │
-┌─────────────┐    ┌───────────────┐     │          │         │                      │
-│             ├────► ebpf-extractor├─────┤          ├─────────┼──►metrics            │
-│   Bitcoin   │    └───────────────┘     │ NATS.io  │         │                      │
-│  Core Node  │    ┌───────────────┐     │ PUB-SUB  ├─────────┼──►websocket          │
-│             ├────► rpc-extractor ├─────┤          │         │                      │
-└─────────────┘    └───────────────┘     │          ├─────────┼──►addr-connectivty   │
-             RPC via                     │          │         │                      │
-             corepc                      └──────────┴─────────┼──►...                │
-                                                              │                      │
-(edit on asciiflow.com)                                       └──────────────────────┘
+                                           protobuf
+                                           messages
+┌─────────────┐    ┌───────────────┐     ┌─────────┐      ┌────────────────────┐
+│             ├────► ebpf-extractor├─────┤         │      │                    │
+│             │    └───────────────┘     │         │      │ Tools              │
+│             │                          │         │      │                    │
+│             │    ┌───────────────┐     │         ├──────┼──►logger           │
+│             ├────► rpc-extractor │─────┤         │      │                    │
+│   Bitcoin   │    └───────────────┘     │ NATS.io ├──────┼──►metrics          │
+│             │                          │         │      │                    │
+│     Node    │    ┌───────────────┐     │ PUB-SUB ├──────┼──►websocket        │
+│             ├────► p2p-extractor │─────┤         │      │                    │
+│             │    └───────────────┘     │         ├──────┼──►addr-connectivty │
+│             │                          │         │      │                    │
+│             │    ┌───────────────┐     │         │      │   ...              │
+│             ├────► log-extractor │─────┤         │      │                    │
+└─────────────┘    └───────────────┘     └─────────┘      └────────────────────┘
+
+ (edit on asciiflow.com)
 ```
 
 [nats.io]: https://nats.io
