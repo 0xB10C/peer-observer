@@ -4,7 +4,7 @@
 use log_extractor::Args;
 use shared::{
     async_nats,
-    bitcoin::{self, Block},
+    bitcoin::{self, Block, consensus::Decodable, hashes::Hash, hex::FromHex},
     corepc_node,
     futures::StreamExt,
     log,
@@ -325,6 +325,118 @@ async fn test_integration_logextractor_block_checked() {
                             log_event::Event::BlockCheckedLog(block_checked) => {
                                 assert!(block_checked.block_hash.len() > 0);
                                 assert_eq!(block_checked.state, "Valid");
+                                log::info!("BlockCheckedLog event {}", block_checked);
+                                return true;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => panic!("unexpected event {:?}", event),
+            };
+            false
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_logextractor_mutated_block_bad_witness_nonce_size() {
+    println!("test that we receive block mutated log events (bad-witness-nonce-size)");
+
+    check(
+        vec!["-debug=validation"],
+        |node1| {
+            let address: bitcoin::address::Address =
+                bitcoin::address::Address::from_str("bcrt1qs758ursh4q9z627kt3pp5yysm78ddny6txaqgw")
+                    .unwrap()
+                    .require_network(bitcoin::Network::Regtest)
+                    .unwrap();
+
+            let block = node1
+                .generate_block(&address.to_string(), &[], false)
+                .unwrap();
+            let block_hex = block.hex.unwrap();
+            let block_bytes: Vec<u8> = FromHex::from_hex(&block_hex).unwrap();
+            let mut block = Block::consensus_decode(&mut block_bytes.as_slice()).unwrap();
+
+            let coinbase = block.txdata.first_mut().unwrap();
+            coinbase.input[0].witness.push([0]);
+
+            update_merkle_root(&mut block);
+            mine_block(&mut block);
+
+            if let Err(_) = node1.submit_block(&block) {
+                return;
+            }
+            panic!("expected block submission to fail")
+        },
+        |event| {
+            match event {
+                Event::LogExtractorEvent(r) => {
+                    if let Some(ref e) = r.event {
+                        match e {
+                            log_event::Event::BlockCheckedLog(block_checked) => {
+                                assert_eq!(block_checked.state, "bad-witness-nonce-size");
+                                assert_eq!(
+                                    block_checked.debug_message,
+                                    "CheckWitnessMalleation : invalid witness reserved value size"
+                                );
+                                log::info!("BlockCheckedLog event {}", block_checked);
+                                return true;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => panic!("unexpected event {:?}", event),
+            };
+            false
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_logextractor_mutated_block_bad_txnmrklroot() {
+    println!("test that we receive block mutated log events (bad-txnmrklroot)");
+
+    check(
+        vec!["-debug=validation"],
+        |node1| {
+            let address: bitcoin::address::Address =
+                bitcoin::address::Address::from_str("bcrt1qs758ursh4q9z627kt3pp5yysm78ddny6txaqgw")
+                    .unwrap()
+                    .require_network(bitcoin::Network::Regtest)
+                    .unwrap();
+
+            let block = node1
+                .generate_block(&address.to_string(), &[], false)
+                .unwrap();
+            let block_hex = block.hex.unwrap();
+            let block_bytes: Vec<u8> = FromHex::from_hex(&block_hex).unwrap();
+            let mut block = Block::consensus_decode(&mut block_bytes.as_slice()).unwrap();
+
+            let merkle_root = block.header.merkle_root.clone();
+            let mut bytes = *merkle_root.as_raw_hash().as_byte_array();
+            bytes[0] ^= 0x55;
+            block.header.merkle_root = Hash::from_byte_array(bytes);
+
+            mine_block(&mut block);
+
+            if let Err(_) = node1.submit_block(&block) {
+                return;
+            }
+            panic!("expected block submission to fail")
+        },
+        |event| {
+            match event {
+                Event::LogExtractorEvent(r) => {
+                    if let Some(ref e) = r.event {
+                        match e {
+                            log_event::Event::BlockCheckedLog(block_checked) => {
+                                assert_eq!(block_checked.state, "bad-txnmrklroot");
+                                assert_eq!(block_checked.debug_message, "hashMerkleRoot mismatch");
                                 log::info!("BlockCheckedLog event {}", block_checked);
                                 return true;
                             }

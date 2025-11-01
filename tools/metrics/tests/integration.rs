@@ -2199,3 +2199,33 @@ async fn test_integration_metrics_logextractor_blockchecked_events() {
     )
     .await;
 }
+
+#[tokio::test]
+async fn test_integration_metrics_logextractor_blockchecked_mutated_events() {
+    println!("test that log-extractor block checked mutated block events metric work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Validation.into(),
+                log_timestamp: 345,
+                event: Some(log_extractor::log_event::Event::BlockCheckedLog(
+                    log_extractor::BlockCheckedLog {
+                        debug_message: "duplicate transaction".to_string(),
+                        state: "bad-txns-duplicate".to_string(),
+                        block_hash:
+                            "2eb63cc71bccef4f3d5da560d810513e2e1155ff7be04d5502ad3e038f956e92"
+                                .to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::LogExtractor,
+        r#"
+        peerobserver_log_block_checked_events 1
+        peerobserver_log_mutated_blocks{status="bad-txns-duplicate"} 1
+        "#,
+    )
+    .await;
+}
