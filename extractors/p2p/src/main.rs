@@ -1,5 +1,5 @@
 use p2p_extractor::Args;
-use shared::log::error;
+use shared::log;
 use shared::tokio::{self, signal, sync::watch};
 use shared::{clap::Parser, simple_logger};
 
@@ -14,10 +14,16 @@ async fn main() {
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let p2p_handle = tokio::spawn(p2p_extractor::run(args, shutdown_rx));
 
-    signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
-    let _ = shutdown_tx.send(true);
-
-    if let Err(e) = p2p_handle.await {
-        error!("p2p_extractor task failed: {:?}", e);
+    tokio::select! {
+        _ = signal::ctrl_c() => {
+            log::info!("Received Ctrl+C. Stopping...");
+            let _ = shutdown_tx.send(true);
+        }
+        result = p2p_handle => {
+            match result.unwrap() {
+                Ok(_) => log::info!("p2p-extractor task completed."),
+                Err(e) => log::error!("p2p-extractor task failed: {e}"),
+            }
+        }
     }
 }
