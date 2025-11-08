@@ -1,4 +1,4 @@
-use shared::log::error;
+use shared::log;
 use shared::tokio::{self, signal, sync::watch};
 use shared::{clap::Parser, simple_logger};
 use websocket::Args;
@@ -14,10 +14,16 @@ async fn main() {
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let websocket_handle = tokio::spawn(websocket::run(args, shutdown_rx));
 
-    signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
-    let _ = shutdown_tx.send(true);
-
-    if let Err(e) = websocket_handle.await {
-        error!("websocket task failed: {:?}", e);
+    tokio::select! {
+        _ = signal::ctrl_c() => {
+            log::info!("Received Ctrl+C. Stopping...");
+            let _ = shutdown_tx.send(true);
+        }
+        result = websocket_handle => {
+            match result.unwrap() {
+                Ok(_) => log::info!("websocket task completed."),
+                Err(e) => log::error!("websocket task failed: {e}"),
+            }
+        }
     }
 }

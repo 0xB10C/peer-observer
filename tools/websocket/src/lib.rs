@@ -57,8 +57,9 @@ pub async fn run(
     args: Args,
     mut shutdown_rx: watch::Receiver<bool>,
 ) -> Result<(), error::RuntimeError> {
-    log::info!("Trying to connect to NATS server at {}", args.nats_address);
-    let nc = async_nats::connect(args.nats_address).await?;
+    log::debug!("Connecting to NATS-server at {}", args.nats_address);
+    let nc = async_nats::connect(args.nats_address.clone()).await?;
+    log::info!("Connected to NATS-server at {}", args.nats_address);
     let mut sub = nc.subscribe("*").await?;
 
     let clients = Arc::new(Mutex::new(HashMap::new()));
