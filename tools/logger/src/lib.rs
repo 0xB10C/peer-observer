@@ -12,7 +12,7 @@ use shared::{async_nats, clap};
 
 use crate::error::RuntimeError;
 
-mod error;
+pub mod error;
 
 // Note: when modifying this struct, make sure to also update the usage
 // instructions in the README of this tool.
