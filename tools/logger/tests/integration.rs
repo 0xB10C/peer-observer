@@ -1,6 +1,6 @@
 #![cfg(feature = "nats_integration_tests")]
 
-use logger::Args;
+use logger::{error::RuntimeError, Args};
 
 use shared::{
     log::{self, Level, Record, SetLoggerError},
@@ -154,6 +154,29 @@ async fn test_integration_logger_basic() {
         "",
     )
     .await;
+}
+
+#[tokio::test]
+async fn test_integration_logger_fail_if_no_nats() {
+    init_logger().unwrap();
+    println!("test that we fail if we can't connect to NATS");
+
+    let (_, shutdown_rx) = watch::channel(false);
+    let logger_handle = tokio::spawn(async move {
+        let args = make_test_args(
+            65535, // There shouln't be a NATS server running on this port..
+            true, true, true, true, true, true, true, true,
+        );
+        match logger::run(args, shutdown_rx.clone()).await {
+            Ok(_) => panic!("We should fail when no NATS server is reachable."),
+            Err(e) => match e {
+                RuntimeError::NatsConnect(_) => (),
+                _ => panic!("Expected NatsConnect error since the NATS server isn't reachable."),
+            },
+        };
+    });
+
+    logger_handle.await.unwrap();
 }
 
 #[tokio::test]
