@@ -698,12 +698,12 @@ fn handle_p2p_message(msg: &net_msg::Message, timestamp: u64, metrics: metrics::
                         future_offset.observe((offset * -1) as f64);
                     }
 
-                    for i in 0..32 {
-                        if (1 << i) & address.services > 0 {
+                    for i in metrics::BUCKETS_ADDR_SERVICE_BITS {
+                        if (1 << i as u8) & address.services > 0 {
                             metrics
                                 .p2p_addrv2_services_bits
                                 .with_label_values(&[&direction])
-                                .observe(i as f64)
+                                .observe(i)
                         }
                     }
                     metrics
