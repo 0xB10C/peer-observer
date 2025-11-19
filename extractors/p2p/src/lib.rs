@@ -14,8 +14,10 @@ use shared::{
     log,
     nats_subjects::Subject,
     prost::Message,
-    protobuf::event_msg::{EventMsg, event_msg::Event},
-    protobuf::p2p_extractor,
+    protobuf::{
+        event_msg::{EventMsg, event_msg::Event},
+        p2p_extractor, primitive,
+    },
     rand::{self, Rng},
     tokio::{
         io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -107,6 +109,11 @@ pub struct Args {
     /// This allows disabling the ping measurements.
     #[arg(long, default_value_t = false)]
     pub disable_ping: bool,
+
+    /// The p2p_extractor publishes events for addresses the node annouces to us.
+    /// This allows disabling the address annoucement events.
+    #[arg(long, default_value_t = false)]
+    pub disable_addrv2: bool,
 }
 
 impl Args {
@@ -117,6 +124,7 @@ impl Args {
         p2p_network: Network,
         ping_interval: u64,
         disable_ping: bool,
+        disable_addrv2: bool,
     ) -> Args {
         Self {
             nats_address,
@@ -125,6 +133,7 @@ impl Args {
             p2p_network,
             ping_interval,
             disable_ping,
+            disable_addrv2,
             // when adding more disable_* args, make sure to update the disable_all below
         }
     }
@@ -134,11 +143,12 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     log::info!("Using network magic for: {}", args.p2p_network);
     let network: BitcoinNetwork = args.p2p_network.clone().into();
     log::info!("Ping measurements enabled: {}", !args.disable_ping);
+    log::info!("Addrv2 events enabled: {}", !args.disable_addrv2);
     if !args.disable_ping {
         log::info!("Ping measurements interval: {}s", args.ping_interval);
     }
     // check if at least one P2P measurement is enabled
-    let disable_all = args.disable_ping;
+    let disable_all = args.disable_ping && args.disable_addrv2;
     if disable_all {
         log::warn!("No P2P measurement enabled!");
     }
@@ -236,6 +246,8 @@ async fn handle_connection(
                         match raw_msg.payload() {
                             NetworkMessage::Version(_) => {
                                 send_message(build_version_message(), network, &mut write_half, addr).await;
+                                // indicate support for addrv2 during version handshake
+                                send_message(NetworkMessage::SendAddrV2, network, &mut write_half, addr).await;
                             }
                             NetworkMessage::Verack => {
                                 send_message(NetworkMessage::Verack, network, &mut write_half, addr).await;
@@ -254,7 +266,15 @@ async fn handle_connection(
                                 log::debug!(target: addr, "processing the ping message took: {}ns", now - nonce);
                                 publish_ping_measurement_event(duration, &nats_client).await;
                             }
-                            NetworkMessage::GetAddr | NetworkMessage::Alert(_) => {
+                            NetworkMessage::AddrV2(addrs) => {
+                                log::debug!(target: addr, "received addrv2: {:?}", addrs);
+                                let addresses: Vec<primitive::Address>  = addrs
+                                    .iter()
+                                    .map(|addr_entry| addr_entry.clone().into())
+                                    .collect();
+                                publish_addr_announcement_event(addresses, &nats_client).await;
+                            }
+                            NetworkMessage::Alert(_) => {
                                 // ignore these for now..
                                 // and treat all other messages as unhandled
                             }
@@ -273,6 +293,38 @@ async fn handle_connection(
     }
     log::info!("closing connection: '{}'", addr);
     let _ = stream.shutdown();
+}
+
+async fn publish_addr_announcement_event(
+    addresses: Vec<primitive::Address>,
+    nats_client: &async_nats::Client,
+) {
+    let proto_result = EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+        event: Some(
+            p2p_extractor::p2p_extractor_event::Event::AddressAnnouncement(
+                p2p_extractor::AddressAnnouncement { addresses },
+            ),
+        ),
+    }));
+
+    match proto_result {
+        Ok(proto) => {
+            if let Err(e) = nats_client
+                .publish(
+                    Subject::P2PExtractor.to_string(),
+                    proto.encode_to_vec().into(),
+                )
+                .await
+            {
+                log::error!("could not publish addr announcement into NATS: {}", e);
+            } else {
+                log::trace!("published addr announcement into NATS: {:?}", proto);
+            }
+        }
+        Err(e) => {
+            log::error!("could not create addr announcement protobuf: {}", e);
+        }
+    }
 }
 
 async fn publish_ping_measurement_event(duration: u64, nats_client: &async_nats::Client) {

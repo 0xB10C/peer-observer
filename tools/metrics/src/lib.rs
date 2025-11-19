@@ -591,6 +591,7 @@ fn handle_p2p_extractor_event(p2p_event: &p2p_extractor_event::Event, metrics: m
                 .p2pextractor_ping_duration_nanoseconds
                 .set(ping_duration.duration as i64);
         }
+        _ => (),
     }
 }
 

@@ -9,10 +9,29 @@ impl fmt::Display for PingDuration {
     }
 }
 
+impl fmt::Display for AddressAnnouncement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "AddressAnnouncement: [")?;
+        let mut first = true;
+        for v in &self.addresses {
+            if first {
+                first = false;
+            } else {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", v)?;
+        }
+        write!(f, "]")
+    }
+}
+
 impl fmt::Display for p2p_extractor_event::Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             p2p_extractor_event::Event::PingDuration(duration) => write!(f, "{}", duration),
+            p2p_extractor_event::Event::AddressAnnouncement(addresses) => {
+                write!(f, "{}", addresses)
+            }
         }
     }
 }

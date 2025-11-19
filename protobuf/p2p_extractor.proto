@@ -1,15 +1,23 @@
 syntax = "proto2";
 
+import "primitive.proto";
+
 // This file is only for Events of the p2p-extractor.
 package p2p_extractor;
 
 message P2PExtractorEvent {
   oneof event {
     PingDuration ping_duration = 1;
+    AddressAnnouncement address_announcement = 2;
   }
 }
 
 // A Ping-Pong duration measurement performed by the p2p-extractor.
 message PingDuration {
   required uint64 duration = 1; // Time it takes for the node to respond with a pong to a ping in nanoseconds. This is useful to measure node processing backlog.
+}
+
+// An addr message that the p2p-extractor received from the node.
+message AddressAnnouncement {
+  repeated primitive.Address addresses = 1;
 }
