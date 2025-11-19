@@ -34,6 +34,7 @@ Options:
       --p2p-network <P2P_NETWORK>      Network (P2P) the Bitcoin node is on. This determines the network magic. The network magic of the p2p-extractor and the Bitcoin node must match [default: mainnet] [possible values: mainnet, testnet3, testnet4, signet, regtest]
       --ping-interval <PING_INTERVAL>  The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows to configure the ping interval (in seconds) [default: 10]
       --disable-ping                   The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows disabling the ping measurements
+      --disable-addrv2                 The p2p_extractor publishes events for addresses the node annouces to us. This allows disabling the address annoucement events
   -h, --help                           Print help
   -V, --version                        Print version
 ```

@@ -294,6 +294,7 @@ impl fmt::Display for Address {
         )
     }
 }
+
 impl fmt::Display for address::Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
