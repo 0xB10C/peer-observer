@@ -309,6 +309,20 @@ impl fmt::Display for address::Address {
     }
 }
 
+impl address::Address {
+    pub fn network(&self) -> &str {
+        match self {
+            address::Address::Ipv4(_) => "IPv4",
+            address::Address::Ipv6(_) => "IPv6",
+            address::Address::Torv2(_) => "TorV2",
+            address::Address::Torv3(_) => "TorV3",
+            address::Address::I2p(_) => "I2P",
+            address::Address::Cjdns(_) => "CJDNS",
+            address::Address::Unknown(_) => "Unknown",
+        }
+    }
+}
+
 impl fmt::Display for UnknownAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(

@@ -591,7 +591,32 @@ fn handle_p2p_extractor_event(p2p_event: &p2p_extractor_event::Event, metrics: m
                 .p2pextractor_ping_duration_nanoseconds
                 .set(ping_duration.duration as i64);
         }
-        _ => (),
+        p2p_extractor_event::Event::AddressAnnouncement(annoucement) => {
+            metrics.p2pextractor_addrv2relay_messages.inc();
+            if annoucement.addresses.len() <= 10 {
+                metrics
+                    .p2pextractor_addrv2relay_messages_10_or_less_entries
+                    .inc();
+            }
+            metrics
+                .p2pextractor_addrv2relay_size
+                .set(annoucement.addresses.len() as i64);
+
+            let mut addresses_by_network: BTreeMap<&str, u64> = BTreeMap::new();
+            for addr in annoucement.addresses.iter() {
+                let address = addr.address.as_ref().unwrap();
+                addresses_by_network
+                    .entry(address.network())
+                    .and_modify(|e| *e += 1)
+                    .or_insert(1);
+            }
+            for (network, v) in addresses_by_network.iter() {
+                metrics
+                    .p2pextractor_addrv2relay_addresses
+                    .with_label_values(&[&network.to_string()])
+                    .inc_by(*v);
+            }
+        }
     }
 }
 

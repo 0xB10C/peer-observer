@@ -2115,6 +2115,52 @@ async fn test_integration_metrics_p2pextractor_ping_duration() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_p2pextractor_address_annoucement() {
+    println!("test that p2p-extractor address annoucement metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+                event: Some(
+                    p2p_extractor::p2p_extractor_event::Event::AddressAnnouncement(
+                        p2p_extractor::AddressAnnouncement {
+                            addresses: vec![
+                                Address {
+                                    timestamp: 0,
+                                    port: 1,
+                                    services: 1,
+                                    address: Some(primitive::address::Address::Ipv4(
+                                        "1.2.3.4".to_string(),
+                                    )),
+                                },
+                                Address {
+                                    timestamp: 2,
+                                    port: 3,
+                                    services: 4,
+                                    address: Some(primitive::address::Address::Ipv6(
+                                        "b10c::1".to_string(),
+                                    )),
+                                },
+                            ],
+                        },
+                    ),
+                ),
+            }))
+            .unwrap(),
+        ],
+        Subject::Validation,
+        r#"
+        peerobserver_p2pextractor_addrv2relay_addresses{network="IPv4"} 1
+        peerobserver_p2pextractor_addrv2relay_addresses{network="IPv6"} 1
+        peerobserver_p2pextractor_addrv2relay_messages 1
+        peerobserver_p2pextractor_addrv2relay_messages_10_or_less_entries 1
+        peerobserver_p2pextractor_addrv2relay_size 2
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_logextractor_logevents() {
     println!("test that log-extractor log events metric work");
 
