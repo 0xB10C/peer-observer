@@ -425,6 +425,6 @@ fn build_version_message() -> message::NetworkMessage {
         nonce: rand::rng().random(),
         user_agent: String::from(USER_AGENT),
         start_height: 0,
-        relay: false,
+        relay: false, // indicates to the node that we want to receive transactions
     })
 }

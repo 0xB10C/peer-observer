@@ -9,6 +9,7 @@ message P2PExtractorEvent {
   oneof event {
     PingDuration ping_duration = 1;
     AddressAnnouncement address_announcement = 2;
+    InventoryAnnouncement inventory_announcement = 3;
   }
 }
 
@@ -17,7 +18,12 @@ message PingDuration {
   required uint64 duration = 1; // Time it takes for the node to respond with a pong to a ping in nanoseconds. This is useful to measure node processing backlog.
 }
 
-// An addr message that the p2p-extractor received from the node.
+// An addrv2 message that the p2p-extractor received from the node.
 message AddressAnnouncement {
   repeated primitive.Address addresses = 1;
+}
+
+// An inv message that the p2p-extractor received from the node.
+message InventoryAnnouncement {
+  repeated primitive.InventoryItem inventory = 1;
 }
