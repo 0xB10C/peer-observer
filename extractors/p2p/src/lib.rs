@@ -410,19 +410,21 @@ fn build_raw_network_message(
 }
 
 fn build_version_message() -> message::NetworkMessage {
-    message::NetworkMessage::Version(message_network::VersionMessage::new(
-        ServiceFlags::NONE,
-        util::current_timestamp() as i64,
-        address::Address::new(
+    message::NetworkMessage::Version(message_network::VersionMessage {
+        version: 70001,
+        services: ServiceFlags::NONE,
+        timestamp: util::current_timestamp() as i64,
+        receiver: address::Address::new(
             &SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
             ServiceFlags::NONE,
         ),
-        address::Address::new(
+        sender: address::Address::new(
             &SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0),
             ServiceFlags::NONE,
         ),
-        rand::rng().random(),
-        String::from(USER_AGENT),
-        0,
-    ))
+        nonce: rand::rng().random(),
+        user_agent: String::from(USER_AGENT),
+        start_height: 0,
+        relay: false,
+    })
 }
