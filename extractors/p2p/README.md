@@ -7,7 +7,7 @@ and publishes selected P2P messages and measurements as events into a NATS pub-s
 queue.
 
 While the p2p-extractor in theory supports multiple inbound connections from multiple
-Bitcoin nodes, it can't (yet) differentiate between them. 
+Bitcoin nodes, it can't (yet) differentiate between them.
 
 ## Example
 
@@ -35,6 +35,7 @@ Options:
       --ping-interval <PING_INTERVAL>  The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows to configure the ping interval (in seconds) [default: 10]
       --disable-ping                   The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows disabling the ping measurements
       --disable-addrv2                 The p2p_extractor publishes events for addresses the node annouces to us. This allows disabling the address annoucement events
+      --disable-invs                   The p2p_extractor publishes events for invs the node annouces to us. This allows disabling the inv annoucement events
   -h, --help                           Print help
   -V, --version                        Print version
 ```

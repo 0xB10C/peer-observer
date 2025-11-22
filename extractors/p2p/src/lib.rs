@@ -114,6 +114,11 @@ pub struct Args {
     /// This allows disabling the address annoucement events.
     #[arg(long, default_value_t = false)]
     pub disable_addrv2: bool,
+
+    /// The p2p_extractor publishes events for invs the node annouces to us.
+    /// This allows disabling the inv annoucement events.
+    #[arg(long, default_value_t = false)]
+    pub disable_invs: bool,
 }
 
 impl Args {
@@ -125,6 +130,7 @@ impl Args {
         ping_interval: u64,
         disable_ping: bool,
         disable_addrv2: bool,
+        disable_invs: bool,
     ) -> Args {
         Self {
             nats_address,
@@ -134,6 +140,7 @@ impl Args {
             ping_interval,
             disable_ping,
             disable_addrv2,
+            disable_invs,
             // when adding more disable_* args, make sure to update the disable_all below
         }
     }
@@ -143,12 +150,13 @@ pub async fn run(args: Args, mut shutdown_rx: watch::Receiver<bool>) -> Result<(
     log::info!("Using network magic for: {}", args.p2p_network);
     let network: BitcoinNetwork = args.p2p_network.clone().into();
     log::info!("Ping measurements enabled: {}", !args.disable_ping);
-    log::info!("Addrv2 events enabled: {}", !args.disable_addrv2);
     if !args.disable_ping {
         log::info!("Ping measurements interval: {}s", args.ping_interval);
     }
+    log::info!("Addrv2 events enabled: {}", !args.disable_addrv2);
+    log::info!("Invs events enabled: {}", !args.disable_invs);
     // check if at least one P2P measurement is enabled
-    let disable_all = args.disable_ping && args.disable_addrv2;
+    let disable_all = args.disable_ping && args.disable_addrv2 && args.disable_invs;
     if disable_all {
         log::warn!("No P2P measurement enabled!");
     }
@@ -248,6 +256,8 @@ async fn handle_connection(
                                 send_message(build_version_message(), network, &mut write_half, addr).await;
                                 // indicate support for addrv2 during version handshake
                                 send_message(NetworkMessage::SendAddrV2, network, &mut write_half, addr).await;
+                                // indicate that we want to receive wtxids in invs (see BIP339)
+                                send_message(NetworkMessage::WtxidRelay, network, &mut write_half, addr).await;
                             }
                             NetworkMessage::Verack => {
                                 send_message(NetworkMessage::Verack, network, &mut write_half, addr).await;
@@ -273,6 +283,16 @@ async fn handle_connection(
                                     .map(|addr_entry| addr_entry.clone().into())
                                     .collect();
                                 publish_addr_announcement_event(addresses, &nats_client).await;
+                            }
+                            NetworkMessage::Inv(inventory) => {
+                                log::debug!(target: addr, "received inv: {:?}", inventory);
+                                if !args.disable_invs {
+                                    let items: Vec<primitive::InventoryItem> = inventory
+                                        .iter()
+                                        .map(|i| i.clone().into())
+                                        .collect();
+                                    publish_inventory_announcement_event(items, &nats_client).await;
+                                }
                             }
                             NetworkMessage::Alert(_) => {
                                 // ignore these for now..
@@ -323,6 +343,38 @@ async fn publish_addr_announcement_event(
         }
         Err(e) => {
             log::error!("could not create addr announcement protobuf: {}", e);
+        }
+    }
+}
+
+async fn publish_inventory_announcement_event(
+    inventory: Vec<primitive::InventoryItem>,
+    nats_client: &async_nats::Client,
+) {
+    let proto_result = EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+        event: Some(
+            p2p_extractor::p2p_extractor_event::Event::InventoryAnnouncement(
+                p2p_extractor::InventoryAnnouncement { inventory },
+            ),
+        ),
+    }));
+
+    match proto_result {
+        Ok(proto) => {
+            if let Err(e) = nats_client
+                .publish(
+                    Subject::P2PExtractor.to_string(),
+                    proto.encode_to_vec().into(),
+                )
+                .await
+            {
+                log::error!("could not publish inventory announcement into NATS: {}", e);
+            } else {
+                log::trace!("published inventory announcement into NATS: {:?}", proto);
+            }
+        }
+        Err(e) => {
+            log::error!("could not create inventory announcement protobuf: {}", e);
         }
     }
 }
@@ -411,7 +463,9 @@ fn build_raw_network_message(
 
 fn build_version_message() -> message::NetworkMessage {
     message::NetworkMessage::Version(message_network::VersionMessage {
-        version: 70001,
+        // use version 70016 to indicate we want wtxids for transaction invs
+        // see https://github.com/bitcoin/bips/blob/master/bip-0339.mediawiki
+        version: 70016,
         services: ServiceFlags::NONE,
         timestamp: util::current_timestamp() as i64,
         receiver: address::Address::new(
@@ -425,6 +479,6 @@ fn build_version_message() -> message::NetworkMessage {
         nonce: rand::rng().random(),
         user_agent: String::from(USER_AGENT),
         start_height: 0,
-        relay: false,
+        relay: true, // indicates to the node that we want to receive transactions
     })
 }

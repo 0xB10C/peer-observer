@@ -25,12 +25,31 @@ impl fmt::Display for AddressAnnouncement {
     }
 }
 
+impl fmt::Display for InventoryAnnouncement {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "InventoryAnnouncement: [")?;
+        let mut first = true;
+        for v in &self.inventory {
+            if first {
+                first = false;
+            } else {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", v)?;
+        }
+        write!(f, "]")
+    }
+}
+
 impl fmt::Display for p2p_extractor_event::Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             p2p_extractor_event::Event::PingDuration(duration) => write!(f, "{}", duration),
             p2p_extractor_event::Event::AddressAnnouncement(addresses) => {
                 write!(f, "{}", addresses)
+            }
+            p2p_extractor_event::Event::InventoryAnnouncement(inventory) => {
+                write!(f, "{}", inventory)
             }
         }
     }
