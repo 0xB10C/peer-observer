@@ -274,6 +274,14 @@ async fn handle_connection(
                                     .collect();
                                 publish_addr_announcement_event(addresses, &nats_client).await;
                             }
+                            NetworkMessage::Inv(inventory) => {
+                                log::debug!(target: addr, "received inv: {:?}", inventory);
+                                let items: Vec<primitive::InventoryItem> = inventory
+                                    .iter()
+                                    .map(|i| i.clone().into())
+                                    .collect();
+                                publish_inventory_announcement_event(items, &nats_client).await;
+                            }
                             NetworkMessage::Alert(_) => {
                                 // ignore these for now..
                                 // and treat all other messages as unhandled
@@ -323,6 +331,38 @@ async fn publish_addr_announcement_event(
         }
         Err(e) => {
             log::error!("could not create addr announcement protobuf: {}", e);
+        }
+    }
+}
+
+async fn publish_inventory_announcement_event(
+    inventory: Vec<primitive::InventoryItem>,
+    nats_client: &async_nats::Client,
+) {
+    let proto_result = EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+        event: Some(
+            p2p_extractor::p2p_extractor_event::Event::InventoryAnnouncement(
+                p2p_extractor::InventoryAnnouncement { inventory },
+            ),
+        ),
+    }));
+
+    match proto_result {
+        Ok(proto) => {
+            if let Err(e) = nats_client
+                .publish(
+                    Subject::P2PExtractor.to_string(),
+                    proto.encode_to_vec().into(),
+                )
+                .await
+            {
+                log::error!("could not publish inventory announcement into NATS: {}", e);
+            } else {
+                log::trace!("published inventory announcement into NATS: {:?}", proto);
+            }
+        }
+        Err(e) => {
+            log::error!("could not create inventory announcement protobuf: {}", e);
         }
     }
 }
@@ -425,6 +465,6 @@ fn build_version_message() -> message::NetworkMessage {
         nonce: rand::rng().random(),
         user_agent: String::from(USER_AGENT),
         start_height: 0,
-        relay: false, // indicates to the node that we want to receive transactions
+        relay: true, // indicates to the node that we want to receive transactions
     })
 }
