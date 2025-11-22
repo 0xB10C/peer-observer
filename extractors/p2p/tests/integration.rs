@@ -2,14 +2,18 @@
 #![cfg(feature = "node_integration_tests")]
 
 use shared::{
-    async_nats, bitcoin,
+    async_nats,
+    bitcoin::{self, Amount},
     corepc_node::{self},
     futures::StreamExt,
     log::{self, info},
     prost::Message,
     protobuf::{
         event_msg::{EventMsg, event_msg::Event},
-        p2p_extractor::p2p_extractor_event::Event::{AddressAnnouncement, PingDuration},
+        p2p_extractor::p2p_extractor_event::Event::{
+            AddressAnnouncement, InventoryAnnouncement, PingDuration,
+        },
+        primitive::inventory_item::Item,
     },
     rand::{self, Rng},
     simple_logger::SimpleLogger,
@@ -62,6 +66,7 @@ fn make_test_args(
     p2p_address: String,
     disable_ping: bool,
     disable_addrv2: bool,
+    disable_invs: bool,
 ) -> Args {
     Args::new(
         format!("127.0.0.1:{}", nats_port),
@@ -71,6 +76,7 @@ fn make_test_args(
         PING_INTERVAL_SECONDS,
         disable_ping,
         disable_addrv2,
+        disable_invs,
     )
 }
 
@@ -98,6 +104,7 @@ fn setup_node_with_addnode(p2p_extractor_port: u16) -> corepc_node::Node {
         // our testing.
         "-connect=0",
         "-listen=1",
+        "-fallbackfee=0.0000001",
         &addnode,
     ];
     // enabling this is useful for debugging, but enabling this by default will
@@ -112,6 +119,7 @@ fn setup_node_with_addnode(p2p_extractor_port: u16) -> corepc_node::Node {
 async fn check(
     disable_ping: bool,
     disable_addrv2: bool,
+    disable_invs: bool,
     test_setup: fn(&corepc_node::Node),
     check_expected: fn(Event) -> bool,
 ) {
@@ -125,6 +133,7 @@ async fn check(
             format!("127.0.0.1:{}", p2p_extractor_port),
             disable_ping,
             disable_addrv2,
+            disable_invs,
         );
         p2p_extractor::run(args, shutdown_rx.clone())
             .await
@@ -186,6 +195,7 @@ async fn test_integration_p2pextractor_ping_measurements() {
     check(
         false,
         true,
+        true,
         |_| (),
         |event| {
             match event {
@@ -219,6 +229,7 @@ async fn test_integration_p2pextractor_addr_annoucement() {
     check(
         true,
         false,
+        true,
         |node| {
             // To self-announce our address, we need to be out ouf initial block download
             // Mine a block to get out of initial block download
@@ -236,7 +247,7 @@ async fn test_integration_p2pextractor_addr_annoucement() {
                     .initial_block_download
             );
 
-            // Connects to the Bitcoie node, announces one address to it, and disconnect.
+            // Connects to the Bitcoin node, announces one address to it, and disconnect.
             // The node will then relay that address to the p2p-extractor eventually.
             // Do this multiple times to have multiple addresses to relay.
             p2p_client::open_connection_and_send_addr(node.params.p2p_socket.unwrap().port());
@@ -259,6 +270,62 @@ async fn test_integration_p2pextractor_addr_annoucement() {
                                 assert_eq!(a.addresses[0].port, 8333);
                                 log::info!("{}", a);
                                 return true;
+                            }
+                            _ => log::info!("unhandled P2P extractor event {:?}", p.event),
+                        }
+                    }
+                }
+                _ => panic!("unexpected event {:?}", event),
+            }
+            return false;
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_p2pextractor_inv_annoucement() {
+    println!("test that we receive InventoryAnnouncement P2P-extractor events");
+
+    const NUM_TX: usize = 5;
+
+    check(
+        true,
+        true,
+        false,
+        |node| {
+            let address = node
+                .client
+                .get_new_address(None, None)
+                .unwrap()
+                .address()
+                .unwrap()
+                .require_network(bitcoin::Network::Regtest)
+                .unwrap();
+            node.client.generate_to_address(110, &address).unwrap();
+            for _ in 0..NUM_TX {
+                node.client
+                    .send_to_address(&address, Amount::from_sat(10000))
+                    .unwrap();
+            }
+        },
+        |event| {
+            match event {
+                Event::P2pExtractorEvent(p) => {
+                    if let Some(ref e) = p.event {
+                        match e {
+                            InventoryAnnouncement(i) => {
+                                log::info!("{}", i);
+                                // we expect an inv with NUM_TX from the node, however the node
+                                // will also send invs for blocks. So ignore all other invs and
+                                // only pass the test on the inv with the size of NUM_TX
+                                if i.inventory.len() == NUM_TX {
+                                    assert!(i.inventory.iter().all(|inventory| matches!(
+                                        inventory.item.clone().unwrap(),
+                                        Item::Wtx(_)
+                                    )));
+                                    return true;
+                                }
                             }
                             _ => log::info!("unhandled P2P extractor event {:?}", p.event),
                         }

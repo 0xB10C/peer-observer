@@ -617,6 +617,7 @@ fn handle_p2p_extractor_event(p2p_event: &p2p_extractor_event::Event, metrics: m
                     .inc_by(*v);
             }
         }
+        p2p_extractor_event::Event::InventoryAnnouncement(_inventory) => (),
     }
 }
 
