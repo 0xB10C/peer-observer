@@ -145,7 +145,6 @@ async fn check(
 
     // Make sure the p2p-extractor and node are connected
     let mut connected = false;
-    let mut mocktime = util::current_timestamp();
     for i in 0..100 {
         let peers = node.client.get_peer_info().unwrap().0;
         if peers.len() == 1 {
