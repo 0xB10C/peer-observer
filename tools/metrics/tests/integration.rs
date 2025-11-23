@@ -2161,6 +2161,41 @@ async fn test_integration_metrics_p2pextractor_address_annoucement() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_p2pextractor_inv_annoucement() {
+    println!("test that p2p-extractor inventory annoucement metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+                event: Some(
+                    p2p_extractor::p2p_extractor_event::Event::InventoryAnnouncement(
+                        p2p_extractor::InventoryAnnouncement {
+                            inventory: vec![
+                                InventoryItem {
+                                    item: Some(Item::Transaction(vec![])),
+                                },
+                                InventoryItem {
+                                    item: Some(Item::Wtx(vec![])),
+                                },
+                            ],
+                        },
+                    ),
+                ),
+            }))
+            .unwrap(),
+        ],
+        Subject::Validation,
+        r#"
+        peerobserver_p2pextractor_invs_items{inv_type="Tx"} 1
+        peerobserver_p2pextractor_invs_items{inv_type="WTx"} 1
+        peerobserver_p2pextractor_invs_messages 1
+        peerobserver_p2pextractor_invs_size 2
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_logextractor_logevents() {
     println!("test that log-extractor log events metric work");
 

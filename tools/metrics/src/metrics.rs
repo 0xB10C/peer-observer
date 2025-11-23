@@ -260,6 +260,9 @@ pub struct Metrics {
     pub p2pextractor_addrv2relay_messages: IntCounter,
     pub p2pextractor_addrv2relay_messages_10_or_less_entries: IntCounter,
     pub p2pextractor_addrv2relay_size: IntGauge,
+    pub p2pextractor_invs_items: IntCounterVec,
+    pub p2pextractor_invs_size: IntGauge,
+    pub p2pextractor_invs_messages: IntCounter,
 
     // log-extractor
     pub log_events: IntCounter,
@@ -368,10 +371,14 @@ impl Metrics {
 
         // P2P-extractor
         ig!(p2pextractor_ping_duration_nanoseconds, "The time it takes for a connected Bitcoin node to respond to a ping with a pong in nanoseconds.", registry);
-        icv!(p2pextractor_addrv2relay_addresses, "The total number of addresses relayed to the p2p-extractor by the node., per network", ["network"], registry);
+        icv!(p2pextractor_addrv2relay_addresses, "The total number of addresses relayed to the p2p-extractor by the node, per network", ["network"], registry);
         ic!(p2pextractor_addrv2relay_messages, "The total number of addrv2 messages that the node sent to the p2p-extractor.", registry);
         ic!(p2pextractor_addrv2relay_messages_10_or_less_entries, "The number of addrv2 messages with 10 or less entries (only the addr from messages with 10 or less entries are relayed to peers by Bitcoin Core) that the node sent to the p2p-extractor.", registry);
         ig!(p2pextractor_addrv2relay_size, "The size of the last addrv2 message received by the p2p-extractor from the node.", registry);
+
+        icv!(p2pextractor_invs_items, "The total number of invs annuonced to the p2p-extractor by the node, per inv type", [LABEL_P2P_INV_TYPE], registry);
+        ic!(p2pextractor_invs_messages, "The total number of inv messages that the node sent to the p2p-extractor.", registry);
+        ig!(p2pextractor_invs_size, "The size of the last inv message received by the p2p-extractor from the node.", registry);
 
         // log-extractor
         ic!(log_events, "Number of log events received.", registry);
@@ -481,6 +488,9 @@ impl Metrics {
             p2pextractor_addrv2relay_messages,
             p2pextractor_addrv2relay_messages_10_or_less_entries,
             p2pextractor_addrv2relay_size,
+            p2pextractor_invs_items,
+            p2pextractor_invs_messages,
+            p2pextractor_invs_size,
 
             // log-extractor
             log_events,

@@ -617,7 +617,25 @@ fn handle_p2p_extractor_event(p2p_event: &p2p_extractor_event::Event, metrics: m
                     .inc_by(*v);
             }
         }
-        p2p_extractor_event::Event::InventoryAnnouncement(_inventory) => (),
+        p2p_extractor_event::Event::InventoryAnnouncement(annoucement) => {
+            metrics.p2pextractor_invs_messages.inc();
+            metrics
+                .p2pextractor_invs_size
+                .set(annoucement.inventory.len() as i64);
+            let mut invs_by_type: BTreeMap<&str, u64> = BTreeMap::new();
+            for item in annoucement.inventory.iter() {
+                invs_by_type
+                    .entry(item.inv_type())
+                    .and_modify(|e| *e += 1)
+                    .or_insert(1);
+            }
+            for (type_, v) in invs_by_type.iter() {
+                metrics
+                    .p2pextractor_invs_items
+                    .with_label_values(&[&type_.to_string()])
+                    .inc_by(*v);
+            }
+        }
     }
 }
 
