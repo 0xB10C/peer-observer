@@ -2196,6 +2196,30 @@ async fn test_integration_metrics_p2pextractor_inv_annoucement() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_p2pextractor_feefilter_annoucement() {
+    println!("test that p2p-extractor feefilter annoucement metrics work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+                event: Some(p2p_extractor::p2p_extractor_event::Event::FeefilterAnnouncement(1234)),
+            }))
+            .unwrap(),
+            EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+                event: Some(p2p_extractor::p2p_extractor_event::Event::FeefilterAnnouncement(2345)),
+            }))
+            .unwrap(),
+        ],
+        Subject::Validation,
+        r#"
+        peerobserver_p2pextractor_feefilter_messages 2
+        peerobserver_p2pextractor_feefilter_last 2345
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_logextractor_logevents() {
     println!("test that log-extractor log events metric work");
 
