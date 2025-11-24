@@ -11,7 +11,7 @@ use shared::{
     protobuf::{
         event_msg::{EventMsg, event_msg::Event},
         p2p_extractor::p2p_extractor_event::Event::{
-            AddressAnnouncement, InventoryAnnouncement, PingDuration,
+            AddressAnnouncement, FeefilterAnnouncement, InventoryAnnouncement, PingDuration,
         },
         primitive::inventory_item::Item,
     },
@@ -67,6 +67,7 @@ fn make_test_args(
     disable_ping: bool,
     disable_addrv2: bool,
     disable_invs: bool,
+    disable_feefilter: bool,
 ) -> Args {
     Args::new(
         format!("127.0.0.1:{}", nats_port),
@@ -77,6 +78,7 @@ fn make_test_args(
         disable_ping,
         disable_addrv2,
         disable_invs,
+        disable_feefilter,
     )
 }
 
@@ -120,6 +122,7 @@ async fn check(
     disable_ping: bool,
     disable_addrv2: bool,
     disable_invs: bool,
+    disable_feefilter: bool,
     test_setup: fn(&corepc_node::Node),
     check_expected: fn(Event) -> bool,
 ) {
@@ -134,6 +137,7 @@ async fn check(
             disable_ping,
             disable_addrv2,
             disable_invs,
+            disable_feefilter,
         );
         p2p_extractor::run(args, shutdown_rx.clone())
             .await
@@ -196,6 +200,7 @@ async fn test_integration_p2pextractor_ping_measurements() {
         false,
         true,
         true,
+        true,
         |_| (),
         |event| {
             match event {
@@ -229,6 +234,7 @@ async fn test_integration_p2pextractor_addr_annoucement() {
     check(
         true,
         false,
+        true,
         true,
         |node| {
             // To self-announce our address, we need to be out ouf initial block download
@@ -293,6 +299,7 @@ async fn test_integration_p2pextractor_inv_annoucement() {
         true,
         true,
         false,
+        true,
         |node| {
             let address = node
                 .client
@@ -326,6 +333,40 @@ async fn test_integration_p2pextractor_inv_annoucement() {
                                     )));
                                     return true;
                                 }
+                            }
+                            _ => log::info!("unhandled P2P extractor event {:?}", p.event),
+                        }
+                    }
+                }
+                _ => panic!("unexpected event {:?}", event),
+            }
+            return false;
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_p2pextractor_feefilter_annoucement() {
+    println!("test that we receive FeefilterAnnouncement P2P-extractor events");
+
+    check(
+        true,
+        true,
+        true,
+        false,
+        |_node| {
+            // No setup required as the node should automatically send a
+            // feefilter message to us right after connecting.
+        },
+        |event| {
+            match event {
+                Event::P2pExtractorEvent(p) => {
+                    if let Some(ref e) = p.event {
+                        match e {
+                            FeefilterAnnouncement(feefilter) => {
+                                log::info!("{}", feefilter);
+                                return true;
                             }
                             _ => log::info!("unhandled P2P extractor event {:?}", p.event),
                         }

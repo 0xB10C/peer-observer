@@ -51,6 +51,9 @@ impl fmt::Display for p2p_extractor_event::Event {
             p2p_extractor_event::Event::InventoryAnnouncement(inventory) => {
                 write!(f, "{}", inventory)
             }
+            p2p_extractor_event::Event::FeefilterAnnouncement(feefilter) => {
+                write!(f, "FeefilterAnnouncement({})", feefilter)
+            }
         }
     }
 }

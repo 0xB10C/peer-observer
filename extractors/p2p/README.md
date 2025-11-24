@@ -36,6 +36,7 @@ Options:
       --disable-ping                   The p2p_extractor frequently pings the connected node to measure ping and backlog timings. This allows disabling the ping measurements
       --disable-addrv2                 The p2p_extractor publishes events for addresses the node annouces to us. This allows disabling the address annoucement events
       --disable-invs                   The p2p_extractor publishes events for invs the node annouces to us. This allows disabling the inv annoucement events
+      --disable-feefilter              The p2p_extractor publishes events for feefilters the node annouces to us. This allows disabling the feefilter annoucement events
   -h, --help                           Print help
   -V, --version                        Print version
 ```

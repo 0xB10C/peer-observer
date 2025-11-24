@@ -119,6 +119,11 @@ pub struct Args {
     /// This allows disabling the inv annoucement events.
     #[arg(long, default_value_t = false)]
     pub disable_invs: bool,
+
+    /// The p2p_extractor publishes events for feefilters the node annouces to us.
+    /// This allows disabling the feefilter annoucement events.
+    #[arg(long, default_value_t = false)]
+    pub disable_feefilter: bool,
 }
 
 impl Args {
@@ -131,6 +136,7 @@ impl Args {
         disable_ping: bool,
         disable_addrv2: bool,
         disable_invs: bool,
+        disable_feefilter: bool,
     ) -> Args {
         Self {
             nats_address,
@@ -141,6 +147,7 @@ impl Args {
             disable_ping,
             disable_addrv2,
             disable_invs,
+            disable_feefilter,
             // when adding more disable_* args, make sure to update the disable_all below
         }
     }
@@ -294,6 +301,12 @@ async fn handle_connection(
                                     publish_inventory_announcement_event(items, &nats_client).await;
                                 }
                             }
+                            NetworkMessage::FeeFilter(feefilter) => {
+                                log::debug!(target: addr, "received feefilter: {}", feefilter);
+                                if !args.disable_feefilter {
+                                    publish_feefilter_announcement_event(*feefilter, &nats_client).await;
+                                }
+                            }
                             NetworkMessage::Alert(_) => {
                                 // ignore these for now..
                                 // and treat all other messages as unhandled
@@ -375,6 +388,31 @@ async fn publish_inventory_announcement_event(
         }
         Err(e) => {
             log::error!("could not create inventory announcement protobuf: {}", e);
+        }
+    }
+}
+
+async fn publish_feefilter_announcement_event(feefilter: i64, nats_client: &async_nats::Client) {
+    let proto_result = EventMsg::new(Event::P2pExtractorEvent(p2p_extractor::P2pExtractorEvent {
+        event: Some(p2p_extractor::p2p_extractor_event::Event::FeefilterAnnouncement(feefilter)),
+    }));
+
+    match proto_result {
+        Ok(proto) => {
+            if let Err(e) = nats_client
+                .publish(
+                    Subject::P2PExtractor.to_string(),
+                    proto.encode_to_vec().into(),
+                )
+                .await
+            {
+                log::error!("could not publish feefilter announcement into NATS: {}", e);
+            } else {
+                log::trace!("published feefilter announcement into NATS: {:?}", proto);
+            }
+        }
+        Err(e) => {
+            log::error!("could not create feefilter announcement protobuf: {}", e);
         }
     }
 }
