@@ -1611,6 +1611,8 @@ async fn test_integration_metrics_rpc_peerinfo() {
                         time_offset: 1234,
                         transport_protocol_type: "v1".to_string(),
                         version: 2841,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                     PeerInfo {
                         addr_processed: 342,
@@ -1650,6 +1652,8 @@ async fn test_integration_metrics_rpc_peerinfo() {
                         time_offset: -1239,
                         transport_protocol_type: "v2".to_string(),
                         version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                     PeerInfo {
                         addr_processed: 342,
@@ -1689,6 +1693,8 @@ async fn test_integration_metrics_rpc_peerinfo() {
                         time_offset: -1239,
                         transport_protocol_type: "v2".to_string(),
                         version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                 ],
             })),
@@ -1822,6 +1828,8 @@ async fn test_integration_metrics_rpc_peerinfo_sub1satvbyte() {
                         time_offset: 1234,
                         transport_protocol_type: "v1".to_string(),
                         version: 2841,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                     // This peer is not a sub-1 sat/vbyte peer as the minfeefilter is 1 sat/vbyte.
                     PeerInfo {
@@ -1862,6 +1870,8 @@ async fn test_integration_metrics_rpc_peerinfo_sub1satvbyte() {
                         time_offset: -1239,
                         transport_protocol_type: "v2".to_string(),
                         version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                     // This peer is not counted as a sub-1 sat/vbyte peer even if the the minfeefilter is 0.5 sat/vbyte.
                     // It didn't receive or send any tx yet.
@@ -1903,6 +1913,8 @@ async fn test_integration_metrics_rpc_peerinfo_sub1satvbyte() {
                         time_offset: -1239,
                         transport_protocol_type: "v2".to_string(),
                         version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                 ],
             })),
@@ -1965,6 +1977,8 @@ async fn test_integration_metrics_rpc_peerinfo_ipv4_inbound_diversity() {
                         time_offset: 1234,
                         transport_protocol_type: "v1".to_string(),
                         version: 2841,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                     PeerInfo {
                         addr_processed: 342,
@@ -2004,6 +2018,8 @@ async fn test_integration_metrics_rpc_peerinfo_ipv4_inbound_diversity() {
                         time_offset: -1239,
                         transport_protocol_type: "v2".to_string(),
                         version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                     PeerInfo {
                         addr_processed: 342,
@@ -2043,6 +2059,8 @@ async fn test_integration_metrics_rpc_peerinfo_ipv4_inbound_diversity() {
                         time_offset: -1239,
                         transport_protocol_type: "v2".to_string(),
                         version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 0,
                     },
                 ],
             })),

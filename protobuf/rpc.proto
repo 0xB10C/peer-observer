@@ -54,6 +54,11 @@ message PeerInfo {
   required string   connection_type         = 36; // Type of connection: e.g. outbound-full-relay, block-relay-only, inbound, manual, addr-fetch, feeler
   required string   transport_protocol_type = 37; // Type of transport protocol (v1, v2)
   // session ID is not implemented, since I'm not sure we need them?
+
+
+  // temporary fields
+  required uint64   inv_to_send             = 38; // How many txs we have queued to announce to this peer
+  required double   cpu_load                = 129; // Total CPU time spent processing messages to/from the peer, in per milles (‰) of the connection duration, if supported by the platform and measured.
 }
 
 // A getmempoolinfo RPC result: Returns details on the active state of the TX memory pool.
