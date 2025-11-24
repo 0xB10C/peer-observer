@@ -21,8 +21,9 @@ futures = "0.3.31"
 rand = "0.9.2"
 time = "0.3.44"
 regex = "1.12"
-corepc-node = {version = "0.10.1", features = ["download", "29_0"]}
-corepc-client = {version = "0.10", features = ["client-sync"]}
+# Use custom commit to support cpu_load and inv_to_send in getpeerinfo.
+corepc-node = { git = "https://github.com/0xb10c/corepc", rev = "3fb9897bca0e41ba1f96a4532578e64349c97864", features = ["download", "29_0"] }
+corepc-client = { git = "https://github.com/0xb10c/corepc", rev = "3fb9897bca0e41ba1f96a4532578e64349c97864", features = ["client-sync"]}
 
 [build-dependencies]
 prost-build = "0.14"
