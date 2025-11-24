@@ -10,6 +10,7 @@ message P2PExtractorEvent {
     PingDuration ping_duration = 1;
     AddressAnnouncement address_announcement = 2;
     InventoryAnnouncement inventory_announcement = 3;
+    sint64 feefilter_announcement = 4;
   }
 }
 
