@@ -227,6 +227,8 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
             let mut ipv4_inbound_peers = 0;
             let mut ipv4_inbound_peer_slash16s = BTreeSet::new();
 
+            let mut invtosend_values = vec![];
+
             for peer in info.infos.iter() {
                 let ip = util::ip_from_ipport(peer.address.clone());
                 if util::is_on_gmax_banlist(&ip) {
@@ -339,6 +341,10 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
                             ip
                         );
                     }
+                }
+
+                if peer.relay_transactions {
+                    invtosend_values.push(peer.inv_to_send);
                 }
             }
 
@@ -456,6 +462,27 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
                 metrics
                     .rpc_peer_info_connection_divserity_inbound_ipv4
                     .set(ipv4_inbound_peer_slash16s.len() as f64 / ipv4_inbound_peers as f64)
+            }
+
+            if invtosend_values.len() > 0 {
+                metrics
+                    .rpc_peer_info_invtosend_sum
+                    .set(invtosend_values.iter().sum::<u64>() as i64);
+                metrics
+                    .rpc_peer_info_invtosend_max
+                    .set(*invtosend_values.iter().max().unwrap_or(&0) as i64);
+                metrics
+                    .rpc_peer_info_invtosend_min
+                    .set(*invtosend_values.iter().min().unwrap_or(&0) as i64);
+
+                let invtosend_values_f64: Vec<f64> =
+                    invtosend_values.iter().map(|v| *v as f64).collect();
+                metrics
+                    .rpc_peer_info_invtosend_mean
+                    .set(stat_util::mean_f64(&invtosend_values_f64));
+                metrics
+                    .rpc_peer_info_invtosend_median
+                    .set(stat_util::median_f64(&invtosend_values_f64));
             }
         }
     }

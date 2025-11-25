@@ -1929,6 +1929,158 @@ async fn test_integration_metrics_rpc_peerinfo_sub1satvbyte() {
 }
 
 #[tokio::test]
+async fn test_integration_metrics_rpc_peerinfo_invtosend() {
+    println!("test that the invtosend metrics work");
+
+    publish_and_check(
+        &[EventMsg::new(Event::Rpc(rpc::RpcEvent {
+            event: Some(rpc::rpc_event::Event::PeerInfos(PeerInfos {
+                infos: vec![
+                    // This peer has an inv-to-send queue of 77.
+                    PeerInfo {
+                        addr_processed: 1234,
+                        addr_rate_limited: 1234,
+                        addr_relay_enabled: false,
+                        // a random IP belonging to a tor exit node.
+                        // This might not be a tor exit node IP in the future and the IP would need to updated.
+                        address: "179.43.182.232:1234".to_string(),
+                        address_bind: "1.2.3.4:8332".to_string(),
+                        address_local: "1.2.3.4:8332".to_string(),
+                        bip152_hb_from: true,
+                        bip152_hb_to: false,
+                        bytes_received: 1,
+                        bytes_received_per_message: HashMap::new(),
+                        bytes_sent_per_message: HashMap::new(),
+                        bytes_sent: 0,
+                        connection_time: 1,
+                        connection_type: "type0".to_string(),
+                        id: 1,
+                        inbound: true,
+                        inflight: vec![1337, 45324],
+                        last_block: 1337,
+                        last_received: 1234,
+                        last_send: 1234,
+                        last_transaction: 1234,
+                        mapped_as: 1234,
+                        minfeefilter: 0.000001, // 0.1 sat/vbyte
+                        minimum_ping: 1234.0,
+                        network: "ipv4".to_string(),
+                        permissions: vec!["permission".to_string()],
+                        ping_time: 1234.0,
+                        ping_wait: 1234.0,
+                        relay_transactions: true,
+                        services: "service".to_string(),
+                        starting_height: 1337,
+                        subversion: "subversion".to_string(),
+                        synced_blocks: 4,
+                        synced_headers: 5,
+                        time_offset: 1234,
+                        transport_protocol_type: "v1".to_string(),
+                        version: 2841,
+                        cpu_load: 0.0,
+                        inv_to_send: 77,
+                    },
+                    // This peer has an inv-to-send queue of 1, but is not relaying transactions -> it's not counted.
+                    PeerInfo {
+                        addr_processed: 342,
+                        addr_rate_limited: 0,
+                        addr_relay_enabled: true,
+                        address: "162.218.65.123:8332".to_string(), // LinkingLion IP
+                        address_bind: "1.2.3.4:8332".to_string(),
+                        address_local: "1.2.3.4:8332".to_string(),
+                        bip152_hb_from: false,
+                        bip152_hb_to: true,
+                        bytes_received: 2344,
+                        bytes_received_per_message: HashMap::new(),
+                        bytes_sent_per_message: HashMap::new(),
+                        bytes_sent: 3483,
+                        connection_time: 8432,
+                        connection_type: "type1".to_string(),
+                        id: 2,
+                        inbound: false,
+                        inflight: vec![],
+                        last_block: 1337,
+                        last_received: 1234,
+                        last_send: 1234,
+                        last_transaction: 1234,
+                        mapped_as: 0,
+                        minfeefilter: 0.00001, // 1 sat/vbyte,
+                        minimum_ping: 13.0,
+                        network: "ipv6".to_string(),
+                        permissions: vec!["permission".to_string()],
+                        ping_time: 23.0,
+                        ping_wait: 53.0,
+                        relay_transactions: false,
+                        services: "service".to_string(),
+                        starting_height: 231,
+                        subversion: "subversion2".to_string(),
+                        synced_blocks: 4,
+                        synced_headers: 5,
+                        time_offset: -1239,
+                        transport_protocol_type: "v2".to_string(),
+                        version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 1,
+                    },
+                    // This peer has an inv-to-send queue of 33.
+                    PeerInfo {
+                        addr_processed: 342,
+                        addr_rate_limited: 434,
+                        addr_relay_enabled: true,
+                        address: "162.218.65.123:8332".to_string(), // LinkingLion IP
+                        address_bind: "1.2.3.4:8332".to_string(),
+                        address_local: "1.2.3.4:8332".to_string(),
+                        bip152_hb_from: false,
+                        bip152_hb_to: true,
+                        bytes_received: 2344,
+                        bytes_received_per_message: HashMap::new(),
+                        bytes_sent_per_message: HashMap::new(),
+                        bytes_sent: 3483,
+                        connection_time: 8432,
+                        connection_type: "type1".to_string(),
+                        id: 2,
+                        inbound: false,
+                        inflight: vec![],
+                        last_block: 1337,
+                        last_received: 1234,
+                        last_send: 1234,
+                        last_transaction: 1234,
+                        mapped_as: 1234,
+                        minfeefilter: 0.000005, // 0.5 sat/vbyte,
+                        minimum_ping: 13.0,
+                        network: "ipv6".to_string(),
+                        permissions: vec!["permission".to_string()],
+                        ping_time: 23.0,
+                        ping_wait: 53.0,
+                        relay_transactions: true,
+                        services: "service".to_string(),
+                        starting_height: 231,
+                        subversion: "subversion2".to_string(),
+                        synced_blocks: 4,
+                        synced_headers: 5,
+                        time_offset: -1239,
+                        transport_protocol_type: "v2".to_string(),
+                        version: 2342,
+                        cpu_load: 0.0,
+                        inv_to_send: 33,
+                    },
+                ],
+            })),
+        }))
+        .unwrap()],
+        Subject::Rpc,
+        r#"
+        peerobserver_rpc_peer_info_invtosend_max 77
+        peerobserver_rpc_peer_info_invtosend_mean 55
+        peerobserver_rpc_peer_info_invtosend_median 55
+        peerobserver_rpc_peer_info_invtosend_min 33
+        peerobserver_rpc_peer_info_invtosend_sum 110
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_integration_metrics_rpc_peerinfo_ipv4_inbound_diversity() {
     println!("test that the ipv4 inbound diversity metric works");
 

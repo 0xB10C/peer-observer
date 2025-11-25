@@ -243,6 +243,12 @@ pub struct Metrics {
     pub rpc_peer_info_minping_mean: Gauge,
     pub rpc_peer_info_sub1satvb_relay: IntGauge,
     pub rpc_peer_info_connection_divserity_inbound_ipv4: Gauge,
+    pub rpc_peer_info_invtosend_sum: IntGauge,
+    pub rpc_peer_info_invtosend_max: IntGauge,
+    pub rpc_peer_info_invtosend_median: Gauge,
+    pub rpc_peer_info_invtosend_mean: Gauge,
+    pub rpc_peer_info_invtosend_min: IntGauge,
+
     // getmempoolinfo
     pub rpc_mempoolinfo_mempool_loaded: IntGauge,
     pub rpc_mempoolinfo_transaction_count: IntGauge,
@@ -360,6 +366,12 @@ impl Metrics {
         g!(rpc_peer_info_minping_mean, "Mean min_ping (in milliseconds) of all connected peers.", registry);
         ig!(rpc_peer_info_sub1satvb_relay, "Number of peers that relay sub-1 sat/vbyte transactions.", registry);
         g!(rpc_peer_info_connection_divserity_inbound_ipv4, "Diversity of IPv4 inbound connections by /16 (higher is better). Calculated: <number of distinct /16 IPv4 inbound connection subnets>/<number of inbound IPv4 peers>", registry);
+        ig!(rpc_peer_info_invtosend_sum, "Sum of the inv-to-send values across all peers.", registry);
+        ig!(rpc_peer_info_invtosend_max, "The maximum inv-to-send value a peers has.", registry);
+        g!(rpc_peer_info_invtosend_median, "The median inv-to-send value across all peers that requested transactions from us (fRelay in verison set).", registry);
+        g!(rpc_peer_info_invtosend_mean, "The mean inv-to-send value across all peers that requested transactions from us (fRelay in verison set).", registry);
+        ig!(rpc_peer_info_invtosend_min, "The min inv-to-send value across all peers that requested transactions from us (fRelay in verison set).", registry);
+
         // getmempoolinfo
         ig!(rpc_mempoolinfo_mempool_loaded, "1 if the initial load attempt of the persisted mempool finished", registry);
         ig!(rpc_mempoolinfo_transaction_count, "Number of transactions in the mempool.", registry);
@@ -473,6 +485,11 @@ impl Metrics {
             rpc_peer_info_minping_mean,
             rpc_peer_info_sub1satvb_relay,
             rpc_peer_info_connection_divserity_inbound_ipv4,
+            rpc_peer_info_invtosend_sum,
+            rpc_peer_info_invtosend_max,
+            rpc_peer_info_invtosend_median,
+            rpc_peer_info_invtosend_mean,
+            rpc_peer_info_invtosend_min,
 
             // getmempoolinfo
             rpc_mempoolinfo_mempool_loaded,
