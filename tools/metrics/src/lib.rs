@@ -227,7 +227,8 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
             let mut ipv4_inbound_peers = 0;
             let mut ipv4_inbound_peer_slash16s = BTreeSet::new();
 
-            let mut invtosend_values = vec![];
+            let mut invtosend_values: Vec<u64> = vec![];
+            let mut cpuload_values: Vec<f64> = vec![];
 
             for peer in info.infos.iter() {
                 let ip = util::ip_from_ipport(peer.address.clone());
@@ -345,6 +346,10 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
 
                 if peer.relay_transactions {
                     invtosend_values.push(peer.inv_to_send);
+                }
+
+                if peer.cpu_load > 0.0 {
+                    cpuload_values.push(peer.cpu_load);
                 }
             }
 
@@ -483,6 +488,31 @@ fn handle_rpc_event(e: &rpc_event::Event, metrics: metrics::Metrics) {
                 metrics
                     .rpc_peer_info_invtosend_median
                     .set(stat_util::median_f64(&invtosend_values_f64));
+            }
+
+            if cpuload_values.len() > 0 {
+                let mut cpuload_values_filtered: Vec<f64> = cpuload_values
+                    .iter()
+                    .cloned()
+                    .filter(|x| !x.is_nan())
+                    .collect();
+                cpuload_values_filtered.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+                metrics
+                    .rpc_peer_info_cpuload_sum
+                    .set(cpuload_values_filtered.iter().sum::<f64>());
+                metrics
+                    .rpc_peer_info_cpuload_max
+                    .set(*cpuload_values_filtered.last().unwrap_or(&0.0));
+                metrics
+                    .rpc_peer_info_cpuload_min
+                    .set(*cpuload_values_filtered.first().unwrap_or(&0.0));
+                metrics
+                    .rpc_peer_info_cpuload_mean
+                    .set(stat_util::mean_f64(&cpuload_values_filtered));
+                metrics
+                    .rpc_peer_info_cpuload_median
+                    .set(stat_util::median_f64(&cpuload_values_filtered));
             }
         }
     }
