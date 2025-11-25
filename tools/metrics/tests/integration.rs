@@ -2717,7 +2717,7 @@ async fn test_integration_metrics_logextractor_logevents() {
         ],
         Subject::LogExtractor,
         r#"
-        peerobserver_log_events 2
+        peerobserver_log_events{category="unknown"} 2
         "#,
     )
     .await;
@@ -2769,7 +2769,68 @@ async fn test_integration_metrics_logextractor_blockconnected_events() {
         Subject::LogExtractor,
         r#"
         peerobserver_log_block_connected_events 2
-        peerobserver_log_events 3
+        peerobserver_log_events{category="unknown"} 1
+        peerobserver_log_events{category="validation"} 2
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_logextractor_blockchecked_events() {
+    println!("test that log-extractor block checked log events metric work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Validation.into(),
+                log_timestamp: 345,
+                event: Some(log_extractor::log_event::Event::BlockCheckedLog(
+                    log_extractor::BlockCheckedLog {
+                        debug_message: "".to_string(),
+                        state: "Valid".to_string(),
+                        block_hash:
+                            "309665469cc06cecdd0be45f3070aa446b4871bb5d1b0bc97965895d1d35f541"
+                                .to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::LogExtractor,
+        r#"
+        peerobserver_log_block_checked_events 1
+        peerobserver_log_events{category="validation"} 1
+        "#,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_integration_metrics_logextractor_blockchecked_mutated_events() {
+    println!("test that log-extractor block checked mutated block events metric work");
+
+    publish_and_check(
+        &[
+            EventMsg::new(Event::LogExtractorEvent(log_extractor::LogEvent {
+                category: LogDebugCategory::Validation.into(),
+                log_timestamp: 345,
+                event: Some(log_extractor::log_event::Event::BlockCheckedLog(
+                    log_extractor::BlockCheckedLog {
+                        debug_message: "duplicate transaction".to_string(),
+                        state: "bad-txns-duplicate".to_string(),
+                        block_hash:
+                            "2eb63cc71bccef4f3d5da560d810513e2e1155ff7be04d5502ad3e038f956e92"
+                                .to_string(),
+                    },
+                )),
+            }))
+            .unwrap(),
+        ],
+        Subject::LogExtractor,
+        r#"
+        peerobserver_log_block_checked_events 1
+        peerobserver_log_mutated_blocks{status="bad-txns-duplicate"} 1
         "#,
     )
     .await;
