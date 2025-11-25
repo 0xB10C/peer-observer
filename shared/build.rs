@@ -32,6 +32,11 @@ fn main() {
         "monerobanlist.rs",
         "is_on_monero_banlist",
     );
+    gen_ip_match_fn(
+        "ip-lists/bitprojects-io.txt",
+        "bitprojects-list.rs",
+        "belongs_to_bitprojects",
+    );
 
     println!("cargo:rerun-if-changed=build.rs");
 }
