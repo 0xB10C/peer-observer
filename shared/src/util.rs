@@ -12,6 +12,9 @@ include!(concat!(env!("OUT_DIR"), "/monerobanlist.rs"));
 // Includes an auto-generated function to check if IPs are Tor exit node IPs
 include!(concat!(env!("OUT_DIR"), "/torexitlist.rs"));
 
+// Includes an auto-generated function to check if IPs belong to bitprojects.io
+include!(concat!(env!("OUT_DIR"), "/bitprojects-list.rs"));
+
 /// Split and return the IP from an ip:port combination.
 pub fn ip_from_ipport(addr: String) -> String {
     match addr.rsplit_once(":") {
@@ -156,7 +159,7 @@ mod tests {
     #[test]
     fn test_linkinglion() {
         assert!(!is_on_linkinglion_banlist(
-            "this is probably not an ip of a tor exit node"
+            "this is probably not an ip of linkinglion"
         ));
 
         // The IP addresses defined in RFC5737 for use in documentation are not on a LinkingLion banlist.
@@ -171,5 +174,25 @@ mod tests {
         assert!(is_on_linkinglion_banlist("209.222.252.254"));
         assert!(is_on_linkinglion_banlist("91.198.115.62"));
         assert!(is_on_linkinglion_banlist("2604:d500:4:1::3:fe"));
+    }
+
+    #[test]
+    fn test_bitprojects() {
+        assert!(!belongs_to_bitprojects(
+            "this is probably not an ip of bitprojects"
+        ));
+
+        // The IP addresses defined in RFC5737 for use in documentation don't belong to bitprojects.
+        //
+        // https://www.rfc-editor.org/rfc/rfc5737
+        assert!(!belongs_to_bitprojects("192.0.2.222")); // TEST-NET-1
+        assert!(!belongs_to_bitprojects("198.51.100.111")); // TEST-NET-2
+        assert!(!belongs_to_bitprojects("203.0.113.123")); // TEST-NET-3
+
+        // These are actual IP addresses bitprojects uses.
+        assert!(belongs_to_bitprojects("104.204.253.15"));
+        assert!(belongs_to_bitprojects("104.204.253.255"));
+        assert!(belongs_to_bitprojects("66.163.223.129"));
+        assert!(belongs_to_bitprojects("173.46.87.56"));
     }
 }
