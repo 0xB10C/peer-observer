@@ -220,6 +220,7 @@ pub struct Metrics {
     pub rpc_peer_info_list_peers_monero_ban: IntGauge,
     pub rpc_peer_info_list_peers_tor_exit: IntGauge,
     pub rpc_peer_info_list_peers_linkinglion: IntGauge,
+    pub rpc_peer_info_list_peers_bitprojects: IntGaugeVec,
     pub rpc_peer_info_addr_ratelimited_peers: IntGauge,
     pub rpc_peer_info_addr_ratelimited_total: IntGauge,
     pub rpc_peer_info_addr_processed_total: IntGauge,
@@ -349,6 +350,7 @@ impl Metrics {
         ig!(rpc_peer_info_list_peers_monero_ban, "Number of peers connected to us that are on the monero banlist.", registry);
         ig!(rpc_peer_info_list_peers_tor_exit, "Number of peers connected to us that are on the list of tor exit nodes.", registry);
         ig!(rpc_peer_info_list_peers_linkinglion, "Number of peers connected to us that are known LinkingLion nodes.", registry);
+        igv!(rpc_peer_info_list_peers_bitprojects, "Number of in- and outbound connections to/from IPs belonging to bitprojects.", [LABEL_P2P_DIRECTION], registry);
         ig!(rpc_peer_info_addr_ratelimited_peers, "Number of peers connected to us that had at least one address rate-limited from being processed (see bitcoin/bitcoin #22387)", registry);
         ig!(rpc_peer_info_addr_ratelimited_total, "Number of addresses rate-limited across all connected peers (see bitcoin/bitcoin #22387).", registry);
         ig!(rpc_peer_info_addr_processed_total, "Number of addresses processed across all connected peers (see bitcoin/bitcoin #22387).", registry);
@@ -474,6 +476,7 @@ impl Metrics {
             rpc_peer_info_list_peers_monero_ban,
             rpc_peer_info_list_peers_tor_exit,
             rpc_peer_info_list_peers_linkinglion,
+            rpc_peer_info_list_peers_bitprojects,
             rpc_peer_info_addr_ratelimited_peers,
             rpc_peer_info_addr_ratelimited_total,
             rpc_peer_info_addr_processed_total,
